@@ -20,11 +20,11 @@ if (invulnerable) {
     draw_self();
 }
 
-//if (oBrain.AmIPseudoHost) {
-//image_blend=c_blue
-//} else {
-//image_blend=c_red
-//}
+if (oBrain.AmIPseudoHost) {
+image_blend=c_blue
+} else {
+image_blend=c_red
+}
 
 
 //draw_text(x,y-10,has_flag)

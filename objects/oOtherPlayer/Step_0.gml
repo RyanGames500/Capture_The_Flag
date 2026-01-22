@@ -14,8 +14,8 @@ your sharedProperties
 */
 
 		//the other player is moving
-		x = lerp(x, real(SP._x),0.2)
-		y = lerp(y, real(SP._y),0.2)
+		x = lerp(x, real(SP._x),0.5)
+		y = lerp(y, real(SP._y),0.5)
 		image_xscale =real(SP._IMXS);
 		image_yscale = real(SP._IMYS);
 		enemyHealth = SP._H;
@@ -30,7 +30,7 @@ your sharedProperties
 		invulnerable = real(SP._INV);
 		image_alpha=real(SP._IA);
 		visible=real(SP._VIS);
-
+		Name = string(SP._NAME);
 
 
 

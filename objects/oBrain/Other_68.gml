@@ -160,7 +160,7 @@ if(type == network_type_data){
 		
 		
 		case "disconnected":
-		callback_DisconnectFromServer()
+		callback_DisconnectFromServer();
 		break;
 		
 		case "destroy_player":

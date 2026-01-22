@@ -25,24 +25,21 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 
 		case "flag_capture":
 		    var equipoCapturador = theMessageStruct.team;
-		    // oFlag = Roja (Enemiga para Azul), oFlag2 = Azul (Enemiga para Rojo)
-		    var banderaObjetivo = (equipoCapturador == "AZUL") ? oFlag : oFlag2;
     
+		    // REGLA DE ORO: 
+		    // Si captura el AZUL -> Se mueve la ROJA (oFlag)
+		    // Si captura el ROJO -> Se mueve la AZUL (oFlag2)
+		    var banderaObjetivo = (equipoCapturador == "AZUL") ? oFlag : oFlag2;
+
 		    with(banderaObjetivo) {
 		        has_flag = true;
-        
-		        // BUSCAMOS AL DUEÑO REAL:
-		        // Si el que capturó NO soy yo (oPlayer), entonces el dueño es oOtherPlayer
+		        // Si el que capturó NO soy yo, el portador es el otro
 		        if (equipoCapturador != global.myTeam) {
-		            if (instance_exists(oOtherPlayer)) {
-		                portador_instancia = oOtherPlayer.id;
-		            }
+		            if (instance_exists(oOtherPlayer)) portador_instancia = oOtherPlayer.id;
 		        } else {
-		            // Si el que capturó SOY YO, el portador es mi oPlayer local
 		            portador_instancia = oPlayer.id;
 		        }
 		    }
-		    show_debug_message("Captura sincronizada para equipo: " + equipoCapturador);
 		break;
 
         case "flag_return":
@@ -66,25 +63,33 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
             }
 			break;
 
-			case "request_point":
-			    if (oBrain.AmIPseudoHost) 
-			    {
-			        if (theMessageStruct.team == "AZUL") global.puntos_azul++; else global.puntos_rojo++;
+case "request_point":
+    if (oBrain.AmIPseudoHost) 
+    {
+        var equipoQuePide = theMessageStruct.team;
+        var banderaAResetear = theMessageStruct.resetFlag;
 
-			        var flag_scored = theMessageStruct.resetFlag; // "ROJA" o "AZUL"
+        // FILTRO DE SEGURIDAD:
+        // Si el ROJO pide punto, la bandera reseteada DEBE ser la AZUL.
+        // Si pide punto y dice que reseteó la ROJA (su propia bandera), lo ignoramos.
+        if (equipoQuePide == "ROJO" && banderaAResetear == "ROJA") exit; 
+        if (equipoQuePide == "AZUL" && banderaAResetear == "AZUL") exit;
 
-			        // Reset SOLO la bandera con la que anotaron
-			        if (flag_scored == "ROJA") {
-			            with (oFlag) { x=spawnX; y=spawnY; velocidad_caida=0; has_flag=false; portador_instancia=noone; }
-			        } else {
-			            with (oFlag2){ x=spawnX; y=spawnY; velocidad_caida=0; has_flag=false; portador_instancia=noone; }
-			        }
+        // Si pasó el filtro, sumamos
+        if (equipoQuePide == "AZUL") global.puntos_azul++; 
+        else if (equipoQuePide == "ROJO") global.puntos_rojo++;
 
-			        // Enviar a cliente score + qué bandera resetear
-			        var data = { azul: global.puntos_azul, rojo: global.puntos_rojo, resetFlag: flag_scored };
-			        SendEventToClient(senderClientId, "sync_score", data);
-			    }
-			break;
+        // Reset físico de la bandera
+        if (banderaAResetear == "ROJA") {
+            with (oFlag) { x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
+        } else {
+            with (oFlag2){ x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
+        }
+
+        var data = { azul: global.puntos_azul, rojo: global.puntos_rojo, resetFlag: banderaAResetear };
+        SendEventToClient(senderClientId, "sync_score", data);
+    }
+break;
 
 
 
@@ -119,10 +124,12 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 			        oPlayer.has_flag = false;
 			    }
     
-			    // Y por seguridad, el otro jugador en mi pantalla también la suelta
-			    if (instance_exists(oOtherPlayer)) {
-			        oOtherPlayer.has_flag = false;
-			    }
+				// Solo le quitamos la bandera al oOtherPlayer si la bandera que se reseteó 
+				// es la que ÉL traía.
+				var objetivoRival = (global.myTeam == "AZUL") ? "AZUL" : "ROJA"; 
+				if (flag_scored == objetivoRival && instance_exists(oOtherPlayer)) {
+				    oOtherPlayer.has_flag = false;
+				}
 			    // IMPORTANTE: NO hagas oPlayer.has_flag=false aquí a lo loco,
 			    // solo si TÚ eras el que anotó (si no, le cortas la bandera al que no debe).
 			break;

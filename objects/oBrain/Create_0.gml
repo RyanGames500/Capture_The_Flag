@@ -26,7 +26,7 @@ victory_alpha = 0; // Empieza invisible
 global.score_blue = 0;
 global.score_red = 0;
 oBrain.t = 0;
-
+global.myTeam = "";
 global.puntos_azul = 0;
 global.puntos_rojo = 0;
 global.winner_team = 0;

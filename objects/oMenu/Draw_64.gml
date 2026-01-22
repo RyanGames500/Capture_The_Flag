@@ -1,7 +1,35 @@
+draw_set_halign(fa_center);
+draw_set_valign(fa_middle);
+
+var mid_x = room_width / 2;
+var mid_y = room_height / 2-250;
+
+// 1. Dibujar el fondo del cuadro
+draw_set_color(input_activo ? c_white : c_gray);
+draw_roundrect_ext(mid_x - 200, mid_y - 30, mid_x + 200, mid_y + 30, 20, 20, false);
+
+// 2. Dibujar el texto
+draw_set_color(c_black);
+var display_text = texto_input;
+
+// Añadir el cursor parpadeante ( | )
+cursor_timer++;
+if (input_activo && (cursor_timer mod 40 < 20)) {
+    display_text += "|";
+}
+
+draw_text_transformed(mid_x, mid_y, display_text, 1.5, 1.5, 0);
+
+// 3. Instrucción abajo
+draw_set_color(c_white);
+draw_text(mid_x, mid_y + 60, "Presiona ENTER para entrar a la batalla");
+
 if (menu_state == "main") {
 draw_set_halign(fa_center);
 draw_set_valign(fa_middle);
 draw_set_font(fnt_menu); // Asegúrate de haber creado una fuente llamada fnt_menu
+
+
 
 var gui_w = display_get_gui_width();
 var gui_h = display_get_gui_height();

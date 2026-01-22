@@ -245,7 +245,6 @@ if (!isDead) {
 	}
 
 
-if (current_time % 32 < 16) {
 //Compartir con los demas jugadores
 global.sharedProperties = {
     _x : x,
@@ -263,6 +262,6 @@ global.sharedProperties = {
 	_KILLS: kills,
 	_VIS: visible,
 	_HF: has_flag,
-	_INV: invulnerable
-}
+	_INV: invulnerable,
+	_NAME: global.myName
 }

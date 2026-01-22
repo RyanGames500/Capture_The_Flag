@@ -4,6 +4,67 @@ draw_set_color(c_white);
 draw_text(100, 100, "PING :" + string(global.ping));
 draw_text(100, 130, "SALA :" + string(global.roomId)); // Bajé un poco el Y para que no se encimen
 
+var gw = display_get_gui_width();
+var gh = display_get_gui_height();
+
+// --- TARJETA JUGADOR LOCAL (TÚ) ---
+draw_set_alpha(0.8);
+draw_set_color(c_black);
+draw_roundrect_ext(20, gh - 80, 250, gh - 20, 10, 10, false); // Fondo negro traslúcido
+
+draw_set_alpha(1);
+draw_set_color(global.myTeam == "AZUL" ? c_aqua : c_red);
+draw_set_halign(fa_left);
+draw_text_transformed(40, gh - 65, global.myName, 1.2, 1.2, 0); // Tu nombre
+draw_rectangle(40, gh - 40, 40 + (health * 2), gh - 35, false); // Barra de vida mini
+
+
+// --- TARJETA RIVAL (Lado Derecho) ---
+if (instance_exists(oOtherPlayer)) 
+{
+    var gw = display_get_gui_width();
+    var gh = display_get_gui_height();
+
+    // 1. FONDO (Rectángulo negro traslúcido)
+    draw_set_alpha(0.8);
+    draw_set_color(c_black);
+    // Lo ubicamos a 20 pixeles del borde derecho (gw - 250)
+    draw_roundrect_ext(gw - 270, gh - 80, gw - 20, gh - 20, 10, 10, false);
+
+    // 2. TEXTO DEL NOMBRE
+    draw_set_alpha(1);
+    // Si tu equipo es AZUL, el rival es ROJO
+    draw_set_color(global.myTeam == "AZUL" ? c_red : c_aqua); 
+    draw_set_halign(fa_right); // Alineado a la derecha
+    draw_set_valign(fa_middle);
+
+    var rivalName = "Oponente";
+    
+    // Lógica segura de las propiedades
+    if (oOtherPlayer.sharedProperties != -1) {
+        var SP_Data;
+        if (is_string(oOtherPlayer.sharedProperties)) {
+            SP_Data = json_parse(oOtherPlayer.sharedProperties);
+        } else {
+            SP_Data = oOtherPlayer.sharedProperties;
+        }
+
+        if (variable_struct_exists(SP_Data, "_NAME")) {
+            rivalName = string(SP_Data._NAME);
+        }
+    }
+    
+    // Dibujamos el nombre a 40 pixeles del borde derecho para que tenga margen
+    draw_text_transformed(gw - 40, gh - 60, rivalName, 1.2, 1.2, 0);
+
+    // 3. INDICADOR DE ESTADO
+    draw_set_color(c_lime);
+    draw_set_halign(fa_right);
+    draw_text_transformed(gw - 40, gh - 35, "• ONLINE", 0.8, 0.8, 0);
+    
+    draw_set_alpha(1); // Reset
+}
+
 // --- 1. CONFIGURACIÓN ---
 var mid_x = display_get_gui_width() / 2;
 var mid_y = display_get_gui_height() / 2;
