@@ -1,0 +1,1 @@
+my_team = TEAM.BLUE;   // Asignar en la sala

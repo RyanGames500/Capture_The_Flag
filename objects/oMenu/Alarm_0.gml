@@ -1,0 +1,1 @@
+room_goto(rm_game_offline); // rm_game es tu sala donde están las banderas y el player
