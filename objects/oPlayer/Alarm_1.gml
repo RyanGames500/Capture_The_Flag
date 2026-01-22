@@ -1,6 +1,20 @@
 // --- Dentro de tu Alarma 1 ---
-x = spawn_x;
-y = spawn_y;
+if (global.ONLINE) {
+    if (oBrain.AmIPseudoHost) x = spawn_left_x; else x = spawn_right_x;
+    y = spawn_y_fixed;
+
+    // alinear red si existe
+    if (variable_instance_exists(id, "latest_x")) latest_x = x;
+    if (variable_instance_exists(id, "latest_y")) latest_y = y;
+
+    // 🔥 IMPORTANTÍSIMO: forzar unos frames
+    respawn_lock = 10;
+} else {
+    x = spawn_x;
+    y = spawn_y;
+}
+
+
 health = 100;
 isDead = false;
 state = PLAYERSTATE.IDLE;

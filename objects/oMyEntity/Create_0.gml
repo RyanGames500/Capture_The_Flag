@@ -21,5 +21,5 @@ entityProperties = {
 }
 
 MessageStruct = {
-	damage: 100
+	damage: 10
 };

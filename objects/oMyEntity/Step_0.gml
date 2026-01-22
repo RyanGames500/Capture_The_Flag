@@ -14,7 +14,8 @@ entityProperties = {
 
 }
 
-
+latest_x = x;
+latest_y = y;
 // --- CÓDIGO SIMPLIFICADO ---
 var target_enemy = instance_place(x, y, oOtherPlayer);
 

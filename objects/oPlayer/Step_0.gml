@@ -1,3 +1,14 @@
+if (global.ONLINE && spawn_lock > 0)
+{
+    spawn_lock--;
+
+    if (oBrain.AmIPseudoHost) { x = 51;  y = 400; }
+    else { x = 591; y = 400; }
+
+    if (variable_instance_exists(id, "latest_x")) latest_x = x;
+    if (variable_instance_exists(id, "latest_y")) latest_y = y;
+}
+
 // 1. Obtener Entradas
 key_left  = keyboard_check(vk_left) 
 key_right = keyboard_check(vk_right) 

@@ -11,14 +11,8 @@ function callback_DisconnectFromServer(){
 	with(oOtherPlayersEntity){
 		instance_destroy(id)
 	}
-	// --- Dentro de callback_DisconnectFromServer ---
-	global.game_over = false;
-	global.puntos_rojo = 0;
-	global.puntos_azul = 0;
-	global.winner_team = 0;
 
-	room_goto(rm_menu); // Ahora sí, volvemos al menú principal
-	show_debug_message("Desconectado con éxito, volviendo al menú.");
+
 	//edit ths code to do whatever you want
 	//show_message("You have successfully disconnected. (Most likely because you were killed)");
 

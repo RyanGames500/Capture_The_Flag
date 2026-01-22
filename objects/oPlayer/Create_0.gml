@@ -2,7 +2,7 @@
 speed = 0
 direction = 0
 health = 100
-
+// Esperamos un milisegundo a que el equipo esté asignado
 // Estados del jugador
 enum PLAYERSTATE {
     IDLE,
@@ -50,3 +50,9 @@ score_pending = false;
 
 
 network_tick = 0;
+respawn_lock = 0;
+spawn_lock = 10;
+spawn_left_x  = 51;
+spawn_right_x = 591;
+spawn_y_fixed = 400;
+

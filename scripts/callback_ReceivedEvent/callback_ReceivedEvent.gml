@@ -1,6 +1,26 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
-        
+    
+case "init_pos_color":
+    var ordered_x = theMessageStruct.x;
+    var ordered_y = theMessageStruct.y;
+
+    oPlayer.x = ordered_x;
+    oPlayer.y = ordered_y;
+
+    oPlayer.latest_x = ordered_x;
+    oPlayer.latest_y = ordered_y;
+
+    // opcional: si usas sharedProperties para publicar
+    if (is_struct(global.sharedProperties)) {
+        global.sharedProperties._x = ordered_x;
+        global.sharedProperties._y = ordered_y;
+    }
+
+break;
+
+    
+
         case "hit":
 		// SI SOY INVULNERABLE, O ESTOY MUERTO, IGNORO EL GOLPE
 		if (oPlayer.isDead || oPlayer.invulnerable) exit;

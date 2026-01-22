@@ -25,3 +25,4 @@ BSI = 0;
 has_flag = false;
 invulnerable=0;
 Name="";
+

@@ -12,10 +12,20 @@ y = SP._y
 or whatever you want to update in any way from
 your sharedProperties
 */
+		var target_x = SP._x;
+		var target_y = SP._y;
 
-		//the other player is moving
-		x = lerp(x, real(SP._x),0.5)
-		y = lerp(y, real(SP._y),0.5)
+
+// Movimiento suavizado (Lerp)
+	if(x!=0){
+		//the bullet is moving
+		x = lerp(x, target_x,0.5)
+		y = lerp(y, target_y,0.5)
+	}else{
+		//the bullet was just created
+		x = real(SP._x);
+		y = real(SP._y);
+	}
 		image_xscale =real(SP._IMXS);
 		image_yscale = real(SP._IMYS);
 		enemyHealth = SP._H;

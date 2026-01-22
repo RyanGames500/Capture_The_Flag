@@ -123,25 +123,28 @@ if (global.game_over)
     // Escala aumentada a 3
     draw_text_transformed(mid_x, mid_y - 120, _ganador_txt, 3 * pulse, 3 * pulse, 0);
 
-    // --- LAS BANDERAS (Más separadas y grandes) ---
-    var spacing = 70; // Más espacio entre ellas
-    var start_x_azul = mid_x - 150;
-    var start_x_rojo = mid_x + 60;
-    
-    for (var i = 1; i <= 3; i++) 
+// --- LAS BANDERAS (CENTRADO PERFECTO) ---
+    var spacing = 100; // Espacio entre cada bandera
+    // Calculamos el inicio restando el ancho total (spacing * 2) dividido entre 2
+    var start_x = mid_x - spacing; 
+
+    for (var i = 1; i <= 3; i++)  
     {
-        // BANDERAS AZULES
+        // Posición X para esta bandera (i-1 para que la primera sea 0)
+        var bx = start_x + ((i-1) * spacing);
+        
+        // --- FILA AZUL (Arriba del centro) ---
         if (global.puntos_azul >= i) {
-            draw_sprite_ext(spr_flag_blue, 0, start_x_azul + (i*spacing), mid_y + 20, 1.5 * pulse, 1.5 * pulse, 0, c_white, victory_alpha);
+            draw_sprite_ext(spr_flag_blue, 0, bx, mid_y - 20, 1.5 * pulse, 1.5 * pulse, 0, c_white, victory_alpha);
         } else {
-            draw_sprite_ext(spr_flagvacia, 0, start_x_azul + (i*spacing), mid_y + 20, 1.2, 1.2, 0, c_black, victory_alpha * 0.3);
+            draw_sprite_ext(spr_flagvacia, 0, bx, mid_y - 20, 1.2, 1.2, 0, c_black, victory_alpha * 0.3);
         }
         
-        // BANDERAS ROJAS
+        // --- FILA ROJA (Abajo del centro) ---
         if (global.puntos_rojo >= i) {
-            draw_sprite_ext(spr_flag_red, 0, start_x_rojo + (i*spacing), mid_y + 20, 1.5 * pulse, 1.5 * pulse, 0, c_white, victory_alpha);
+            draw_sprite_ext(spr_flag_red, 0, bx, mid_y + 80, 1.5 * pulse, 1.5 * pulse, 0, c_white, victory_alpha);
         } else {
-            draw_sprite_ext(spr_flagvacia, 0, start_x_rojo + (i*spacing), mid_y + 20, 1.2, 1.2, 0, c_black, victory_alpha * 0.3);
+            draw_sprite_ext(spr_flagvacia, 0, bx, mid_y + 80, 1.2, 1.2, 0, c_black, victory_alpha * 0.3);
         }
     }
 

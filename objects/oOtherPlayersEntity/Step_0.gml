@@ -13,11 +13,14 @@ or whatever you want to update in any way from
 your entityProperties
 */
 
+var target_x = EP._x;
+var target_y = EP._y;
+
 // Movimiento suavizado (Lerp)
 	if(x!=0){
 		//the bullet is moving
-		x = lerp(x, real(EP._x),0.5)
-		y = lerp(y, real(EP._y),0.5)
+		x = lerp(x, target_x,0.5)
+		y = lerp(y, target_y,0.5)
 	}else{
 		//the bullet was just created
 		x = real(EP._x);
