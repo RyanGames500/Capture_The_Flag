@@ -18,6 +18,14 @@ roomId = -1
 
 //add your personal variables under this line
 
+guns = [noone, noone];
+
+weapon = {
+	index: 0,
+	angle: 0,
+	frequency: 0
+};
+
 enemyHealth = 100
 state=0;
 team="";
@@ -25,4 +33,5 @@ BSI = 0;
 has_flag = false;
 invulnerable=0;
 Name="";
+WSI = 0;
 

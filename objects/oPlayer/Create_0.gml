@@ -15,6 +15,15 @@ enum PLAYERSTATE {
 
 state = PLAYERSTATE.IDLE;
 
+//ARMAS - 1 a la ves
+guns = [noone];
+
+weapon = {
+    index: 0,
+    angle: 0,
+    frequency: 0
+};
+
 // Física
 hsp = 0;
 vsp = 0;

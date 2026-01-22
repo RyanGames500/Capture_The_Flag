@@ -1,26 +1,46 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
+
+		case "weapon_picked":
+		    var _tx = theMessageStruct._x;
+		    var _ty = theMessageStruct._y;
     
-case "init_pos_color":
-    var ordered_x = theMessageStruct.x;
-    var ordered_y = theMessageStruct.y;
-
-    oPlayer.x = ordered_x;
-    oPlayer.y = ordered_y;
-
-    oPlayer.latest_x = ordered_x;
-    oPlayer.latest_y = ordered_y;
-
-    // opcional: si usas sharedProperties para publicar
-    if (is_struct(global.sharedProperties)) {
-        global.sharedProperties._x = ordered_x;
-        global.sharedProperties._y = ordered_y;
-    }
-
-break;
-
+		    // Buscamos en un radio de 2 píxeles para estar seguros
+		    var _armaEnPiso = collision_circle(_tx, _ty, 2, oWeapon, false, true);
     
+		    if (_armaEnPiso != noone) {
+		        instance_destroy(_armaEnPiso);
+		    }
+		break;
+   
+		case "spawn_weapon":
+		    var _wx = theMessageStruct._x;
+		    var _wy = theMessageStruct._y;
+		    var _wt = theMessageStruct._type;
+    
+		    // El cliente crea el arma visualmente
+		    instance_create_layer(_wx, _wy, "Weapons", _wt);
+		break;
+	
+		case "init_pos_color":
+		    var ordered_x = theMessageStruct.x;
+		    var ordered_y = theMessageStruct.y;
 
+		    oPlayer.x = ordered_x;
+		    oPlayer.y = ordered_y;
+
+		    oPlayer.latest_x = ordered_x;
+		    oPlayer.latest_y = ordered_y;
+
+		    // opcional: si usas sharedProperties para publicar
+		    if (is_struct(global.sharedProperties)) {
+		        global.sharedProperties._x = ordered_x;
+		        global.sharedProperties._y = ordered_y;
+		    }
+
+		break;
+
+ 
         case "hit":
 		// SI SOY INVULNERABLE, O ESTOY MUERTO, IGNORO EL GOLPE
 		if (oPlayer.isDead || oPlayer.invulnerable) exit;

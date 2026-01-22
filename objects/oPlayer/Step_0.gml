@@ -23,6 +23,7 @@ if (state != PLAYERSTATE.DEAD) {
 // 3. Máquina de Estados
 switch (state) {
     case PLAYERSTATE.IDLE:
+	scrPlayerWeaponUpdate();
         hsp = 0;
         sprite_index = spr_player_idle;
         if (key_jump && place_meeting(x, y + 1, obj_wall)) { vsp = jumpsp; state = PLAYERSTATE.JUMP; }
@@ -31,6 +32,7 @@ switch (state) {
         break;
 
     case PLAYERSTATE.WALK:
+	scrPlayerWeaponUpdate();
 		// Modifica la línea de hsp dentro de PLAYERSTATE.WALK:
 		var _current_speed = has_flag ? walksp * 0.7 : walksp; // 30% más lento si tiene la bandera
 		hsp = move * _current_speed;
@@ -44,6 +46,7 @@ switch (state) {
         break;
 
     case PLAYERSTATE.JUMP:
+	scrPlayerWeaponUpdate();
         move = key_right - key_left;
         hsp = move * walksp;
         if (hsp != 0) image_xscale = sign(hsp) * 1.5;
@@ -274,5 +277,7 @@ global.sharedProperties = {
 	_VIS: visible,
 	_HF: has_flag,
 	_INV: invulnerable,
-	_NAME: global.myName
-}
+	_NAME: global.myName,
+	_ANG: weapon.angle,              // Ángulo del mouse
+    _WSI: guns[weapon.index]? guns[weapon.index].sprite : 0,
+};

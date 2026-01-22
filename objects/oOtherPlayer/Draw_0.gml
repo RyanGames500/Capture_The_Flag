@@ -16,3 +16,10 @@ if (invulnerable) {
 } else {
     draw_self();
 }
+
+if (WSI != 0) {
+	var weaponScale = (weapon.angle >= 90 && weapon.angle < 270) ? -1.5 : 1.5;
+	var weaponAngle = weapon.angle + ((weapon.angle >= 90 && weapon.angle < 270) ? 180 : 0);
+	
+	draw_sprite_ext(WSI, 0, x-3, y - 7, weaponScale, 1.5, weaponAngle, c_white, 1);
+}

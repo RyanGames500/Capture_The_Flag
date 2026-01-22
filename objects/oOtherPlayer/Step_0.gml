@@ -41,6 +41,8 @@ your sharedProperties
 		image_alpha=real(SP._IA);
 		visible=real(SP._VIS);
 		Name = string(SP._NAME);
+		weapon.angle = real(SP._ANG)
+		WSI = (SP._WSI)
 
 
 

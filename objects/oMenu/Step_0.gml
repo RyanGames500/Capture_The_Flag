@@ -50,7 +50,8 @@ if (!input_activo) {
                 menu_state = "connecting";
                 // Aquí es vital: primero nos aseguramos de estar conectados 
                 // y luego cambiamos de room
-                ChangeRoom("auto_matchmake_2");
+                //ChangeRoom("public");
+				ChangeRoom("auto_matchmake_2");
             break;
             case 1: // OPTIONS
                 show_message("Opciones...");
