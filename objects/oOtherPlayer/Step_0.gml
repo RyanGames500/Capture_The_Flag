@@ -47,12 +47,19 @@ your sharedProperties
 		reloading = SP._REL;
 		recoil_kick = real(SP._RK);
 		recoil_angle = real(SP._RA);
+		var net_melee = real(SP._MELEE);
 
+		// Detectar inicio de golpe: cuando el net sube (ej: 0 -> 6)
+		if (net_melee > melee_prev_net)
+		{
+		    melee_active = 6; // arrancamos animación local suave
+		}
+		melee_prev_net = net_melee;
 
+		// Animación local (suave, 1 frame por step)
+		if (melee_active > 0) melee_active--;
 
-
-
-
+		
 
 //DO NOT PUT YOUR CODE AFTER THIS LINE
 }

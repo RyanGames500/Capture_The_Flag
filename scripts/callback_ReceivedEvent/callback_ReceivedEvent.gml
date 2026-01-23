@@ -342,7 +342,19 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 			}
 			break;
 
-	
+			case "fx_melee":
+			{
+			    // Datos que manda el atacante
+			    var xx  = theMessageStruct.x;
+			    var yy  = theMessageStruct.y;
+			    var dir = theMessageStruct.dir; // -1 o 1
+
+			    // Creamos SOLO el efecto visual
+			    var fx = instance_create_layer(xx, yy, "Instances", oMeleeFX);
+			    fx.image_xscale = dir;
+			}
+			break;
+
 
     }
 }

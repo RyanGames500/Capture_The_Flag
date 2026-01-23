@@ -38,6 +38,10 @@ reload_timer = 0;
 //Aviso de recarga
 reload_max = 0; // duración total de la recarga (frames)
 
+melee_cd = 0;
+melee_active = 0;   // frames que el hitbox está activo
+melee_damage = 20;  // ajusta
+
 // Física
 hsp = 0;
 vsp = 0;

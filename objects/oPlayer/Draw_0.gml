@@ -26,7 +26,7 @@ image_blend=c_blue
 image_blend=c_red
 }
 
-if (guns[weapon.index] != noone)
+if (guns[weapon.index] != noone && !has_flag)
 {
     var weaponScale = (weapon.angle >= 90 && weapon.angle < 270) ? -1.5 : 1.5;
     var weaponAngle = weapon.angle + ((weapon.angle >= 90 && weapon.angle < 270) ? 180 : 0);
@@ -69,5 +69,20 @@ if (reloading)
     );
 }
 
+if (melee_active > 0)
+{
+    var dir  = sign(image_xscale);   // -1 o 1
+    var sx   = 2 * dir;              // escala X (voltea)
+    var offx = 12 * dir;             // 🔥 más cerca (antes 10*dir pero tu dir era *2)
+
+    var p = 1 - (melee_active / 6);
+    var a = lerp(-40, 40, p);
+
+    draw_sprite_ext(spr_Hand, 0,
+        x + offx, y - 12,
+        sx, 2,
+        a * dir,
+        c_white, 1);
+}
 
 //draw_text(x,y-10,has_flag)

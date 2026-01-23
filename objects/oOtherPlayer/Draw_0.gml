@@ -17,7 +17,7 @@ if (invulnerable) {
     draw_self();
 }
 
-if (WSI != 0)
+if (WSI != 0 && !has_flag)
 {
     var weaponScale = (weapon.angle >= 90 && weapon.angle < 270) ? -1.5 : 1.5;
     var weaponAngle = weapon.angle + ((weapon.angle >= 90 && weapon.angle < 270) ? 180 : 0);
@@ -30,6 +30,26 @@ if (WSI != 0)
         x - 3 + ox, y - 7 + oy,
         weaponScale, 1.5,
         weaponAngle + recoil_angle,
+        c_white, 1
+    );
+}
+
+
+//melee atack IM NOT FLAG
+if (melee_active > 0)
+{
+    var dir  = sign(image_xscale);
+    var sx   = 2 * dir;
+    var offx = 12 * dir;   // 🔥 más cerca (antes 20)
+
+    var p = 1 - (melee_active / 6);
+    var a = lerp(-40, 40, p);
+
+    draw_sprite_ext(
+        spr_Hand, 0,
+        x + offx, y - 12,
+        sx, 2,
+        a * dir,
         c_white, 1
     );
 }

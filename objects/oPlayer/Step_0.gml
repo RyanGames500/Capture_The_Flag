@@ -1,3 +1,12 @@
+// 1. Obtener Entradas
+key_left  = keyboard_check(ord("A")) 
+key_right = keyboard_check(ord("D")) 
+key_jump  = keyboard_check_pressed(ord("W")) 
+key_melee = keyboard_check_pressed(ord("X"));
+ 
+if (melee_cd > 0) melee_cd--;
+if (melee_active > 0) melee_active--;
+
 if (!mouse_check_button(mb_left)) {
     ak_recoil = max(0, ak_recoil - 0.6); // qué tan rápido se “calma”
 }
@@ -7,11 +16,6 @@ recoil_kick *= 0.75;
 recoil_angle *= 0.75;
 recoil_x *= 0.7;
 recoil_y *= 0.7;
-
-
-
-//scrReloadWeapon();
-
 
 if (reloading)
 {
@@ -36,9 +40,6 @@ if (reloading)
     }
 }
 
-
-
-
 if (global.ONLINE && spawn_lock > 0)
 {
     spawn_lock--;
@@ -50,11 +51,56 @@ if (global.ONLINE && spawn_lock > 0)
     if (variable_instance_exists(id, "latest_y")) latest_y = y;
 }
 
-// 1. Obtener Entradas
-key_left  = keyboard_check(ord("A")) 
-key_right = keyboard_check(ord("D")) 
-key_jump  = keyboard_check_pressed(ord("W")) 
-key_shot  = keyboard_check_pressed(ord("Z")) 
+// se recalcula SIEMPRE
+var canShoot = (!has_flag) && (state != PLAYERSTATE.DEAD);
+
+if (has_flag)
+{
+    canShoot = false; // no disparar si tienes la bandera
+
+    // aquí va tu melee (X)
+    if (key_melee && melee_cd <= 0 && state != PLAYERSTATE.DEAD)
+    {
+        melee_cd = room_speed div 3;
+        melee_active = 6;
+
+        if (global.sfx) audio_play_sound(snd_melee, 1, false);
+
+        if (global.ONLINE && instance_exists(oOtherPlayer))
+        {
+            SendEventToClient(oOtherPlayer.clientId, "fx_melee", {
+                x: x, y: y, dir: sign(image_xscale)
+            });
+        }
+    }
+
+   // si estás en melee_active, aplicas daño por colisión (hitbox simple)
+    if (melee_active > 0)
+    {
+        var range = 26;
+        var hx = x + (range * sign(image_xscale));
+        var hy = y - 10;
+
+        // golpe al otro jugador
+        var target = instance_place(hx, hy, oOtherPlayer);
+        if (target != noone)
+        {
+            // anti doble-hit: solo pega 1 vez por swing
+            melee_active = 0;
+
+            // mandar daño al host/cliente según tu sistema actual de hit
+            if (global.ONLINE)
+            {
+                // manda "hit" al otro
+                SendEventToClient(target.clientId, "hit", { damage: melee_damage });
+            }
+            else
+            {
+                target.health -= melee_damage;
+            }
+        }
+    }
+}
 
 // 2. Aplicar Gravedad (Aplica para casi todos los estados)
 if (state != PLAYERSTATE.DEAD) {
@@ -64,16 +110,23 @@ if (state != PLAYERSTATE.DEAD) {
 // 3. Máquina de Estados
 switch (state) {
     case PLAYERSTATE.IDLE:
-	scrPlayerWeaponUpdate();
+if (canShoot)
+{
+    scrPlayerWeaponUpdate();
+}
+
         hsp = 0;
         sprite_index = spr_player_idle;
         if (key_jump && place_meeting(x, y + 1, obj_wall)) { vsp = jumpsp; state = PLAYERSTATE.JUMP; }
         if (key_right || key_left) state = PLAYERSTATE.WALK;
-        if (key_shot) { state = PLAYERSTATE.SHOT; image_index = 0; bullet_created = false; }
         break;
 
     case PLAYERSTATE.WALK:
-	scrPlayerWeaponUpdate();
+if (canShoot)
+{
+    scrPlayerWeaponUpdate();
+}
+
 		// Modifica la línea de hsp dentro de PLAYERSTATE.WALK:
 		var _current_speed = has_flag ? walksp * 0.7 : walksp; // 30% más lento si tiene la bandera
 		hsp = move * _current_speed;
@@ -83,11 +136,15 @@ switch (state) {
         
         if (hsp == 0) state = PLAYERSTATE.IDLE;
         if (key_jump && place_meeting(x, y + 1, obj_wall)) { vsp = jumpsp; state = PLAYERSTATE.JUMP; }
-        if (key_shot) { state = PLAYERSTATE.SHOT; image_index = 0; bullet_created = false; }
+        
         break;
 
     case PLAYERSTATE.JUMP:
-	scrPlayerWeaponUpdate();
+if (canShoot)
+{
+    scrPlayerWeaponUpdate();
+}
+
         move = key_right - key_left;
         hsp = move * walksp;
         if (hsp != 0) image_xscale = sign(hsp) * 1.5;
@@ -216,6 +273,7 @@ if (place_meeting(x, y, miBase) && has_flag)
 	// DETACH LOCAL: para evitar recaptura en loop mientras llega la confirmación del host
 	with (objetivo) {
 	    has_flag = false;
+		canShoot=true;
 	    portador_instancia = noone;
 	    velocidad_caida = 0; // opcional
 	}
@@ -325,6 +383,7 @@ global.sharedProperties = {
 	_ATYPE: (guns[weapon.index] != noone) ? guns[weapon.index].ammoType : "",
 	_REL: reloading,
 	_RK: recoil_kick,
-	_RA: recoil_angle
+	_RA: recoil_angle,
+	_MELEE: melee_active
 
 };

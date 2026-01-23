@@ -38,3 +38,5 @@ ammo=0;
 reloading=0;
 recoil_kick=0;
 recoil_angle=0;
+melee_active = 0;
+melee_prev_net = 0;
