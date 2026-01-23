@@ -35,6 +35,9 @@ reserve = {
 reloading = false;
 reload_timer = 0;
 
+//Aviso de recarga
+reload_max = 0; // duración total de la recarga (frames)
+
 // Física
 hsp = 0;
 vsp = 0;

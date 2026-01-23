@@ -29,7 +29,7 @@
   "isEcma":false,
   "LibraryEmitters":[],
   "MetaData":{
-    "IDEVersion":"2024.14.2.212",
+    "IDEVersion":"2024.14.2.213",
   },
   "name":"Capture de Flag",
   "resources":[
@@ -126,6 +126,7 @@
     {"id":{"name":"spr_player_idle","path":"sprites/spr_player_idle/spr_player_idle.yy",},},
     {"id":{"name":"spr_player_shot","path":"sprites/spr_player_shot/spr_player_shot.yy",},},
     {"id":{"name":"spr_player_walk","path":"sprites/spr_player_walk/spr_player_walk.yy",},},
+    {"id":{"name":"spr_reload_circle","path":"sprites/spr_reload_circle/spr_reload_circle.yy",},},
     {"id":{"name":"spr_smg","path":"sprites/spr_smg/spr_smg.yy",},},
     {"id":{"name":"sprBullet_escop","path":"sprites/sprBullet_escop/sprBullet_escop.yy",},},
     {"id":{"name":"sprBullet_gun","path":"sprites/sprBullet_gun/sprBullet_gun.yy",},},

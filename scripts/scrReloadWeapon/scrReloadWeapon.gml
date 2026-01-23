@@ -19,6 +19,8 @@ function scrReloadWeapon()
     // iniciar recarga
     reloading = true;
     reload_timer = w.reloadTime;
+	reload_max   = w.reloadTime;
+
 
     if (global.sfx) audio_play_sound(snd_reload, 1, false);
 }

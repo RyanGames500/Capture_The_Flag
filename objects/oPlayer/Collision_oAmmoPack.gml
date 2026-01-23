@@ -38,6 +38,18 @@ other.visible = false;
 var add = other.amount;
 reserve[$ t] = min(cur + add, maxReserve);
 
+// ✅ auto-recarga si estoy vacío y ahora sí tengo reserva
+if (guns[weapon.index] != noone)
+{
+    var ww = guns[weapon.index];
+
+    if (!reloading && ww.ammo <= 0)
+    {
+        scrReloadWeapon();
+    }
+}
+
+
 // sonido 1 vez
 if (global.sfx) audio_play_sound(snd_ammo_pickup, 1, false);
 

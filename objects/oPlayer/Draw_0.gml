@@ -44,4 +44,30 @@ if (guns[weapon.index] != noone)
     );
 }
 
+if (reloading)
+{
+    var spr = spr_reload_circle; // tu sprite
+    var frames = sprite_get_number(spr);
+
+    // progreso real de recarga
+    var progress = 1 - (reload_timer / reload_max);
+    var frame = floor(progress * (frames - 1));
+    frame = clamp(frame, 0, frames - 1);
+
+    // posición sobre la cabeza
+    var yy = bbox_top - 25; // ajusta si quieres más arriba
+
+    draw_sprite_ext(
+        spr,
+        frame,
+        x,
+        yy,
+        0.5, 0.5,
+        0,
+        c_white,
+        1
+    );
+}
+
+
 //draw_text(x,y-10,has_flag)
