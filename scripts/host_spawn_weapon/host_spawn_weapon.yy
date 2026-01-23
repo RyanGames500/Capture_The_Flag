@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"host_spawn_weapon",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"host_spawn_weapon",
+  "parent":{
+    "name":"Scripts",
+    "path":"folders/Scripts.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

@@ -42,7 +42,12 @@ your sharedProperties
 		visible=real(SP._VIS);
 		Name = string(SP._NAME);
 		weapon.angle = real(SP._ANG)
-		WSI = (SP._WSI)
+		WSI = (SP._WSI);
+		ammo = SP._AMMO;
+		reloading = SP._REL;
+		recoil_kick = real(SP._RK);
+		recoil_angle = real(SP._RA);
+
 
 
 

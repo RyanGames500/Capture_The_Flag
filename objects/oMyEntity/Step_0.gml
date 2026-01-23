@@ -1,4 +1,8 @@
 /// @description Update this entity as much as you want
+if (life > 0) {
+    life--;
+    if (life <= 0) instance_destroy();
+}
 
 /*
 * Update this struct
@@ -14,9 +18,7 @@ entityProperties = {
 
 }
 
-latest_x = x;
-latest_y = y;
-// --- CÓDIGO SIMPLIFICADO ---
+
 var target_enemy = instance_place(x, y, oOtherPlayer);
 
 if (target_enemy != noone) 
@@ -27,8 +29,8 @@ if (target_enemy != noone)
     {
         // SOLO si NO es invulnerable ejecutamos el sonido y la destrucción
         if(global.sfx==true){audio_play_sound(snd_hit, 20, false, .9);}
-        SendEventToClient(target_enemy.clientId, "hit", MessageStruct);    
-        instance_destroy();
+		SendEventToClient(target_enemy.clientId, "hit", { damage: damage });
+       instance_destroy();
     } 
     else 
     {
@@ -36,6 +38,7 @@ if (target_enemy != noone)
         image_alpha = 0.5;
     }
 }
+
 
 
 

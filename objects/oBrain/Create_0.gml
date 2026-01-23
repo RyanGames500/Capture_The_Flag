@@ -1,6 +1,59 @@
 /// @description Creates the Brain. Do Not Tamper!
 
+#region // --- PRESETS DE ARMAS ---
+weapon_struct_pistola = {
+    sprite: spr_gun,
+    object: oGun,
+    subimage: 0,
+    ammo: 10,//10
+    maxAmmo: 10,//10
+    frequency: room_speed / 2,
+    type2: "gun",
+	damage: 10,
+	
+	ammoType:"gun",
+	clipSize:30,
+	reloadTime: room_speed * 1.2
+};
+
+weapon_struct_escopeta = {
+    sprite: spr_escopeta,
+    object: oGun,
+    subimage: 0,
+    ammo: 6,//6
+    maxAmmo: 6,//6
+    frequency: room_speed / 1.2,
+    type2: "escop",
+	damage: 8,
+	pellets: 7,
+	
+    ammoType:"escop",
+    clipSize:30,
+    reloadTime: room_speed * 1.2
+};
+
+weapon_struct_smg = {
+    sprite: spr_smg,
+    object: oGun,
+    subimage: 0,
+    ammo: 30,//30
+    maxAmmo: 30,//30
+    frequency: room_speed / 8,
+    type2: "smg",
+	damage: 12,
+	
+    ammoType:"smg",
+    clipSize:30,
+    reloadTime: room_speed * 1.2,
+};
+
+#endregion
+
+
 global.ONLINE=false;
+weapons_spawned = false;
+ammo_spawned = false;
+
 connect = -10
 non_blocking_success_yet = false
 entitiesCreated = 0;
@@ -20,6 +73,7 @@ global.sharedProperties = {
 }
 
 oBrain.AmIPseudoHost = false
+sent_ready = false;
 
 pseudoHostClientId = -1
 victory_alpha = 0; // Empieza invisible

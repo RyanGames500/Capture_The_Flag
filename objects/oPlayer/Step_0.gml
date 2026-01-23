@@ -1,3 +1,44 @@
+if (!mouse_check_button(mb_left)) {
+    ak_recoil = max(0, ak_recoil - 0.6); // qué tan rápido se “calma”
+}
+
+// se va “recuperando” solo
+recoil_kick *= 0.75;
+recoil_angle *= 0.75;
+recoil_x *= 0.7;
+recoil_y *= 0.7;
+
+
+
+//scrReloadWeapon();
+
+
+if (reloading)
+{
+    reload_timer--;
+
+    if (reload_timer <= 0)
+    {
+        var w = guns[weapon.index];
+        var t = w.ammoType;
+
+        var res  = reserve[$ t];
+        var need = w.maxAmmo - w.ammo;
+        var take = min(need, res);
+
+        w.ammo += take;
+        reserve[$ t] -= take;
+
+        guns[weapon.index] = w;
+        reloading = false;
+
+        //if (global.sfx) audio_play_sound(snd_reload_done, 1, false);
+    }
+}
+
+
+
+
 if (global.ONLINE && spawn_lock > 0)
 {
     spawn_lock--;
@@ -10,9 +51,9 @@ if (global.ONLINE && spawn_lock > 0)
 }
 
 // 1. Obtener Entradas
-key_left  = keyboard_check(vk_left) 
-key_right = keyboard_check(vk_right) 
-key_jump  = keyboard_check_pressed(vk_space) 
+key_left  = keyboard_check(ord("A")) 
+key_right = keyboard_check(ord("D")) 
+key_jump  = keyboard_check_pressed(ord("W")) 
 key_shot  = keyboard_check_pressed(ord("Z")) 
 
 // 2. Aplicar Gravedad (Aplica para casi todos los estados)
@@ -280,4 +321,10 @@ global.sharedProperties = {
 	_NAME: global.myName,
 	_ANG: weapon.angle,              // Ángulo del mouse
     _WSI: guns[weapon.index]? guns[weapon.index].sprite : 0,
+	_AMMO: (guns[weapon.index] != noone) ? guns[weapon.index].ammo : 0,
+	_ATYPE: (guns[weapon.index] != noone) ? guns[weapon.index].ammoType : "",
+	_REL: reloading,
+	_RK: recoil_kick,
+	_RA: recoil_angle
+
 };

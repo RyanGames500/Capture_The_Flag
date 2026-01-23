@@ -1,3 +1,17 @@
+if (variable_global_exists("tracer_queue"))
+{
+    for (var i = array_length(global.tracer_queue)-1; i >= 0; i--)
+    {
+        var t = global.tracer_queue[i];
+        draw_line_width(t[0], t[1], t[2], t[3], 2);
+
+        t[4] -= 1;
+        global.tracer_queue[i] = t;
+
+        if (t[4] <= 0) array_delete(global.tracer_queue, i, 1);
+    }
+}
+
 // Datos de red arriba a la izquierda
 draw_set_halign(fa_left);
 draw_set_color(c_white);

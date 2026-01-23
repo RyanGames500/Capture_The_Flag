@@ -19,7 +19,20 @@ entityProperties = {
 	
 
 }
-
-MessageStruct = {
-	damage: 10
+life = 0;
+tipo="";
+//cuando es tipo arma
+weapon = {
+	sprite: sprite_index,
+	object: object_index,
+	subimage: 1,
+	ammo: 10,//10
+	maxAmmo: 10,//10
+	frequency: room_speed / 1.5,
+	type2: "gun",
 };
+// oMyEntity Create
+damage = 10; // default por si alguien olvida setearlo
+ownerClientId = -1; // opcional, si quieres rastrear atacante
+
+MessageStruct = { damage: damage };

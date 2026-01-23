@@ -24,6 +24,17 @@ weapon = {
     frequency: 0
 };
 
+reserve = {
+    gun: 0,
+    smg: 0,
+    escop: 0,
+    shell: 0
+};
+
+
+reloading = false;
+reload_timer = 0;
+
 // Física
 hsp = 0;
 vsp = 0;
@@ -37,6 +48,17 @@ invul_timer = 0;
 bullet_created = false;
 isDead = false;
 kills=0;
+ak_recoil = 0;
+ak_recoil_relax = 0;
+
+recoil_kick = 0;      // cuánto empuja el arma hacia atrás
+recoil_angle = 0;     // pequeño “kick” angular
+recoil_x = 0; recoil_y = 0;
+
+//sonido
+empty_cd = 0; // cooldown sonido sin balas
+
+
 
 if (oBrain.AmIPseudoHost) {
     global.myTeam = "AZUL";
@@ -64,4 +86,6 @@ spawn_lock = 10;
 spawn_left_x  = 51;
 spawn_right_x = 591;
 spawn_y_fixed = 400;
+
+
 

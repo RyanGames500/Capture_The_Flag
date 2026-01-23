@@ -133,7 +133,7 @@ if(type == network_type_data){
 			new_enemy.clientId = real(realData.clientId);
 			new_enemy.roomId = realData.roomId;
 			new_enemy.sharedProperties = realData.SP;
-		
+			
 		}
 		break;
 		

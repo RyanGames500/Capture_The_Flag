@@ -34,4 +34,7 @@ has_flag = false;
 invulnerable=0;
 Name="";
 WSI = 0;
-
+ammo=0;
+reloading=0;
+recoil_kick=0;
+recoil_angle=0;

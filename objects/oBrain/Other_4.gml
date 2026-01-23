@@ -14,3 +14,6 @@ if (AmIPseudoHost) {
         SendEventToClient(oOtherPlayer.clientId, "init_pos_color", { x: 591, y: 400 });
     }
 }
+
+
+

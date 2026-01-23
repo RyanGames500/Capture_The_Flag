@@ -48,3 +48,29 @@ else
 {
     victory_alpha = 0; // Reset si no hay game over
 }
+
+
+if (!AmIPseudoHost) exit;
+if (room != rm_game) exit;
+
+if (!weapons_spawned && instance_exists(oOtherPlayer))
+{
+    weapons_spawned = true;
+
+    host_spawn_weapon(oGun, 320, 300, weapon_struct_pistola);
+    host_spawn_weapon(oGun, 520, 300, weapon_struct_escopeta);
+    host_spawn_weapon(oGun, 120, 300, weapon_struct_smg);
+}
+
+if (!AmIPseudoHost) exit;
+if (room != rm_game) exit;
+
+if (!ammo_spawned && instance_exists(oOtherPlayer))
+{
+	ammo_spawned=true;
+    host_spawn_ammo(160, 320, 25);
+    host_spawn_ammo(320, 320, 25);
+    host_spawn_ammo(480, 320, 25);
+    host_spawn_ammo(320, 200, 25);
+}
+

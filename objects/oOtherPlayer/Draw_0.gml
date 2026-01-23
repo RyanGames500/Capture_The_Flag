@@ -17,9 +17,22 @@ if (invulnerable) {
     draw_self();
 }
 
-if (WSI != 0) {
-	var weaponScale = (weapon.angle >= 90 && weapon.angle < 270) ? -1.5 : 1.5;
-	var weaponAngle = weapon.angle + ((weapon.angle >= 90 && weapon.angle < 270) ? 180 : 0);
-	
-	draw_sprite_ext(WSI, 0, x-3, y - 7, weaponScale, 1.5, weaponAngle, c_white, 1);
+if (WSI != 0)
+{
+    var weaponScale = (weapon.angle >= 90 && weapon.angle < 270) ? -1.5 : 1.5;
+    var weaponAngle = weapon.angle + ((weapon.angle >= 90 && weapon.angle < 270) ? 180 : 0);
+
+    var ox = lengthdir_x(-recoil_kick, weapon.angle);
+    var oy = lengthdir_y(-recoil_kick, weapon.angle);
+
+    draw_sprite_ext(
+        WSI, 0,
+        x - 3 + ox, y - 7 + oy,
+        weaponScale, 1.5,
+        weaponAngle + recoil_angle,
+        c_white, 1
+    );
 }
+
+
+

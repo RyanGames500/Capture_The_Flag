@@ -26,13 +26,22 @@ image_blend=c_blue
 image_blend=c_red
 }
 
-if (guns[weapon.index] != noone) {
-	
-if(guns[weapon.index].type2 = "gun"){
-	var weaponScale = (weapon.angle >= 90 && weapon.angle < 270) ? -1.5 : 1.5;
-	var weaponAngle = weapon.angle + ((weapon.angle >= 90 && weapon.angle < 270) ? 180 : 0);
+if (guns[weapon.index] != noone)
+{
+    var weaponScale = (weapon.angle >= 90 && weapon.angle < 270) ? -1.5 : 1.5;
+    var weaponAngle = weapon.angle + ((weapon.angle >= 90 && weapon.angle < 270) ? 180 : 0);
 
-	draw_sprite_ext(guns[weapon.index].sprite, 0, x, y - 16, weaponScale, 1.5, weaponAngle, c_white, 1);
+    // offset del arma
+    var ox = lengthdir_x(-recoil_kick, weapon.angle);
+    var oy = lengthdir_y(-recoil_kick, weapon.angle);
+
+    draw_sprite_ext(
+        guns[weapon.index].sprite, 0,
+        x + ox, (y - 16) + oy,
+        weaponScale, 1.5,
+        weaponAngle + recoil_angle,
+        c_white, 1
+    );
 }
-}
+
 //draw_text(x,y-10,has_flag)
