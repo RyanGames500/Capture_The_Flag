@@ -94,5 +94,6 @@ spawn_left_x  = 51;
 spawn_right_x = 591;
 spawn_y_fixed = 400;
 
+crush_cd = 0;
 
 

@@ -1,3 +1,32 @@
+//Compartir con los demas jugadores
+global.sharedProperties = {
+    _x : x,
+    _y : y,
+    _A : image_angle,
+    _H : health,
+	_IA: image_alpha,
+    _IMYS: image_yscale,
+    _IMXS: image_xscale,
+    _ST: state,
+    _SI: sprite_index,
+    _II: (state == PLAYERSTATE.DEAD) ? -1 : image_index,
+    _IS: image_speed,
+    _BS: bullet_created, // Para que los otros "vean" cuando sale la bala de tu arma
+	_KILLS: kills,
+	_VIS: visible,
+	_HF: has_flag,
+	_INV: invulnerable,
+	_NAME: global.myName,
+	_ANG: weapon.angle,              // Ángulo del mouse
+    _WSI: guns[weapon.index]? guns[weapon.index].sprite : 0,
+	_AMMO: (guns[weapon.index] != noone) ? guns[weapon.index].ammo : 0,
+	_ATYPE: (guns[weapon.index] != noone) ? guns[weapon.index].ammoType : "",
+	_REL: reloading,
+	_RK: recoil_kick,
+	_RA: recoil_angle,
+	_MELEE: melee_active
+
+};
 // 1. Obtener Entradas
 key_left  = keyboard_check(ord("A")) 
 key_right = keyboard_check(ord("D")) 
@@ -6,6 +35,7 @@ key_melee = keyboard_check_pressed(ord("X"));
  
 if (melee_cd > 0) melee_cd--;
 if (melee_active > 0) melee_active--;
+if (crush_cd > 0) crush_cd--;
 
 if (!mouse_check_button(mb_left)) {
     ak_recoil = max(0, ak_recoil - 0.6); // qué tan rápido se “calma”
@@ -365,33 +395,21 @@ if (!isDead) {
     }
 	}
 
+// Colisión con el martillo
+var inst_hammer = instance_place(x, y, oHammer);
 
-//Compartir con los demas jugadores
-global.sharedProperties = {
-    _x : x,
-    _y : y,
-    _A : image_angle,
-    _H : health,
-	_IA: image_alpha,
-    _IMYS: image_yscale,
-    _IMXS: image_xscale,
-    _ST: state,
-    _SI: sprite_index,
-    _II: (state == PLAYERSTATE.DEAD) ? -1 : image_index,
-    _IS: image_speed,
-    _BS: bullet_created, // Para que los otros "vean" cuando sale la bala de tu arma
-	_KILLS: kills,
-	_VIS: visible,
-	_HF: has_flag,
-	_INV: invulnerable,
-	_NAME: global.myName,
-	_ANG: weapon.angle,              // Ángulo del mouse
-    _WSI: guns[weapon.index]? guns[weapon.index].sprite : 0,
-	_AMMO: (guns[weapon.index] != noone) ? guns[weapon.index].ammo : 0,
-	_ATYPE: (guns[weapon.index] != noone) ? guns[weapon.index].ammoType : "",
-	_REL: reloading,
-	_RK: recoil_kick,
-	_RA: recoil_angle,
-	_MELEE: melee_active
+if (inst_hammer != noone) {
+    // Si en MI pantalla el martillo está en el frame de golpe (ej. del 5 al 7)
+    if (inst_hammer.image_index >= 5 && inst_hammer.image_index <= 7) {
+        if (health > 0) {
+            health = 0; 
+            global.sharedProperties._H = 0; // Se sincroniza por el sharedProperties que ya tienes
+            
+            // Mandamos un evento de "Muerte por martillo" para que el otro vea efectos
+            with(oOtherPlayer) {
+                SendEventToClient(id.clientId, "player_squashed", {});
+            }
+        }
+    }
+}
 
-};

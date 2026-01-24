@@ -137,3 +137,20 @@ if (weap_check_cd <= 0)
         }
     }
 }
+
+// --- En el Step de un objeto controlador (Solo el Host) ---
+if (oBrain.AmIPseudoHost) {
+    with(oHammer) {
+        // Si el martillo está quieto, hay una pequeña chance de que ataque
+        if (!ataca && irandom(200) == 1) { 
+            ataca = true;
+            image_speed = 1;
+            
+            // AVISAR A LOS DEMÁS
+            var hammerData = { _id: myHammerId };
+            with(oOtherPlayer) {
+                SendEventToClient(id.clientId, "hammer_attack", hammerData);
+            }
+        }
+    }
+}

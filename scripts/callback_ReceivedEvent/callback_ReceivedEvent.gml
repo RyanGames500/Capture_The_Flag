@@ -146,7 +146,7 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
                 
                 if(health <= 0) {
                     // Si morimos, avisamos a quien nos mató para que sume su kill
-                    SendEventToClient(senderClientId, "i_died", {}); 
+                    //SendEventToClient(senderClientId, "i_died", {}); 
                 }
             }
 		}
@@ -354,6 +354,20 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 			    fx.image_xscale = dir;
 			}
 			break;
+
+			case "hammer_attack":
+			    var _hid = theMessageStruct._id;
+    
+			    // Buscamos el martillo que tenga ese ID de posición
+			    with(oHammer) {
+			        if (myHammerId == _hid) {
+			            ataca = true;
+			            image_index = 0; // Reiniciamos para que empiecen igualitos
+			            image_speed = 1;
+			        }
+			    }
+			break;
+
 
 
     }
