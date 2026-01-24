@@ -17,7 +17,7 @@ function scrPlayerWeaponUpdate()
     // =========================================
     // DISPARO (misma entrada para todas)
     // =========================================
-    if (mouse_check_button_pressed(mb_left) && weapon.frequency <= 0)
+    if (mouse_check_button(mb_left) && weapon.frequency <= 0)
     {
         // ---------- SIN BALAS ----------
         if (w.ammo <= 0)

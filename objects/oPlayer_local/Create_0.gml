@@ -18,7 +18,7 @@ state = PLAYER.IDLE;
 // Física
 hsp = 0;
 vsp = 0;
-grv = 0.5;
+grv = 0.6;
 walksp = 4;
 jumpsp = -13;
 move=0;

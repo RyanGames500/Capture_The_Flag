@@ -5,8 +5,8 @@
   "isDnD":false,
   "name":"host_drop_weapon",
   "parent":{
-    "name":"Scripts",
-    "path":"folders/Scripts.yy",
+    "name":"Funciones",
+    "path":"folders/Scripts/Funciones.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",

@@ -49,28 +49,91 @@ else
     victory_alpha = 0; // Reset si no hay game over
 }
 
-
 if (!AmIPseudoHost) exit;
-if (room != rm_game) exit;
+if (room != rm_stage1) exit;
 
+// ---- ARMAS ----
 if (!weapons_spawned && instance_exists(oOtherPlayer))
 {
     weapons_spawned = true;
 
-    host_spawn_weapon(oGun, 320, 300, weapon_struct_pistola);
-    host_spawn_weapon(oGun, 520, 300, weapon_struct_escopeta);
-    host_spawn_weapon(oGun, 120, 300, weapon_struct_smg);
+    var p;
+
+    p = scrFindSpawnPosTopBottom(80, 40, 18);
+    host_spawn_weapon(oGun, p.x, p.y, weapon_struct_pistola);
+
+    p = scrFindSpawnPosTopBottom(80, 40, 18);
+    host_spawn_weapon(oGun, p.x, p.y, weapon_struct_escopeta);
+
+    p = scrFindSpawnPosTopBottom(80, 40, 18);
+    host_spawn_weapon(oGun, p.x, p.y, weapon_struct_smg);
+}
+
+// ---- MUNICIÓN ----
+if (!ammo_spawned && instance_exists(oOtherPlayer))
+{
+    ammo_spawned = true;
+
+    for (var k = 0; k < 6; k++)
+    {
+        var a = scrFindSpawnPosTopBottom(80, 40, 18);
+        host_spawn_ammo(a.x, a.y, 25);
+    }
 }
 
 if (!AmIPseudoHost) exit;
-if (room != rm_game) exit;
+if (room != rm_stage1) exit;
 
-if (!ammo_spawned && instance_exists(oOtherPlayer))
+// si tienes una variable para “partida activa”, úsala aquí
+// if (!match_running) exit;
+
+// ---- MUNCIÓN: mantener stock ----
+if (ammo_check_cd > 0) ammo_check_cd--;
+
+if (ammo_check_cd <= 0)
 {
-	ammo_spawned=true;
-    host_spawn_ammo(160, 320, 25);
-    host_spawn_ammo(320, 320, 25);
-    host_spawn_ammo(480, 320, 25);
-    host_spawn_ammo(320, 200, 25);
+    ammo_check_cd = ammo_check_every;
+
+    var freeAmmo = scrCountFree(oAmmoPack);
+
+    if (freeAmmo < ammo_min_on_map)
+    {
+        var need = ammo_min_on_map - freeAmmo;
+
+        for (var i = 0; i < need; i++)
+        {
+            var p = scrFindSpawnPosTopBottom(80, 40, 18);
+            host_spawn_ammo(p.x, p.y, 25);
+        }
+    }
 }
 
+
+if (weap_check_cd > 0) weap_check_cd--;
+
+if (weap_check_cd <= 0)
+{
+    weap_check_cd = weap_check_every;
+
+    var freeWeaps = scrCountFree(oGun);
+
+    if (freeWeaps < weap_min_on_map)
+    {
+        var need = weap_min_on_map - freeWeaps;
+
+        for (var j = 0; j < need; j++)
+        {
+            var p = scrFindSpawnPosTopBottom(80, 40, 18);
+
+            // elige aleatorio entre tus structs (SIN ? :)
+            var pick = irandom(2);
+            var wstruct;
+
+            if (pick == 0) wstruct = weapon_struct_pistola;
+            else if (pick == 1) wstruct = weapon_struct_escopeta;
+            else wstruct = weapon_struct_smg;
+
+            host_spawn_weapon(oGun, p.x, p.y, wstruct);
+        }
+    }
+}

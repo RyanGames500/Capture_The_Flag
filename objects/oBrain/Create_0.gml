@@ -1,4 +1,5 @@
 /// @description Creates the Brain. Do Not Tamper!
+global.remoteSP = undefined;
 
 #region // --- PRESETS DE ARMAS ---
 weapon_struct_pistola = {
@@ -87,5 +88,14 @@ global.winner_team = 0;
 global.game_over = false;
 global.sfx=true;
 global.music=true;
+
+ammo_min_on_map   = 6;   // mínimo de packs que quieres siempre en el mapa
+ammo_check_cd     = 0;   // cooldown de chequeo
+ammo_check_every  = 60;  // cada 60 frames (1s)
+
+weap_min_on_map   = 3;   // opcional: mínimo de armas en el mapa
+weap_check_cd     = 0;
+weap_check_every  = 90;  // cada 1.5s
+
 ConnectToServer();
 

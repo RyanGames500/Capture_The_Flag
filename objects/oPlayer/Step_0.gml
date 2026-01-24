@@ -54,53 +54,47 @@ if (global.ONLINE && spawn_lock > 0)
 // se recalcula SIEMPRE
 var canShoot = (!has_flag) && (state != PLAYERSTATE.DEAD);
 
-if (has_flag)
+// =========================
+// MELEE SIEMPRE (tenga o no bandera)
+// =========================
+if (key_melee && melee_cd <= 0 && state != PLAYERSTATE.DEAD)
 {
-    canShoot = false; // no disparar si tienes la bandera
+    melee_cd = room_speed div 3;
+    melee_active = 6;
 
-    // aquí va tu melee (X)
-    if (key_melee && melee_cd <= 0 && state != PLAYERSTATE.DEAD)
+    if (global.sfx) audio_play_sound(snd_melee, 1, false);
+
+    if (global.ONLINE && instance_exists(oOtherPlayer))
     {
-        melee_cd = room_speed div 3;
-        melee_active = 6;
-
-        if (global.sfx) audio_play_sound(snd_melee, 1, false);
-
-        if (global.ONLINE && instance_exists(oOtherPlayer))
-        {
-            SendEventToClient(oOtherPlayer.clientId, "fx_melee", {
-                x: x, y: y, dir: sign(image_xscale)
-            });
-        }
+        SendEventToClient(oOtherPlayer.clientId, "fx_melee", {
+            x: x, y: y, dir: sign(image_xscale)
+        });
     }
+}
 
-   // si estás en melee_active, aplicas daño por colisión (hitbox simple)
-    if (melee_active > 0)
+// daño melee mientras está activo
+if (melee_active > 0)
+{
+    var range = 26;
+    var hx = x + (range * sign(image_xscale));
+    var hy = y - 10;
+
+    var target = instance_place(hx, hy, oOtherPlayer);
+    if (target != noone)
     {
-        var range = 26;
-        var hx = x + (range * sign(image_xscale));
-        var hy = y - 10;
+        melee_active = 0;
 
-        // golpe al otro jugador
-        var target = instance_place(hx, hy, oOtherPlayer);
-        if (target != noone)
+        if (global.ONLINE)
         {
-            // anti doble-hit: solo pega 1 vez por swing
-            melee_active = 0;
-
-            // mandar daño al host/cliente según tu sistema actual de hit
-            if (global.ONLINE)
-            {
-                // manda "hit" al otro
-                SendEventToClient(target.clientId, "hit", { damage: melee_damage });
-            }
-            else
-            {
-                target.health -= melee_damage;
-            }
+            SendEventToClient(target.clientId, "hit", { damage: melee_damage });
+        }
+        else
+        {
+            target.health -= melee_damage;
         }
     }
 }
+
 
 // 2. Aplicar Gravedad (Aplica para casi todos los estados)
 if (state != PLAYERSTATE.DEAD) {
@@ -110,10 +104,11 @@ if (state != PLAYERSTATE.DEAD) {
 // 3. Máquina de Estados
 switch (state) {
     case PLAYERSTATE.IDLE:
-if (canShoot)
+if (canShoot && melee_active <= 0)
 {
     scrPlayerWeaponUpdate();
 }
+
 
         hsp = 0;
         sprite_index = spr_player_idle;
@@ -122,11 +117,10 @@ if (canShoot)
         break;
 
     case PLAYERSTATE.WALK:
-if (canShoot)
+if (canShoot && melee_active <= 0)
 {
     scrPlayerWeaponUpdate();
 }
-
 		// Modifica la línea de hsp dentro de PLAYERSTATE.WALK:
 		var _current_speed = has_flag ? walksp * 0.7 : walksp; // 30% más lento si tiene la bandera
 		hsp = move * _current_speed;
@@ -140,10 +134,11 @@ if (canShoot)
         break;
 
     case PLAYERSTATE.JUMP:
-if (canShoot)
+if (canShoot && melee_active <= 0)
 {
     scrPlayerWeaponUpdate();
 }
+
 
         move = key_right - key_left;
         hsp = move * walksp;
@@ -192,6 +187,20 @@ if (canShoot)
 		}
         break;
 }
+
+var plat = instance_place(x, y + 1, oMovingPlatform);
+if (plat != noone && vsp >= 0)
+{
+    // “pegarlo” arriba de la plataforma (evita que se vaya al centro)
+    var my_bottom = bbox_bottom;
+    var plat_top  = plat.bbox_top;
+    y -= (my_bottom - plat_top);
+
+    // subir/bajar con ella
+    y += plat.dy;
+}
+
+
 
 // 4. Colisiones (El código que ya teníamos)
 if (place_meeting(x + hsp, y, obj_wall)) {
@@ -273,7 +282,6 @@ if (place_meeting(x, y, miBase) && has_flag)
 	// DETACH LOCAL: para evitar recaptura en loop mientras llega la confirmación del host
 	with (objetivo) {
 	    has_flag = false;
-		canShoot=true;
 	    portador_instancia = noone;
 	    velocidad_caida = 0; // opcional
 	}

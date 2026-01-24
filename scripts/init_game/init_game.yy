@@ -5,8 +5,8 @@
   "isDnD":false,
   "name":"init_game",
   "parent":{
-    "name":"Scripts",
-    "path":"folders/Scripts.yy",
+    "name":"Funciones",
+    "path":"folders/Scripts/Funciones.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",
