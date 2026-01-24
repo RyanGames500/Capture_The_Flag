@@ -43,7 +43,7 @@ if (melee_active > 0)
 }
 if (guns[weapon.index] != noone && !has_flag)
 {
-    var weaponScale = (weapon.angle >= 90 && weapon.angle < 270) ? -1.5 : 1.5;
+    var weaponScale = (weapon.angle >= 90 && weapon.angle < 270) ? -2 : 2;
     var weaponAngle = weapon.angle + ((weapon.angle >= 90 && weapon.angle < 270) ? 180 : 0);
 
     // offset del arma
@@ -52,8 +52,8 @@ if (guns[weapon.index] != noone && !has_flag)
 
     draw_sprite_ext(
         guns[weapon.index].sprite, 0,
-        x + ox, (y - 16) + oy,
-        weaponScale, 1.5,
+        x + ox, (y - 13) + oy,
+        weaponScale, 2,
         weaponAngle + recoil_angle,
         c_white, 1
     );

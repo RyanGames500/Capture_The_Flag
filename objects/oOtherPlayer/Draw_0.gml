@@ -36,7 +36,7 @@ if (melee_active > 0)
 }
 if (WSI != 0 && !has_flag)
 {
-    var weaponScale = (weapon.angle >= 90 && weapon.angle < 270) ? -1.5 : 1.5;
+    var weaponScale = (weapon.angle >= 90 && weapon.angle < 270) ? -2 : 2;
     var weaponAngle = weapon.angle + ((weapon.angle >= 90 && weapon.angle < 270) ? 180 : 0);
 
     var ox = lengthdir_x(-recoil_kick, weapon.angle);
@@ -44,8 +44,8 @@ if (WSI != 0 && !has_flag)
 
     draw_sprite_ext(
         WSI, 0,
-        x - 3 + ox, y - 7 + oy,
-        weaponScale, 1.5,
+        x - 3 + ox, y - 3 + oy,
+        weaponScale, 2,
         weaponAngle + recoil_angle,
         c_white, 1
     );

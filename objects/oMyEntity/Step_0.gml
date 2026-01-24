@@ -41,7 +41,15 @@ if (target_enemy != noone)
 
 
 
-
+if (target_enemy != noone) {
+    // Mandamos el hit y nuestro nombre (global.userName)
+    var hitData = {
+        killerName: global.userName 
+    };
+    SendEventToClient(target_enemy.clientId, "hit", hitData);
+    
+    instance_destroy();
+}
 
 
 

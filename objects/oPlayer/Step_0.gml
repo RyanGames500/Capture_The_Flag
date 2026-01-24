@@ -409,7 +409,18 @@ if (inst_hammer != noone) {
             with(oOtherPlayer) {
                 SendEventToClient(id.clientId, "player_squashed", {});
             }
+			
+		 // Creamos el feed local
+        var feed = instance_create_layer(0, 0, "Instances", oKillFeed);
+        feed.text = string(global.userName) + " FUE APLASTADO";
+        
+        // Avisamos al rival para que él también vea que te aplastaron
+        with(oOtherPlayer) {
+            SendEventToClient(id.clientId, "show_kill_message", { 
+                _victim: global.userName, 
+                _killer: "LA PRENSA" 
+            });	
+		
         }
     }
 }
-
