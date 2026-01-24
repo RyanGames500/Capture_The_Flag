@@ -2,6 +2,8 @@
 speed = 0
 direction = 0
 health = 100
+playerName = global.myName; // tu nombre local
+
 // Esperamos un milisegundo a que el equipo esté asignado
 // Estados del jugador
 enum PLAYERSTATE {

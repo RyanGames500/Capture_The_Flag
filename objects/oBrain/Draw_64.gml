@@ -1,3 +1,20 @@
+var xx = 20;
+var yy = 20;
+
+draw_set_font(fnt_killfeed);
+draw_set_halign(fa_left);
+draw_set_valign(fa_top);
+
+for (var i = 0; i < array_length(kill_feed); i++)
+{
+    draw_set_color(c_black);
+    draw_text(xx+1, yy + i*22 + 1, kill_feed[i].text);
+
+    draw_set_color(c_white);
+    draw_text(xx, yy + i*22, kill_feed[i].text);
+}
+
+
 if (variable_global_exists("tracer_queue"))
 {
     for (var i = array_length(global.tracer_queue)-1; i >= 0; i--)

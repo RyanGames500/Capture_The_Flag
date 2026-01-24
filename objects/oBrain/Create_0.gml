@@ -1,5 +1,7 @@
 /// @description Creates the Brain. Do Not Tamper!
-global.remoteSP = undefined;
+kill_feed = [];      // array de mensajes
+kill_feed_max = 5;   // máximo en pantalla
+
 
 #region // --- PRESETS DE ARMAS ---
 weapon_struct_pistola = {

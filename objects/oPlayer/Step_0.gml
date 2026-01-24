@@ -16,7 +16,7 @@ global.sharedProperties = {
 	_VIS: visible,
 	_HF: has_flag,
 	_INV: invulnerable,
-	_NAME: global.myName,
+	_NAME: playerName,
 	_ANG: weapon.angle,              // Ángulo del mouse
     _WSI: guns[weapon.index]? guns[weapon.index].sprite : 0,
 	_AMMO: (guns[weapon.index] != noone) ? guns[weapon.index].ammo : 0,
@@ -252,6 +252,19 @@ if health <= 0 and isDead = false
 	state = PLAYERSTATE.DEAD;
 	invulnerable = true;
     alarm[1] = 120;
+	
+	var killerName = scrGetPlayerName(oPlayer);      // el host local (quien disparó/pegó)
+	var victimName = scrGetPlayerName(target_enemy); // el que murió
+
+	var text = killerName + " eliminó a " + victimName;
+
+	// local
+	scrAddKillFeed(text);
+
+	// remoto
+	if (instance_exists(oOtherPlayer))
+	    SendEventToClient(oOtherPlayer.clientId, "kill_feed", { msg: text });
+
 }
 
 if (state == PLAYERSTATE.DEAD && has_flag == true) 
@@ -394,4 +407,33 @@ if (!isDead) {
         image_alpha = 1;
     }
 	}
+
+// Colisión con el martillo
+var inst_hammer = instance_place(x, y, oHammer);
+
+if (inst_hammer != noone) {
+    // Si en MI pantalla el martillo está en el frame de golpe (ej. del 5 al 7)
+    if (inst_hammer.image_index >= 5 && inst_hammer.image_index <= 7) {
+        if (health > 0) {
+            health = 0; 
+            global.sharedProperties._H = 0; // Se sincroniza por el sharedProperties que ya tienes
+            
+            // Mandamos un evento de "Muerte por martillo" para que el otro vea efectos
+            with(oOtherPlayer) {
+                SendEventToClient(id.clientId, "player_squashed", {});
+            }
+        }
+		
+		var victimName = scrGetPlayerName(_target);
+		var text = victimName + " fue aplastado";
+
+		scrAddKillFeed(text);
+
+		if (global.ONLINE && instance_exists(oOtherPlayer))
+		    SendEventToClient(oOtherPlayer.clientId, "kill_feed", { msg: text });
+
+
+
+    }
+}
 

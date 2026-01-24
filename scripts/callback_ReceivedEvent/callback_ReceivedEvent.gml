@@ -368,6 +368,12 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 			    }
 			break;
 
+			case "kill_feed":
+			{
+			    scrAddKillFeed(theMessageStruct.msg);
+			}
+			break;
+
 
 
     }

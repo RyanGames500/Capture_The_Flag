@@ -1,3 +1,15 @@
+//actualizar variables de quiee elimino a quien
+for (var i = array_length(kill_feed) - 1; i >= 0; i--)
+{
+    kill_feed[i].timer--;
+
+    if (kill_feed[i].timer <= 0)
+    {
+        array_delete(kill_feed, i, 1);
+    }
+}
+
+
 // --- 1. LÓGICA MIENTRAS SE JUEGA (SOLO HOST) ---
 if (global.game_over == false) 
 {

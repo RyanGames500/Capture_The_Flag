@@ -48,7 +48,7 @@ your sharedProperties
 		reloading = SP._REL;
 		recoil_kick = real(SP._RK);
 		recoil_angle = real(SP._RA);
-		global.remoteSP = SP;
+
 		var net_melee = real(SP._MELEE);
 
 		// Detectar inicio de golpe: cuando el net sube (ej: 0 -> 6)
