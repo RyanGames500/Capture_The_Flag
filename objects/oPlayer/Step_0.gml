@@ -395,32 +395,3 @@ if (!isDead) {
     }
 	}
 
-// Colisión con el martillo
-var inst_hammer = instance_place(x, y, oHammer);
-
-if (inst_hammer != noone) {
-    // Si en MI pantalla el martillo está en el frame de golpe (ej. del 5 al 7)
-    if (inst_hammer.image_index >= 5 && inst_hammer.image_index <= 7) {
-        if (health > 0) {
-            health = 0; 
-            global.sharedProperties._H = 0; // Se sincroniza por el sharedProperties que ya tienes
-            
-            // Mandamos un evento de "Muerte por martillo" para que el otro vea efectos
-            with(oOtherPlayer) {
-                SendEventToClient(id.clientId, "player_squashed", {});
-            }
-			
-		 // Creamos el feed local
-        var feed = instance_create_layer(0, 0, "Instances", oKillFeed);
-        feed.text = string(global.userName) + " FUE APLASTADO";
-        
-        // Avisamos al rival para que él también vea que te aplastaron
-        with(oOtherPlayer) {
-            SendEventToClient(id.clientId, "show_kill_message", { 
-                _victim: global.userName, 
-                _killer: "LA PRENSA" 
-            });	
-		
-        }
-    }
-}

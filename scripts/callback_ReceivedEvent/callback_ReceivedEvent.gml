@@ -136,7 +136,6 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
  
         case "hit":
 		{
-		var elAsesino = theMessageStruct.killerName;
 		// SI SOY INVULNERABLE, O ESTOY MUERTO, IGNORO EL GOLPE
 		if (oPlayer.isDead || oPlayer.invulnerable) exit;
 		
@@ -145,31 +144,13 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
                 if(global.sfx==true){audio_play_sound(snd_hit, 20, false, .9);}
                 health -= theMessageStruct.damage;
                 
-		if (health <= 0) {
-        // 1. Creamos el feed en nuestra pantalla (Rojo murió)
-        var feed = instance_create_layer(0, 0, "Instances", oKillFeed);
-        feed.text = string(elAsesino) + " ELIMINÓ A " + string(global.userName);
-
-        // 2. Opcional: Avisamos de vuelta para que el Asesino vea el mensaje en SU pantalla
-        with(oOtherPlayer) {
-             SendEventToClient(id.clientId, "show_kill_message", { 
-                 _victim: global.userName, 
-                 _killer: elAsesino 
-						});
-				}
+                if(health <= 0) {
+                    // Si morimos, avisamos a quien nos mató para que sume su kill
+                    //SendEventToClient(senderClientId, "i_died", {}); 
+                }
             }
 		}
-		}
         break;
-
-		case "show_kill_message":
-		    // Esto es para que el que mató también vea el letrero bonito
-		    var vName = theMessageStruct._victim;
-		    var kName = theMessageStruct._killer;
-    
-		    var feed = instance_create_layer(0, 0, "Instances", oKillFeed);
-		    feed.text = string(kName) + " ELIMINÓ A " + string(vName);
-		break;
 
         case "i_died":
 		{
