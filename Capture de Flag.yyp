@@ -110,6 +110,7 @@
     {"id":{"name":"PreConnect","path":"scripts/PreConnect/PreConnect.yy",},},
     {"id":{"name":"scrAddAlert","path":"scripts/scrAddAlert/scrAddAlert.yy",},},
     {"id":{"name":"scrAddKillFeed","path":"scripts/scrAddKillFeed/scrAddKillFeed.yy",},},
+    {"id":{"name":"scrBroadcastAlert","path":"scripts/scrBroadcastAlert/scrBroadcastAlert.yy",},},
     {"id":{"name":"scrCamShake","path":"scripts/scrCamShake/scrCamShake.yy",},},
     {"id":{"name":"scrCountFree","path":"scripts/scrCountFree/scrCountFree.yy",},},
     {"id":{"name":"scrFindSpawnPosTopBottom","path":"scripts/scrFindSpawnPosTopBottom/scrFindSpawnPosTopBottom.yy",},},

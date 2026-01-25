@@ -134,32 +134,32 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		break;
 
  
-case "hit":
-{
-    if (!instance_exists(oPlayer)) break;
+		case "hit":
+		{
+		    if (!instance_exists(oPlayer)) break;
 
-    with (oPlayer)
-    {
-        if (isDead || invulnerable) exit;
+		    with (oPlayer)
+		    {
+		        if (isDead || invulnerable) exit;
 
-        var dmg = real(theMessageStruct.damage);
+		        var dmg = real(theMessageStruct.damage);
 
-        // guardar killer/reason
-        if (is_string(theMessageStruct.killer)) last_killer = theMessageStruct.killer;
-        if (is_string(theMessageStruct.reason)) death_reason = theMessageStruct.reason;
+		        // guardar killer/reason
+		        if (is_string(theMessageStruct.killer)) last_killer = theMessageStruct.killer;
+		        if (is_string(theMessageStruct.reason)) death_reason = theMessageStruct.reason;
 		
-        else death_reason = "pvp";
+		        else death_reason = "pvp";
 
-        health -= dmg;
+		        health -= dmg;
 
-        if (state != PLAYERSTATE.DEAD)
-        {
-            state = PLAYERSTATE.HIT;
-            if (global.sfx) audio_play_sound(snd_hit, 20, false, .9);
-        }
-    }
-}
-break;
+		        if (state != PLAYERSTATE.DEAD)
+		        {
+		            state = PLAYERSTATE.HIT;
+		            if (global.sfx) audio_play_sound(snd_hit, 20, false, .9);
+		        }
+		    }
+		}
+		break;
 
 
 
@@ -182,7 +182,6 @@ break;
 		    });
 		}
 		break;
-
 
 
         case "i_died":
@@ -211,6 +210,7 @@ break;
 		            portador_instancia = oPlayer.id;
 		        }
 		    }
+
 		}
 		break;
 
@@ -264,6 +264,7 @@ break;
 
 		        var data = { azul: global.puntos_azul, rojo: global.puntos_rojo, resetFlag: banderaAResetear };
 		        SendEventToClient(senderClientId, "sync_score", data);
+			
 		    }
 		break;
 
@@ -307,8 +308,15 @@ break;
 				if (flag_scored == objetivoRival && instance_exists(oOtherPlayer)) {
 				    oOtherPlayer.has_flag = false;
 				}
-			    // IMPORTANTE: NO hagas oPlayer.has_flag=false aquí a lo loco,
-			    // solo si TÚ eras el que anotó (si no, le cortas la bandera al que no debe).
+
+				// ===== ALERTA HUD (quién anotó) =====
+				var miObjetivo = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
+
+				if (flag_scored == miObjetivo)
+				    scrAddAlert("PUNTO PARA TU EQUIPO!", c_lime);
+				else
+				    scrAddAlert("Punto para el enemigo", c_red);
+
 			}
 		break;
 
@@ -317,10 +325,9 @@ break;
 		    var equipoQueLaSolto = theMessageStruct.team;
 		    var dropX = theMessageStruct.dropX;
 		    var dropY = theMessageStruct.dropY;
-    
-		    // Si el equipo que la soltó es el Azul, la bandera es la Roja (oFlag) y viceversa
+
 		    var bandera = (equipoQueLaSolto == "AZUL") ? oFlag : oFlag2;
-    
+
 		    with(bandera) {
 		        has_flag = false;
 		        portador_instancia = noone;
@@ -328,20 +335,30 @@ break;
 		        y = dropY;
 		        velocidad_caida = -2;
 		    }
-    
-		    // También reseteamos el has_flag del otro jugador en nuestra pantalla
-		    if (instance_exists(oOtherPlayer)) oOtherPlayer.has_flag = false;
-			}
-		break;
 
-			// --- Dentro del switch(eventName) ---
-		case "finalizar_partida":
-		{
-			  global.game_over = true;
-			  // Cambiamos "data" por "theMessageStruct" que es como se llama en tu función
-			  global.winner_team = theMessageStruct.winner;
+		    if (instance_exists(oOtherPlayer)) oOtherPlayer.has_flag = false;
+
+		    // ===== ALERTA HUD =====
+		    if (equipoQueLaSolto == global.myTeam)
+		        scrAddAlert("Soltaste la bandera!", c_yellow);
+		    else
+		        scrAddAlert("El enemigo soltó la bandera!", c_blue);
 		}
 		break;
+
+
+		case "finalizar_partida":
+		{
+		    global.game_over = true;
+		    global.winner_team = theMessageStruct.winner;
+
+		    if (global.winner_team == global.myTeam)
+		        scrAddAlert("VICTORIA!", c_lime);
+		    else
+		        scrAddAlert("DERROTA", c_red);
+		}
+		break;
+
 			
 			case "host_abandono":
 		    // El host se fue, así que nos desconectamos nosotros también
@@ -383,7 +400,7 @@ break;
 			    var dir = theMessageStruct.dir; // -1 o 1
 
 			    // Creamos SOLO el efecto visual
-			    var fx = instance_create_layer(xx, yy, "Instances", oMeleeFX);
+			    var fx = instance_create_layer(xx+10, yy, "Instances", oMeleeFX);
 			    fx.image_xscale = dir;
 			}
 			break;
@@ -401,13 +418,44 @@ break;
 			    }
 			break;
 
-case "kill_event":
-{
-    scrOnKillEvent(theMessageStruct);
-}
-break;
+			case "kill_event":
+			{
+			    scrOnKillEvent(theMessageStruct);
+			}
+			break;
 
+			case "hud_alert":
+			{
+			    // msg: string, col: int (color)
+			    scrAddAlert(theMessageStruct.msg, real(theMessageStruct.col));
+			}
+			break;
 
+			case "flag_stolen":
+			{
+			    // “team” aquí es el equipo que robó
+			    var equipoCapturador = theMessageStruct.team;
+
+			    // Si el que robó NO soy yo, entonces me robaron mi bandera
+			    if (equipoCapturador != global.myTeam)
+			        scrAddAlert("Te robaron la bandera!", c_red);
+			    else
+			        scrAddAlert("Robaste la bandera!", c_lime); // por si lo reutilizas luego
+			}
+			break;
+
+			case "flag_dropped_enemy":
+			{
+			    // team = quien la soltó
+			    var team = theMessageStruct.team;
+
+			    // si la soltó el enemigo:
+			    if (team != global.myTeam)
+			        scrAddAlert("El enemigo soltó la bandera!", c_aqua);
+			    else
+			        scrAddAlert("Soltaste la bandera!", c_yellow);
+			}
+			break;
 
 
     }

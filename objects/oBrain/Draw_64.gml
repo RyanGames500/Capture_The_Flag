@@ -1,4 +1,35 @@
-// ===== PING HUD =====
+#region Dibujar Avisos(Flag Capture)
+var gw = display_get_gui_width();
+var xx3  = gw * 0.5;
+var yy3  = 18;
+
+draw_set_font(fnt_killfeed); // o una font más grande si tienes
+draw_set_halign(fa_center);
+draw_set_valign(fa_top);
+
+for (var i = 0; i < array_length(alerts); i++)
+{
+    var it = alerts[i];
+
+    draw_set_alpha(it.a);
+
+    // sombra
+    draw_set_color(c_black);
+    draw_text_transformed(xx3+2, yy3 + it.yoff + i*26 + 2, it.text, 1.25, 1.25, 0);
+
+    // texto
+    draw_set_color(it.col);
+    draw_text_transformed(xx3, yy3 + it.yoff + i*26, it.text, 1.25, 1.25, 0);
+}
+
+draw_set_alpha(1);
+draw_set_color(c_white);
+draw_set_halign(fa_left);
+draw_set_valign(fa_top);
+
+#endregion
+
+#region // ===== PING HUD =====
 var pad = 10;
 
 // esquina superior derecha (GUI)
@@ -34,9 +65,9 @@ draw_set_color(col);
 draw_text_transformed(xx2, yy2, string(global.ping) + " ms",0.8,0.8,0);
 
 draw_set_color(c_white);
+#endregion
 
-
-// ====== evita error xx/yy/scale ======
+#region // ====== evita error xx/yy/scale ======
 var xx = 20;
 var yy = 20;
 var scale = 1.35; // ✅ CLAVE: evita el crash cuando se dibuja killfeed
@@ -176,12 +207,9 @@ for (var i = 0; i < array_length(targets); i++)
 
 draw_set_alpha(1);
 draw_set_color(c_white);
+#endregion
 
-
-
-
-
-// Textos de kill
+#region // Textos de kill
 draw_set_valign(fa_top);
 draw_set_halign(fa_left);
 
@@ -208,10 +236,9 @@ for (var i = 0; i < array_length(kill_feed); i++)
 
 draw_set_alpha(1);
 draw_set_color(c_white);
+#endregion
 
-
-
-
+#region Tracer queue
 if (variable_global_exists("tracer_queue"))
 {
     for (var i = array_length(global.tracer_queue)-1; i >= 0; i--)
@@ -225,17 +252,12 @@ if (variable_global_exists("tracer_queue"))
         if (t[4] <= 0) array_delete(global.tracer_queue, i, 1);
     }
 }
+#endregion
 
-// Datos de red arriba a la izquierda
-draw_set_halign(fa_left);
-draw_set_color(c_white);
-//draw_text(100, 100, "PING :" + string(global.ping));
-//draw_text(100, 130, "SALA :" + string(global.roomId)); // Bajé un poco el Y para que no se encimen
-
+#region --- TARJETA JUGADOR LOCAL ---
 var gw = display_get_gui_width();
 var gh = display_get_gui_height();
 
-// --- TARJETA JUGADOR LOCAL (TÚ) ---
 draw_set_alpha(0.8);
 draw_set_color(c_black);
 draw_roundrect_ext(20, gh - 80, 250, gh - 20, 10, 10, false); // Fondo negro traslúcido
@@ -245,9 +267,9 @@ draw_set_color(global.myTeam == "AZUL" ? c_aqua : c_red);
 draw_set_halign(fa_left);
 draw_text_transformed(40, gh - 65, global.myName, 1.2, 1.2, 0); // Tu nombre
 draw_rectangle(40, gh - 40, 40 + (health * 2), gh - 35, false); // Barra de vida mini
+#endregion
 
-
-// --- TARJETA RIVAL (Lado Derecho) ---
+#region // --- TARJETA RIVAL (Lado Derecho) ---
 if (instance_exists(oOtherPlayer)) 
 {
     var gw = display_get_gui_width();
@@ -292,8 +314,9 @@ if (instance_exists(oOtherPlayer))
     
     draw_set_alpha(1); // Reset
 }
+#endregion
 
-// --- 1. CONFIGURACIÓN ---
+#region // --- 1. CONFIGURACIÓN ---
 var mid_x = display_get_gui_width() / 2;
 var mid_y = display_get_gui_height() / 2;
 
@@ -385,3 +408,4 @@ if (global.game_over)
 
     draw_set_alpha(1); 
 }
+#endregion

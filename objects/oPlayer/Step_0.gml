@@ -273,50 +273,64 @@ if (health <= 0 && !isDead)
 
 
 
-if (state == PLAYERSTATE.DEAD && has_flag == true) 
+if (state == PLAYERSTATE.DEAD && has_flag == true)
 {
     has_flag = false;
-    
-    // Identificamos qué bandera soltamos
+
     var bandera_a_soltar = (global.myTeam == "AZUL") ? oFlag : oFlag2;
 
-    with (bandera_a_soltar) 
+    with (bandera_a_soltar)
     {
         has_flag = false;
         portador_instancia = noone;
-        // La dejamos exactamente donde estaba el jugador
         x = other.x;
         y = other.y;
-        velocidad_caida = -2; // Un pequeño rebote hacia arriba para que se vea bien
+        velocidad_caida = -2;
     }
-    
-    // IMPORTANTE: Avisar a los demás que la bandera cayó al suelo
-    if (instance_exists(oOtherPlayer)) {
-        SendEventToClient(oOtherPlayer.clientId, "flag_dropped", { 
-            team: global.myTeam, 
-            dropX: x, 
-            dropY: y 
+
+    // ✅ LOCAL (solo el que la soltó)
+    scrAddAlert("Soltaste la bandera!", c_yellow);
+
+    // ✅ ENEMIGO: "el enemigo soltó la bandera"
+    if (global.ONLINE && instance_exists(oOtherPlayer))
+    {
+        SendEventToClient(oOtherPlayer.clientId, "flag_dropped", {
+            team: global.myTeam,
+            dropX: x,
+            dropY: y
         });
+
+        SendEventToClient(oOtherPlayer.clientId, "flag_dropped_enemy", { team: global.myTeam });
     }
 }
 
 
+
 // --- CÓDIGO DE CAPTURA DE BANDERA ---
-// Identificamos cuál es la bandera que debo capturar (la del enemigo)
 var objetivo = (global.myTeam == "AZUL") ? oFlag : oFlag2;
 
-if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD && !has_flag) 
+if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD && !has_flag)
 {
     has_flag = true;
-    with(objetivo) { 
+
+    with (objetivo)
+    {
         has_flag = true;
         portador_instancia = other.id;
     }
 
-    if (instance_exists(oOtherPlayer)) {
+    // ✅ LOCAL SIEMPRE (host o cliente)
+    scrAddAlert("Robaste la bandera!", c_lime);
+
+    // ✅ AVISAR AL ENEMIGO (para que vea "te robaron")
+    if (global.ONLINE && instance_exists(oOtherPlayer))
+    {
+        // Mantén tu evento viejo si lo usas para sincronizar portador:
         SendEventToClient(oOtherPlayer.clientId, "flag_capture", { team: global.myTeam });
+
+        // ✅ NUEVO: alerta específica para el enemigo
+        SendEventToClient(oOtherPlayer.clientId, "flag_stolen", { team: global.myTeam });
     }
-    //audio_play_sound(snd_flag_taken, 10, false); // Pon tu sonido de captura
 }
 
 // --- CÓDIGO DE ANOTACIÓN EN BASE ---

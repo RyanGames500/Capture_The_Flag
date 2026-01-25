@@ -176,7 +176,7 @@ if (weap_check_cd <= 0)
     }
 }
 
-// --- En el Step de un objeto controlador (Solo el Host) ---
+
 if (oBrain.AmIPseudoHost) {
     with(oHammer) {
         // Si el martillo está quieto, hay una pequeña chance de que ataque
@@ -191,4 +191,40 @@ if (oBrain.AmIPseudoHost) {
             }
         }
     }
+}
+	
+//Alertas Actualizar animacioes (Flag Capture etc)
+for (var i = array_length(alerts)-1; i >= 0; i--)
+{
+    var it = alerts[i];
+    it.t++;
+
+    var tin  = alert_in_frames;
+    var th   = alert_hold_frames;
+    var tout = alert_out_frames;
+
+    if (it.t <= tin)
+    {
+        var p = it.t / tin;
+        it.a = p;
+        it.yoff = lerp(-18, 0, p);
+    }
+    else if (it.t <= tin + th)
+    {
+        it.a = 1;
+        it.yoff = 0;
+    }
+    else if (it.t <= tin + th + tout)
+    {
+        var p2 = (it.t - (tin + th)) / tout;
+        it.a = 1 - p2;
+        it.yoff = lerp(0, -12, p2);
+    }
+    else
+    {
+        array_delete(alerts, i, 1);
+        continue;
+    }
+
+    alerts[i] = it;
 }
