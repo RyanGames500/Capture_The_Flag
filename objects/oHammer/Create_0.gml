@@ -11,3 +11,5 @@ timer = tiempo_espera;
 ataca = false;
 // Le damos un ID único basado en su posición para que el Host sepa a cuál se refiere
 myHammerId = string(round(x)) + string(round(y));
+crush_cd = 0;
+hit_this_swing = false;

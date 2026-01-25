@@ -134,23 +134,55 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		break;
 
  
-        case "hit":
+case "hit":
+{
+    if (!instance_exists(oPlayer)) break;
+
+    with (oPlayer)
+    {
+        if (isDead || invulnerable) exit;
+
+        var dmg = real(theMessageStruct.damage);
+
+        // guardar killer/reason
+        if (is_string(theMessageStruct.killer)) last_killer = theMessageStruct.killer;
+        if (is_string(theMessageStruct.reason)) death_reason = theMessageStruct.reason;
+        else death_reason = "pvp";
+
+        health -= dmg;
+
+        if (state != PLAYERSTATE.DEAD)
+        {
+            state = PLAYERSTATE.HIT;
+            if (global.sfx) audio_play_sound(snd_hit, 20, false, .9);
+        }
+    }
+}
+break;
+
+
+
+		case "request_hit":
 		{
-		// SI SOY INVULNERABLE, O ESTOY MUERTO, IGNORO EL GOLPE
-		if (oPlayer.isDead || oPlayer.invulnerable) exit;
-		
-            if (oPlayer.state != PLAYERSTATE.DEAD) {
-                oPlayer.state = PLAYERSTATE.HIT;
-                if(global.sfx==true){audio_play_sound(snd_hit, 20, false, .9);}
-                health -= theMessageStruct.damage;
-                
-                if(health <= 0) {
-                    // Si morimos, avisamos a quien nos mató para que sume su kill
-                    //SendEventToClient(senderClientId, "i_died", {}); 
-                }
-            }
+		    if (!AmIPseudoHost) break;
+
+		    var victimId = theMessageStruct.victimId;
+		    var dmg      = theMessageStruct.damage;
+		    var killer   = string(theMessageStruct.killer);
+		    var reason   = string(theMessageStruct.reason);
+
+		    // (Opcional anti-cheat: validar distancia/linea de tiro luego)
+
+		    // Mandar hit REAL al jugador víctima
+		    SendEventToClient(victimId, "hit", {
+		        damage: dmg,
+		        killer: killer,
+		        reason: reason
+		    });
 		}
-        break;
+		break;
+
+
 
         case "i_died":
 		{
@@ -368,11 +400,12 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 			    }
 			break;
 
-			case "kill_feed":
-			{
-			    scrAddKillFeed(theMessageStruct.msg);
-			}
-			break;
+case "kill_event":
+{
+    scrOnKillEvent(theMessageStruct);
+}
+break;
+
 
 
 

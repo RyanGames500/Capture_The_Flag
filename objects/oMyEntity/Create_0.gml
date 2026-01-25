@@ -36,3 +36,8 @@ damage = 10; // default por si alguien olvida setearlo
 ownerClientId = -1; // opcional, si quieres rastrear atacante
 
 MessageStruct = { damage: damage };
+
+damage = 10;
+owner_name = "";   // <- nombre del que disparó
+owner_id = noone;
+owner_team = "";

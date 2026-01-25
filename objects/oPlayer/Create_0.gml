@@ -97,5 +97,7 @@ spawn_right_x = 591;
 spawn_y_fixed = 400;
 
 crush_cd = 0;
+death_reason = "pvp";      // "pvp" o "crush"
+last_killer  = "";         // nombre del que te mató (para PVP)
 
 

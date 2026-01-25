@@ -21,23 +21,42 @@ entityProperties = {
 
 var target_enemy = instance_place(x, y, oOtherPlayer);
 
-if (target_enemy != noone) 
+// target_enemy es oOtherPlayer (o el que pegaste)
+if (target_enemy != noone)
 {
-    // Usamos la variable directa. 
-    // Si en sharedProperties mandaste "_INV", aquí la buscas como _INV
-    if (target_enemy.invulnerable == false) 
+    if (target_enemy.invulnerable) exit;
+
+    // 🔥 SOLO el host manda HIT real
+    if (global.ONLINE)
     {
-        // SOLO si NO es invulnerable ejecutamos el sonido y la destrucción
-        if(global.sfx==true){audio_play_sound(snd_hit, 20, false, .9);}
-		SendEventToClient(target_enemy.clientId, "hit", { damage: damage });
-       instance_destroy();
-    } 
-    else 
-    {
-        // Si es invulnerable, ignoramos la colisión visualmente
-        image_alpha = 0.5;
+        if (oBrain.AmIPseudoHost)
+        {
+            // Host pega directo y manda killer
+            SendEventToClient(target_enemy.clientId, "hit", {
+                damage: damage,
+                killer: global.myName,     // <- VIENE DE LA BALA
+                reason: "pvp"
+            });
+        }
+        else
+        {
+            // Cliente NO manda hit a la víctima, se lo pide al host
+            SendEventToClient(oOtherPlayer.clientId, "request_hit", {
+                victimId: target_enemy.clientId,
+                damage: damage,
+                killer: global.myName,
+                reason: "pvp"
+            });
+        }
+
+
     }
+
+        instance_destroy();
+
+  
 }
+
 
 
 

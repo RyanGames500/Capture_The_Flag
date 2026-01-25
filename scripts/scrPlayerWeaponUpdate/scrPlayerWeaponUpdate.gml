@@ -63,6 +63,7 @@ function scrPlayerWeaponUpdate()
             recoil_angle += random_range(-angKick, angKick);
 
             var bullet = instance_create_layer(bx, by, "Instances", oMyEntity);
+			bullet.owner_name = global.myName;
             bullet.sprite_index = sprBullet_gun;
             bullet.speed = 7;
             bullet.direction = point_direction(bx, by, mouse_x, mouse_y);
@@ -127,6 +128,7 @@ function scrPlayerWeaponUpdate()
             var shot_dir    = base_dir + rand_spread - recoil_up;
 
             var bullet = instance_create_layer(bx, by, "Instances", oMyEntity);
+			bullet.owner_name = global.myName;
             bullet.sprite_index = sprBullet_smg;
             bullet.speed = 11;
             bullet.direction = shot_dir;
@@ -211,6 +213,7 @@ function scrPlayerWeaponUpdate()
                 ang += random_range(-rand_sp, rand_sp);
 
                 var b = instance_create_layer(bx, by, "Instances", oMyEntity);
+				b.owner_name = global.myName;
                 b.sprite_index = sprBullet_escop;
                 b.speed = spd + random_range(-0.5, 0.5);
                 b.direction = ang;

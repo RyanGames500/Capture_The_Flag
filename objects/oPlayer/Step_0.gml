@@ -1,32 +1,6 @@
-//Compartir con los demas jugadores
-global.sharedProperties = {
-    _x : x,
-    _y : y,
-    _A : image_angle,
-    _H : health,
-	_IA: image_alpha,
-    _IMYS: image_yscale,
-    _IMXS: image_xscale,
-    _ST: state,
-    _SI: sprite_index,
-    _II: (state == PLAYERSTATE.DEAD) ? -1 : image_index,
-    _IS: image_speed,
-    _BS: bullet_created, // Para que los otros "vean" cuando sale la bala de tu arma
-	_KILLS: kills,
-	_VIS: visible,
-	_HF: has_flag,
-	_INV: invulnerable,
-	_NAME: playerName,
-	_ANG: weapon.angle,              // Ángulo del mouse
-    _WSI: guns[weapon.index]? guns[weapon.index].sprite : 0,
-	_AMMO: (guns[weapon.index] != noone) ? guns[weapon.index].ammo : 0,
-	_ATYPE: (guns[weapon.index] != noone) ? guns[weapon.index].ammoType : "",
-	_REL: reloading,
-	_RK: recoil_kick,
-	_RA: recoil_angle,
-	_MELEE: melee_active
 
-};
+
+
 // 1. Obtener Entradas
 key_left  = keyboard_check(ord("A")) 
 key_right = keyboard_check(ord("D")) 
@@ -114,14 +88,19 @@ if (melee_active > 0)
     {
         melee_active = 0;
 
-        if (global.ONLINE)
-        {
-            SendEventToClient(target.clientId, "hit", { damage: melee_damage });
-        }
-        else
-        {
-            target.health -= melee_damage;
-        }
+	if (global.ONLINE)
+	{
+	    SendEventToClient(target.clientId, "hit", {
+	        damage: melee_damage,
+	        killer: global.myName,   // o global.myName
+	        reason: "pvp"
+	    });
+	}
+	else
+	{
+	    target.health -= melee_damage;
+	}
+
     }
 }
 
@@ -245,27 +224,54 @@ if (place_meeting(x, y + vsp, obj_wall)) {
 }
 y += vsp;
 
-if health <= 0 and isDead = false
+if (health <= 0 && !isDead)
 {
-	isDead=true
-	if(global.sfx==true){audio_play_sound(snd_die, 20, false, .9);}
-	state = PLAYERSTATE.DEAD;
-	invulnerable = true;
+    isDead = true;
+    state = PLAYERSTATE.DEAD;
+    invulnerable = true;
     alarm[1] = 120;
-	
-	var killerName = scrGetPlayerName(oPlayer);      // el host local (quien disparó/pegó)
-	var victimName = scrGetPlayerName(target_enemy); // el que murió
 
-	var text = killerName + " eliminó a " + victimName;
+    var localText  = "";
+    var remoteText = "";
 
-	// local
-	scrAddKillFeed(text);
+    // =========================
+    // 1) MUERTE POR MARTILLO
+    // =========================
+    if (death_reason == "crush")
+    {
+        // en tu pantalla:
+        localText = "Moriste aplastado";
 
-	// remoto
-	if (instance_exists(oOtherPlayer))
-	    SendEventToClient(oOtherPlayer.clientId, "kill_feed", { msg: text });
+        // en la pantalla de los demás:
+        remoteText = playerName + " murió aplastado";
+    }
+    // =========================
+    // 2) MUERTE NORMAL (PVP)
+    // =========================
+    else
+    {
+        var killerName = (last_killer != "") ? last_killer : "Alguien";
 
+        // en tu pantalla:
+        localText = killerName + " te eliminó";
+
+        // en la pantalla de los demás:
+        remoteText = killerName + " eliminó a " + playerName;
+    }
+
+    // ====== mostrar local ======
+    scrAddKillFeed(localText);
+
+    // ====== mandar al remoto ======
+    if (global.ONLINE && instance_exists(oOtherPlayer))
+    {
+        SendEventToClient(oOtherPlayer.clientId, "kill_feed", { msg: remoteText });
+    }
 }
+
+
+
+
 
 if (state == PLAYERSTATE.DEAD && has_flag == true) 
 {
@@ -408,32 +414,32 @@ if (!isDead) {
     }
 	}
 
-// Colisión con el martillo
-var inst_hammer = instance_place(x, y, oHammer);
+//Compartir con los demas jugadores
+global.sharedProperties = {
+    _x : x,
+    _y : y,
+    _A : image_angle,
+    _H : health,
+	_IA: image_alpha,
+    _IMYS: image_yscale,
+    _IMXS: image_xscale,
+    _ST: state,
+    _SI: sprite_index,
+    _II: (state == PLAYERSTATE.DEAD) ? -1 : image_index,
+    _IS: image_speed,
+    _BS: bullet_created, // Para que los otros "vean" cuando sale la bala de tu arma
+	_KILLS: kills,
+	_VIS: visible,
+	_HF: has_flag,
+	_INV: invulnerable,
+	_NAME: playerName,
+	_ANG: weapon.angle,              // Ángulo del mouse
+    _WSI: guns[weapon.index]? guns[weapon.index].sprite : 0,
+	_AMMO: (guns[weapon.index] != noone) ? guns[weapon.index].ammo : 0,
+	_ATYPE: (guns[weapon.index] != noone) ? guns[weapon.index].ammoType : "",
+	_REL: reloading,
+	_RK: recoil_kick,
+	_RA: recoil_angle,
+	_MELEE: melee_active
 
-if (inst_hammer != noone) {
-    // Si en MI pantalla el martillo está en el frame de golpe (ej. del 5 al 7)
-    if (inst_hammer.image_index >= 5 && inst_hammer.image_index <= 7) {
-        if (health > 0) {
-            health = 0; 
-            global.sharedProperties._H = 0; // Se sincroniza por el sharedProperties que ya tienes
-            
-            // Mandamos un evento de "Muerte por martillo" para que el otro vea efectos
-            with(oOtherPlayer) {
-                SendEventToClient(id.clientId, "player_squashed", {});
-            }
-        }
-		
-		var victimName = scrGetPlayerName(_target);
-		var text = victimName + " fue aplastado";
-
-		scrAddKillFeed(text);
-
-		if (global.ONLINE && instance_exists(oOtherPlayer))
-		    SendEventToClient(oOtherPlayer.clientId, "kill_feed", { msg: text });
-
-
-
-    }
-}
-
+};
