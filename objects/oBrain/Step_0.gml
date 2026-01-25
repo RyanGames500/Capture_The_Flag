@@ -1,13 +1,39 @@
-//actualizar variables de quiee elimino a quien
-for (var i = array_length(kill_feed) - 1; i >= 0; i--)
+//textos de aviso de bajas
+for (var i = array_length(kill_feed)-1; i >= 0; i--)
 {
-    kill_feed[i].timer--;
+    var it = kill_feed[i];
+    it.t++;
 
-    if (kill_feed[i].timer <= 0)
+    var tin  = kf_in;
+    var th   = kf_hold;
+    var tout = kf_out;
+
+    if (it.t <= tin)
     {
-        array_delete(kill_feed, i, 1);
+        var p = it.t / tin;
+        it.a = p;
+        it.xoff = lerp(-80, 0, p);
+        it.yoff = 0;
     }
+    else if (it.t <= tin + th)
+    {
+        it.a = 1;
+        it.xoff = 0;
+        it.yoff = 0;
+    }
+    else
+    {
+        var p2 = (it.t - (tin + th)) / tout;
+        it.a = 1 - p2;
+        it.xoff = lerp(0, -20, p2);
+        it.yoff = lerp(0, -10, p2);
+    }
+
+    kill_feed[i] = it;
+
+    if (it.t >= it.life) array_delete(kill_feed, i, 1);
 }
+
 
 
 // --- 1. LÓGICA MIENTRAS SE JUEGA (SOLO HOST) ---

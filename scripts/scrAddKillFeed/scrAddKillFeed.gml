@@ -1,11 +1,39 @@
 function scrAddKillFeed(_text)
 {
-    if (!variable_instance_exists(oBrain, "kill_feed")) oBrain.kill_feed = [];
-    if (!variable_instance_exists(oBrain, "kill_feed_max")) oBrain.kill_feed_max = 5;
+    // agarrar timings desde oBrain si existe
+    var tin  = 10;
+    var th   = 90;
+    var tout = 12;
+    var kmax = 5;
 
-    var entry = { text: _text, timer: room_speed * 3 };
-    array_insert(oBrain.kill_feed, 0, entry);
+    if (instance_exists(oBrain))
+    {
+        tin  = oBrain.kf_in;
+        th   = oBrain.kf_hold;
+        tout = oBrain.kf_out;
+        kmax = oBrain.kill_feed_max;
+    }
 
-    if (array_length(oBrain.kill_feed) > oBrain.kill_feed_max)
-        array_resize(oBrain.kill_feed, oBrain.kill_feed_max);
+    // asegurar array en oBrain
+    if (instance_exists(oBrain) && !is_array(oBrain.kill_feed))
+        oBrain.kill_feed = [];
+
+    var item = {
+        text: _text,
+        t: 0,
+        life: tin + th + tout,
+        a: 0,
+        xoff: -80,
+        yoff: 0
+    };
+
+    // insert al inicio (en oBrain)
+    if (instance_exists(oBrain))
+    {
+        array_insert(oBrain.kill_feed, 0, item);
+
+        if (array_length(oBrain.kill_feed) > kmax) {
+            array_delete(oBrain.kill_feed, kmax, array_length(oBrain.kill_feed) - kmax);
+        }
+    }
 }

@@ -2,6 +2,19 @@
 kill_feed = [];      // array de mensajes
 kill_feed_max = 5;   // máximo en pantalla
 
+kf_in  = 10;   // frames entrada
+kf_hold= 90;   // frames visible
+kf_out = 12;   // frames salida
+
+
+// ===== ALERTAS (HUD) =====
+alerts = array_create(0);
+
+// config (ajusta a gusto)
+alert_in_frames  = 10;  // entrada
+alert_hold_frames = 70; // tiempo en pantalla
+alert_out_frames = 12;  // salida
+
 
 #region // --- PRESETS DE ARMAS ---
 weapon_struct_pistola = {

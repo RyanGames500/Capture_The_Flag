@@ -243,7 +243,7 @@ if (health <= 0 && !isDead)
         localText = "Moriste aplastado";
 
         // en la pantalla de los demás:
-        remoteText = playerName + " murió aplastado";
+        remoteText = playerName + " murio aplastado";
     }
     // =========================
     // 2) MUERTE NORMAL (PVP)
@@ -253,10 +253,10 @@ if (health <= 0 && !isDead)
         var killerName = (last_killer != "") ? last_killer : "Alguien";
 
         // en tu pantalla:
-        localText = killerName + " te eliminó";
+        localText = killerName + " te elimino";
 
         // en la pantalla de los demás:
-        remoteText = killerName + " eliminó a " + playerName;
+        remoteText = killerName + " elimino a " + playerName;
     }
 
     // ====== mostrar local ======
@@ -440,6 +440,8 @@ global.sharedProperties = {
 	_REL: reloading,
 	_RK: recoil_kick,
 	_RA: recoil_angle,
-	_MELEE: melee_active
+	_MELEE: melee_active,
+	_TEAM: team
+
 
 };

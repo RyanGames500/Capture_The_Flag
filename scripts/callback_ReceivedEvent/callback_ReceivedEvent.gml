@@ -147,6 +147,7 @@ case "hit":
         // guardar killer/reason
         if (is_string(theMessageStruct.killer)) last_killer = theMessageStruct.killer;
         if (is_string(theMessageStruct.reason)) death_reason = theMessageStruct.reason;
+		
         else death_reason = "pvp";
 
         health -= dmg;
