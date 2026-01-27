@@ -1,3 +1,6 @@
+draw_text(100,100,global.puntos_rojo);
+draw_text(100,200,global.puntos_azul);
+
 #region Dibujar Avisos(Flag Capture)
 var gw = display_get_gui_width();
 var xx3  = gw * 0.5;

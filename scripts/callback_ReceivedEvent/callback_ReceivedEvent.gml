@@ -184,6 +184,7 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		break;
 
 
+
         case "i_died":
 		{
             // "kills" es una variable local, esto está bien para el marcador visual
@@ -210,7 +211,23 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		            portador_instancia = oPlayer.id;
 		        }
 		    }
+			
+			var teamWhoCaptured = theMessageStruct.team;
+		    var notif = instance_create_layer(0, 0, "Instances", oNotification);
 
+		    if (teamWhoCaptured == global.myTeam) {
+		        // MI EQUIPO capturó la bandera enemiga (Mensaje Sexy de éxito)
+		        notif.text = "TIENES LA BANDERA ENEMIGA!";
+		        notif.color = c_aqua; // Azul neón
+		    } else {
+		        // EL ENEMIGO capturó mi bandera (Mensaje Sexy de peligro)
+		        notif.text = "CUIDADO! ROBARON TU BANDERA";
+		        notif.color = c_red; // Rojo sangre/neón
+        
+		        //Sonido de alarma
+		        //if(global.sfx) audio_play_sound(snd_alarm, 10, false);
+		    }
+			
 		}
 		break;
 
@@ -239,34 +256,47 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		}
 			break;
 
-		case "request_point":
-		    if (oBrain.AmIPseudoHost) 
-		    {
-		        var equipoQuePide = theMessageStruct.team;
-		        var banderaAResetear = theMessageStruct.resetFlag;
+case "request_point":
+    {
+        if (oBrain.AmIPseudoHost) {
+            var teamRequest = theMessageStruct.team;
+            var flagToReset = theMessageStruct.resetFlag;
 
-		        // FILTRO DE SEGURIDAD:
-		        // Si el ROJO pide punto, la bandera reseteada DEBE ser la AZUL.
-		        // Si pide punto y dice que reseteó la ROJA (su propia bandera), lo ignoramos.
-		        if (equipoQuePide == "ROJO" && banderaAResetear == "ROJA") exit; 
-		        if (equipoQuePide == "AZUL" && banderaAResetear == "AZUL") exit;
+            // 1. Sumar puntos (Lógica simplificada para evitar fallos de texto)
+            if (teamRequest == "AZUL") {
+                global.puntos_azul++;
+            } else if (teamRequest == "ROJA" || teamRequest == "SISTEMA") {
+                // Si no es azul, asumimos que es el rival (Rojo)
+                // Usamos SISTEMA para cuando solo devuelven la bandera sin anotar
+                if (teamRequest != "SISTEMA") global.puntos_rojo++;
+            }
 
-		        // Si pasó el filtro, sumamos
-		        if (equipoQuePide == "AZUL") global.puntos_azul++; 
-		        else if (equipoQuePide == "ROJO") global.puntos_rojo++;
+            // 2. Reset físico de la bandera en el Host
+            if (flagToReset == "ROJA") {
+                with (oFlag) { x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
+            } else {
+                with (oFlag2){ x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
+            }
 
-		        // Reset físico de la bandera
-		        if (banderaAResetear == "ROJA") {
-		            with (oFlag) { x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
-		        } else {
-		            with (oFlag2){ x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
-		        }
+            // 3. Notificación Sexy para el Host (Él ve que le anotaron)
+            if (teamRequest != "SISTEMA") {
+                var notif = instance_create_layer(0, 0, "Instances", oNotification);
+                notif.target_scale = 1.5;
+                notif.text = "EL ENEMIGO ANOTO!";
+                notif.color = c_orange;
+            }
 
-		        var data = { azul: global.puntos_azul, rojo: global.puntos_rojo, resetFlag: banderaAResetear };
-		        SendEventToClient(senderClientId, "sync_score", data);
-			
-		    }
-		break;
+            // 4. SYNC TOTAL: Esto es lo que saca al Player 2 del estado "esperando"
+            with(oOtherPlayer) {
+                SendEventToClient(id.clientId, "sync_score", {
+                    azul: global.puntos_azul,
+                    rojo: global.puntos_rojo,
+                    resetFlag: flagToReset
+                });
+            }
+        }
+    }
+    break;
 
 
 
@@ -309,13 +339,22 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 				    oOtherPlayer.has_flag = false;
 				}
 
-				// ===== ALERTA HUD (quién anotó) =====
-				var miObjetivo = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
+			// CREAR NOTIFICACIÓN PARA EL CLIENTE
+			    var notif = instance_create_layer(0, 0, "Instances", oNotification);
+			    notif.target_scale = 1.5;
 
-				if (flag_scored == miObjetivo)
-				    scrAddAlert("PUNTO PARA TU EQUIPO!", c_lime);
-				else
-				    scrAddAlert("Punto para el enemigo", c_red);
+			    // LÓGICA SEXY: 
+			    // Si la bandera que se reseteó es la del ENEMIGO, significa que MI EQUIPO anotó.
+			    var miBanderaEnemiga = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
+    
+			    if (flag_scored == miBanderaEnemiga) {
+			        notif.text = "TU EQUIPO ANOTO!";
+			        notif.color = c_lime;
+			    } else {
+			        notif.text = "EL ENEMIGO ANOTO!";
+			        notif.color = c_orange;
+			        //if(global.sfx) audio_play_sound(snd_goal_enemy, 10, false);
+			    }
 
 			}
 		break;
@@ -325,9 +364,10 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		    var equipoQueLaSolto = theMessageStruct.team;
 		    var dropX = theMessageStruct.dropX;
 		    var dropY = theMessageStruct.dropY;
-
+    
+		    // Si el equipo que la soltó es el Azul, la bandera es la Roja (oFlag) y viceversa
 		    var bandera = (equipoQueLaSolto == "AZUL") ? oFlag : oFlag2;
-
+    
 		    with(bandera) {
 		        has_flag = false;
 		        portador_instancia = noone;
@@ -335,30 +375,20 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		        y = dropY;
 		        velocidad_caida = -2;
 		    }
-
+    
+		    // También reseteamos el has_flag del otro jugador en nuestra pantalla
 		    if (instance_exists(oOtherPlayer)) oOtherPlayer.has_flag = false;
-
-		    // ===== ALERTA HUD =====
-		    if (equipoQueLaSolto == global.myTeam)
-		        scrAddAlert("Soltaste la bandera!", c_yellow);
-		    else
-		        scrAddAlert("El enemigo soltó la bandera!", c_blue);
-		}
+			}
 		break;
 
-
+			// --- Dentro del switch(eventName) ---
 		case "finalizar_partida":
 		{
-		    global.game_over = true;
-		    global.winner_team = theMessageStruct.winner;
-
-		    if (global.winner_team == global.myTeam)
-		        scrAddAlert("VICTORIA!", c_lime);
-		    else
-		        scrAddAlert("DERROTA", c_red);
+			  global.game_over = true;
+			  // Cambiamos "data" por "theMessageStruct" que es como se llama en tu función
+			  global.winner_team = theMessageStruct.winner;
 		}
 		break;
-
 			
 			case "host_abandono":
 		    // El host se fue, así que nos desconectamos nosotros también
@@ -400,7 +430,7 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 			    var dir = theMessageStruct.dir; // -1 o 1
 
 			    // Creamos SOLO el efecto visual
-			    var fx = instance_create_layer(xx+10, yy, "Instances", oMeleeFX);
+			    var fx = instance_create_layer(xx, yy, "Instances", oMeleeFX);
 			    fx.image_xscale = dir;
 			}
 			break;
@@ -418,44 +448,13 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 			    }
 			break;
 
-			case "kill_event":
-			{
-			    scrOnKillEvent(theMessageStruct);
-			}
-			break;
+case "kill_event":
+{
+    scrOnKillEvent(theMessageStruct);
+}
+break;
 
-			case "hud_alert":
-			{
-			    // msg: string, col: int (color)
-			    scrAddAlert(theMessageStruct.msg, real(theMessageStruct.col));
-			}
-			break;
 
-			case "flag_stolen":
-			{
-			    // “team” aquí es el equipo que robó
-			    var equipoCapturador = theMessageStruct.team;
-
-			    // Si el que robó NO soy yo, entonces me robaron mi bandera
-			    if (equipoCapturador != global.myTeam)
-			        scrAddAlert("Te robaron la bandera!", c_red);
-			    else
-			        scrAddAlert("Robaste la bandera!", c_lime); // por si lo reutilizas luego
-			}
-			break;
-
-			case "flag_dropped_enemy":
-			{
-			    // team = quien la soltó
-			    var team = theMessageStruct.team;
-
-			    // si la soltó el enemigo:
-			    if (team != global.myTeam)
-			        scrAddAlert("El enemigo soltó la bandera!", c_aqua);
-			    else
-			        scrAddAlert("Soltaste la bandera!", c_yellow);
-			}
-			break;
 
 
     }

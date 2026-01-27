@@ -273,64 +273,50 @@ if (health <= 0 && !isDead)
 
 
 
-if (state == PLAYERSTATE.DEAD && has_flag == true)
+if (state == PLAYERSTATE.DEAD && has_flag == true) 
 {
     has_flag = false;
-
+    
+    // Identificamos qué bandera soltamos
     var bandera_a_soltar = (global.myTeam == "AZUL") ? oFlag : oFlag2;
 
-    with (bandera_a_soltar)
+    with (bandera_a_soltar) 
     {
         has_flag = false;
         portador_instancia = noone;
+        // La dejamos exactamente donde estaba el jugador
         x = other.x;
         y = other.y;
-        velocidad_caida = -2;
+        velocidad_caida = -2; // Un pequeño rebote hacia arriba para que se vea bien
     }
-
-    // ✅ LOCAL (solo el que la soltó)
-    scrAddAlert("Soltaste la bandera!", c_yellow);
-
-    // ✅ ENEMIGO: "el enemigo soltó la bandera"
-    if (global.ONLINE && instance_exists(oOtherPlayer))
-    {
-        SendEventToClient(oOtherPlayer.clientId, "flag_dropped", {
-            team: global.myTeam,
-            dropX: x,
-            dropY: y
+    
+    // IMPORTANTE: Avisar a los demás que la bandera cayó al suelo
+    if (instance_exists(oOtherPlayer)) {
+        SendEventToClient(oOtherPlayer.clientId, "flag_dropped", { 
+            team: global.myTeam, 
+            dropX: x, 
+            dropY: y 
         });
-
-        SendEventToClient(oOtherPlayer.clientId, "flag_dropped_enemy", { team: global.myTeam });
     }
 }
 
 
-
 // --- CÓDIGO DE CAPTURA DE BANDERA ---
+// Identificamos cuál es la bandera que debo capturar (la del enemigo)
 var objetivo = (global.myTeam == "AZUL") ? oFlag : oFlag2;
 
-if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD && !has_flag)
+if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD && !has_flag) 
 {
     has_flag = true;
-
-    with (objetivo)
-    {
+    with(objetivo) { 
         has_flag = true;
         portador_instancia = other.id;
     }
 
-    // ✅ LOCAL SIEMPRE (host o cliente)
-    scrAddAlert("Robaste la bandera!", c_lime);
-
-    // ✅ AVISAR AL ENEMIGO (para que vea "te robaron")
-    if (global.ONLINE && instance_exists(oOtherPlayer))
-    {
-        // Mantén tu evento viejo si lo usas para sincronizar portador:
+    if (instance_exists(oOtherPlayer)) {
         SendEventToClient(oOtherPlayer.clientId, "flag_capture", { team: global.myTeam });
-
-        // ✅ NUEVO: alerta específica para el enemigo
-        SendEventToClient(oOtherPlayer.clientId, "flag_stolen", { team: global.myTeam });
     }
+    //audio_play_sound(snd_flag_taken, 10, false); // Pon tu sonido de captura
 }
 
 // --- CÓDIGO DE ANOTACIÓN EN BASE ---
@@ -372,16 +358,46 @@ if (place_meeting(x, y, miBase) && has_flag)
                 resetFlag: flag_scored
             });
         }
-    } else {
+
+
+// 2. EL HOST CREA SU PROPIA NOTIFICACIÓN
+        var notif = instance_create_layer(0, 0, "Instances", oNotification);
+        notif.target_scale = 1.5;
+        
+        // LÓGICA PARA EL HOST:
+        // flag_scored es la bandera que acaba de llegar a una base.
+        // Si la bandera reseteada es la del enemigo, ¡Anotó el Host!
+        var miObjetivo = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
+        
+        if (flag_scored == miObjetivo) {
+            notif.text = "TU EQUIPO ANOTO!";
+            notif.color = c_lime;
+        } else {
+            // Si se reseteó MI bandera, significa que el PLAYER 2 anotó en mi cara
+            notif.text = "EL ENEMIGO ANOTO!";
+            notif.color = c_orange;
+        }
+		
+		
+    } 
+	else 
+	{
 		score_pending = true;
         // Cliente le pide al host el punto + cuál bandera anotó
         if (instance_exists(oOtherPlayer)) {
-            SendEventToClient(oOtherPlayer.clientId, "request_point", {
-                team: global.myTeam,
-                resetFlag: flag_scored
-            });
+			// Asegúrate de que global.myTeam sea "ROJA" o cámbialo manualmente aquí para probar:
+			SendEventToClient(oOtherPlayer.clientId, "request_point", {
+			    team: (global.myTeam == "AZUL") ? "AZUL" : "ROJA", // Forzamos el nombre correcto
+			    resetFlag: flag_scored
+			});
         }
     }
+	
+	
+
+
+
+
 }
 
 
