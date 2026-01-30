@@ -125,19 +125,20 @@ if (room != rm_stage1) exit;
 // si tienes una variable para “partida activa”, úsala aquí
 // if (!match_running) exit;
 
-// ---- MUNCIÓN: mantener stock ----
+// ---- MANTENER STOCK ----
 if (ammo_check_cd > 0) ammo_check_cd--;
 
 if (ammo_check_cd <= 0)
 {
     ammo_check_cd = ammo_check_every;
 
-    var freeAmmo = scrCountFree(oAmmoPack);
+    // CAMBIO AQUÍ: Contamos entidades tipo "ammo"
+    var freeAmmo = 0;
+    with(oMyEntity) { if (tipo == "ammo") freeAmmo++; }
 
     if (freeAmmo < ammo_min_on_map)
     {
         var need = ammo_min_on_map - freeAmmo;
-
         for (var i = 0; i < need; i++)
         {
             var p = scrFindSpawnPosTopBottom(80, 40, 18);

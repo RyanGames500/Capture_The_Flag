@@ -9,29 +9,25 @@ array_push(oBrain.entitiesActive , entityId);
 /*
 * Add your variables in this entityproperties
 */
+// oMyEntity - CREATE
+tipo = "bala"; // Por defecto, pero el oBrain lo cambiará al crear munición
+net_uid = entityId; // Usamos el ID de entidad como ID de red
+taken = false;
+amount = 0;
 entityProperties = {
 	_entityId : entityId,
+	 _type : tipo,
 	_spd: speed,
 	_SI: sprite_index,
 	_IMXS : image_xscale, // Para que la bandera mire a donde mira el portador
 	_x: x,
 	_y: y,
+	_amount : amount
 	
 
 }
 life = 0;
-tipo="";
-//cuando es tipo arma
-weapon = {
-	sprite: sprite_index,
-	object: object_index,
-	subimage: 1,
-	ammo: 10,//10
-	maxAmmo: 10,//10
-	frequency: room_speed / 1.5,
-	type2: "gun",
-};
-// oMyEntity Create
+
 damage = 10; // default por si alguien olvida setearlo
 ownerClientId = -1; // opcional, si quieres rastrear atacante
 
@@ -41,3 +37,4 @@ damage = 10;
 owner_name = "";   // <- nombre del que disparó
 owner_id = noone;
 owner_team = "";
+

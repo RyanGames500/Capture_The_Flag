@@ -11,4 +11,6 @@ entityProperties = {
 
 }
 
-type1="";
+tipo="";
+amount=0;
+taken = false; // El cerrojo

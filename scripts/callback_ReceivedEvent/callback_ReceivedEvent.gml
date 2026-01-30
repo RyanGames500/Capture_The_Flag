@@ -66,53 +66,6 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		    }
 		}
 		break;
-
-		case "request_ammo":
-		{
-		    if (!oBrain.AmIPseudoHost) exit;
-
-		    var uid = theMessageStruct.uid;
-
-		    var pick = noone;
-		    with (oAmmoPack) {
-		        if (net_uid == uid) { pick = id; break; } // ✅ break aquí
-		    }
-		    if (pick == noone) exit;
-
-		    with (pick) instance_destroy();
-
-		    SendEventToClient(senderClientId, "ammo_taken", { uid: uid });
-		}
-		break;
-
-		case "ammo_taken":
-		{
-		    var uid = theMessageStruct.uid;
-
-		    with (oAmmoPack) {
-		        if (net_uid == uid) { instance_destroy(); break; } // ✅ break aquí
-		    }
-		}
-		break;
-
-		case "spawn_ammo_pack":
-		{
-		    var uid = theMessageStruct.uid;
-
-		    // evitar duplicados
-		    var exists = false;
-		    with (oAmmoPack) {
-		        if (net_uid == uid) { exists = true;}
-		    }
-		    if (exists) exit;
-
-		    var a = instance_create_layer(theMessageStruct.x, theMessageStruct.y, "Instances", oAmmoPack);
-		    a.net_uid = uid;
-		    a.taken   = false;
-		    a.amount  = theMessageStruct.amount;
-		}
-		break;
-
 	
 		case "init_pos_color":
 		{
@@ -133,7 +86,30 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		}	
 		break;
 
- 
+	case "request_hit":
+	{
+	    // Solo el Host procesa peticiones de daño
+	    if (oBrain.AmIPseudoHost) 
+	    {
+	        var victimId = theMessageStruct.victimId;
+	        var dmg      = theMessageStruct.damage;
+	        var killer   = string(theMessageStruct.killer);
+	        var reason   = string(theMessageStruct.reason);
+
+	        // El Host le ordena a la víctima que reciba el golpe
+	        // (Esto disparará el caso "hit" en la pantalla de la víctima)
+	        SendEventToClient(victimId, "hit", {
+	            damage: dmg,
+	            killer: killer,
+	            reason: reason
+	        });
+        
+	        // Opcional: El Host también podría avisarle al atacante que el golpe fue válido
+	        // SendEventToClient(senderClientId, "hit_confirmed", {});
+	    }
+	}
+	break;
+
 		case "hit":
 		{
 		    if (!instance_exists(oPlayer)) break;
@@ -160,30 +136,6 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		    }
 		}
 		break;
-
-
-
-		case "request_hit":
-		{
-		    if (!AmIPseudoHost) break;
-
-		    var victimId = theMessageStruct.victimId;
-		    var dmg      = theMessageStruct.damage;
-		    var killer   = string(theMessageStruct.killer);
-		    var reason   = string(theMessageStruct.reason);
-
-		    // (Opcional anti-cheat: validar distancia/linea de tiro luego)
-
-		    // Mandar hit REAL al jugador víctima
-		    SendEventToClient(victimId, "hit", {
-		        damage: dmg,
-		        killer: killer,
-		        reason: reason
-		    });
-		}
-		break;
-
-
 
         case "i_died":
 		{

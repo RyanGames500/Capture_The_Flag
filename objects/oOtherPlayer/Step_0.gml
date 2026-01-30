@@ -35,7 +35,13 @@ your sharedProperties
 		    image_index = real(SP._II);
 		}
 		image_speed = SP._IS;
-		state = real(SP._ST);	
+		// Si el cronómetro de golpe está activo, ignoramos el estado de la red
+		if (hit_bloqueo_timer > 0) {
+		    hit_bloqueo_timer--;
+		    state = PLAYERSTATE.HIT; // Forzamos el estado visual de dolor
+		} else {
+		    state = real(SP._ST);    // Si no hay golpe, seguimos a la red
+		}	
 		has_flag = SP._HF;
 		kills = SP._KILLS;
 		invulnerable = real(SP._INV);

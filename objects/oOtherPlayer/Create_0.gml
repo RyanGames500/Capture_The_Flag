@@ -40,3 +40,4 @@ recoil_kick=0;
 recoil_angle=0;
 melee_active = 0;
 melee_prev_net = 0;
+hit_bloqueo_timer = 0;
