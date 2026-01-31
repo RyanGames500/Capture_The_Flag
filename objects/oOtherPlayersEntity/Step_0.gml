@@ -29,10 +29,7 @@ var target_y = EP._y;
         image_angle = real(EP._A);
         image_xscale = real(EP._IMXS);
         sprite_index = EP._SI;
-		tipo = EP._type;
-		amount = EP._amount;
- 
-
+		
 }
 }catch(e){
 
@@ -40,3 +37,7 @@ var target_y = EP._y;
 	show_debug_message(e)
 }
 //DO NOT PUT YOUR CODE AFTER THIS LINE
+
+
+
+

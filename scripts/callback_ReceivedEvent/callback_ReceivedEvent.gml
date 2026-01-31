@@ -66,7 +66,56 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		    }
 		}
 		break;
-	
+
+		case "request_ammo":
+		{
+		    if (!oBrain.AmIPseudoHost) exit;
+
+		    var uid = theMessageStruct.uid;
+
+		    var pick = noone;
+		    with (oAmmoPack) {
+		        if (net_uid == uid) { pick = id; break; } // ✅ break aquí
+		    }
+		    if (pick == noone) exit;
+
+		    with (pick) instance_destroy();
+
+		    SendEventToClient(senderClientId, "ammo_taken", { uid: uid });
+		}
+		break;
+
+		case "ammo_taken":
+		{
+		    var uid = theMessageStruct.uid;
+
+		    with (oAmmoPack) {
+		        if (net_uid == uid) { instance_destroy(); break; } // ✅ break aquí
+		    }
+		}
+		break;
+
+case "spawn_ammo_pack":
+    var _uid = theMessageStruct.uid;
+    var _xx  = theMessageStruct.x; // <--- DEBE USAR LA X DEL HOST
+    var _yy  = theMessageStruct.y; // <--- DEBE USAR LA Y DEL HOST
+
+    // Evitar duplicados por ID
+    var exists = false;
+    with (oAmmoPack) {
+        if (net_uid == _uid) { exists = true; break; }
+    }
+    
+    if (!exists) {
+        var a = instance_create_layer(_xx, _yy, "Instances", oAmmoPack);
+        a.net_uid = _uid;
+        a.taken   = false;
+        a.amount  = theMessageStruct.amount;
+        show_debug_message("CLIENTE: Spawn ammo en " + string(_xx) + "," + string(_yy));
+    }
+break;
+
+
 		case "init_pos_color":
 		{
 		    var ordered_x = theMessageStruct.x;

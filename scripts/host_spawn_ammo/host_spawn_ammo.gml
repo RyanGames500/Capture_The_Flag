@@ -2,15 +2,26 @@ function host_spawn_ammo(_x, _y, _amount)
 {
     if (!oBrain.AmIPseudoHost) exit;
 
-    // Creamos la entidad
-    var a = instance_create_layer(_x, _y, "Instances", oMyEntity);
-    
-    // Configuramos los datos de oMyEntity
-    a.tipo = "ammo"; // <--- Le decimos que es munición
+    // 1. Crear localmente en el Host
+    var a = instance_create_layer(_x, _y, "Instances", oAmmoPack);
     a.amount = _amount;
-    a.sprite_index = spr_ammo; // Pon el sprite de tu caja de balas
-    a.life = 0; // Para que no desaparezca por tiempo como las balas
+    a.taken = false;
+
+    if (!variable_global_exists("next_ammo_uid")) global.next_ammo_uid = 1;
+    a.net_uid = global.next_ammo_uid++;
     
-    // El net_uid ahora es el entityId que genera oBrain automáticamente
-    a.net_uid = a.entityId; 
+    // 2. AVISO RADICAL AL CLIENTE
+    if (instance_exists(oOtherPlayer))
+    {
+        // Forzamos que las coordenadas sean floored (enteros) para evitar desfases de decimales
+        var _posX = floor(_x);
+        var _posY = floor(_y);
+        
+        SendEventToClient(oOtherPlayer.clientId, "spawn_ammo_pack", {
+            uid: a.net_uid,
+            x: _posX,
+            y: _posY,
+            amount: _amount
+        });
+    }
 }

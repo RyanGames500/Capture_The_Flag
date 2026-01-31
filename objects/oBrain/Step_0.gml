@@ -107,47 +107,25 @@ if (!weapons_spawned && instance_exists(oOtherPlayer))
     host_spawn_weapon(oGun, p.x, p.y, weapon_struct_smg);
 }
 
-// ---- MUNICIÓN ----
+// ---- MUNICIÓN INICIAL ----
+// Cambiamos el check: si ya spawneamos, no entramos. 
+// Pero nos aseguramos de que el cliente esté listo para recibir.
 if (!ammo_spawned && instance_exists(oOtherPlayer))
 {
     ammo_spawned = true;
-
     for (var k = 0; k < 6; k++)
     {
         var a = scrFindSpawnPosTopBottom(80, 40, 18);
-        host_spawn_ammo(a.x, a.y, 25);
+        host_spawn_ammo(a.x, a.y, 25); // Esta función ya manda el evento
     }
 }
-
-if (!AmIPseudoHost) exit;
-if (room != rm_stage1) exit;
 
 // si tienes una variable para “partida activa”, úsala aquí
 // if (!match_running) exit;
 
-// ---- MANTENER STOCK ----
-if (ammo_check_cd > 0) ammo_check_cd--;
-
-if (ammo_check_cd <= 0)
+// --- TODO ESTO SOLO LO HACE EL HOST ---
+if (oBrain.AmIPseudoHost) 
 {
-    ammo_check_cd = ammo_check_every;
-
-    // CAMBIO AQUÍ: Contamos entidades tipo "ammo"
-    var freeAmmo = 0;
-    with(oMyEntity) { if (tipo == "ammo") freeAmmo++; }
-
-    if (freeAmmo < ammo_min_on_map)
-    {
-        var need = ammo_min_on_map - freeAmmo;
-        for (var i = 0; i < need; i++)
-        {
-            var p = scrFindSpawnPosTopBottom(80, 40, 18);
-            host_spawn_ammo(p.x, p.y, 25);
-        }
-    }
-}
-
-
 if (weap_check_cd > 0) weap_check_cd--;
 
 if (weap_check_cd <= 0)
@@ -173,6 +151,24 @@ if (weap_check_cd <= 0)
             else wstruct = weapon_struct_smg;
 
             host_spawn_weapon(oGun, p.x, p.y, wstruct);
+        }
+    }
+}
+
+    // MANTENER STOCK MUNICIÓN
+    if (ammo_check_cd > 0) ammo_check_cd--;
+    if (ammo_check_cd <= 0)
+    {
+        ammo_check_cd = ammo_check_every;
+        var freeAmmo = scrCountFree(oAmmoPack);
+        if (freeAmmo < ammo_min_on_map)
+        {
+            var need = ammo_min_on_map - freeAmmo;
+            for (var i = 0; i < need; i++)
+            {
+                var p = scrFindSpawnPosTopBottom(80, 40, 18);
+                host_spawn_ammo(p.x, p.y, 25); // El host crea y avisa
+            }
         }
     }
 }

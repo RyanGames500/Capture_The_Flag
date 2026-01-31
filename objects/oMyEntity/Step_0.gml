@@ -13,13 +13,9 @@ entityProperties = {
 	_A : direction,
     _IMXS : image_xscale, // Para que la bandera mire a donde mira el portador
 	_SI: sprite_index,
-	_amount : amount
 
 }
 
-
-// 2. LÓGICA DIFERENCIADA
-if (tipo == "bala") {
 if (life > 0) {
     life--;
     if (life <= 0) instance_destroy();
@@ -73,59 +69,8 @@ with(target_enemy)
 
     instance_destroy(); // La bala desaparece
 }
-} 
-else if (tipo == "ammo") {
-// --- Lógica de Recogida (Para el jugador local oPlayer) ---
-var p = instance_place(x, y, oPlayer);
 
-if (p != noone) 
-{
-    // 0) Si ya fue tomado, no hacer nada
-    if (taken) exit;
 
-    // 1) Debes tener arma equipada (accedemos a las variables de oPlayer 'p')
-    if (p.guns[p.weapon.index] == noone) exit;
-
-    // 2) Tipo de ammo según arma equipada
-    var w = p.guns[p.weapon.index];
-    var t = w.ammoType;
-
-    if (t == "" || is_undefined(t)) exit;
-
-    // 3) LÍMITE de reserva
-    var maxReserve = 999;
-    switch (t) {
-        case "gun":   maxReserve = 120; break;
-        case "smg":   maxReserve = 240; break;
-        case "escop": maxReserve = 180; break;
-        case "shell": maxReserve = 40;  break;
-    }
-
-    var cur = 0;
-    if (variable_struct_exists(p.reserve, t)) cur = p.reserve[$ t];
-
-    if (cur >= maxReserve) exit;
-
-    // 4) ¡TOMADO!
-    taken = true;
-    
-    // Sumar munición al oPlayer
-    var add = amount;
-    p.reserve[$ t] = min(cur + add, maxReserve);
-
-    // Auto-recarga
-    if (!p.reloading && w.ammo <= 0) {
-        with(p) { scrReloadWeapon(); }
-    }
-
-    if (global.sfx) audio_play_sound(snd_ammo_pickup, 1, false);
-
-    // 5) DESTRUCCIÓN SINCRONIZADA (MAGIA DE ENTIDADES)
-    // Al hacer esto, el evento Destroy de oMyEntity se ejecuta y 
-    // le dice al servidor que borre esta entidad en todos lados.
-    instance_destroy(); 
-}
-}
 
 
 
