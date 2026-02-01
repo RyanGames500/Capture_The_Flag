@@ -226,6 +226,17 @@ y += vsp;
 
 if (health <= 0 && !isDead)
 {
+//Soltar arma equipada 
+if (global.ONLINE) {
+    // Solo el Host o el dueño del jugador procesa el drop
+    if (oBrain.AmIPseudoHost) {
+        // El Host hace el drop del arma que llevaba el que murió
+        // 'weapon.index' es el slot actual
+        var weapon_to_drop = guns[weapon.index]; 
+        scr_drop_on_death(weapon_to_drop, x, y);
+    }
+}	
+
     isDead = true;
     state = PLAYERSTATE.DEAD;
     invulnerable = true;

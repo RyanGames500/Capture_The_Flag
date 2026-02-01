@@ -14,7 +14,10 @@ if (global.ONLINE) {
     y = spawn_y;
 }
 
-
+// 2. Resetear armas
+for (var i = 0; i < array_length(guns); i++) {
+    guns[i] = noone;
+}
 health = 100;
 isDead = false;
 state = PLAYERSTATE.IDLE;

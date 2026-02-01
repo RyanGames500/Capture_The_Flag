@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"scr_drop_on_death",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_drop_on_death",
+  "parent":{
+    "name":"Funciones",
+    "path":"folders/Scripts/Funciones.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

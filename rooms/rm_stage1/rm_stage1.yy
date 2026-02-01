@@ -38,6 +38,10 @@
     {"name":"inst_6625C282","path":"rooms/rm_stage1/rm_stage1.yy",},
     {"name":"inst_15433653","path":"rooms/rm_stage1/rm_stage1.yy",},
     {"name":"inst_3359CDC1","path":"rooms/rm_stage1/rm_stage1.yy",},
+    {"name":"inst_2585531D","path":"rooms/rm_stage1/rm_stage1.yy",},
+    {"name":"inst_775FE7A2","path":"rooms/rm_stage1/rm_stage1.yy",},
+    {"name":"inst_3B325698","path":"rooms/rm_stage1/rm_stage1.yy",},
+    {"name":"inst_1AFE06D7","path":"rooms/rm_stage1/rm_stage1.yy",},
   ],
   "isDnd":false,
   "layers":[
@@ -46,6 +50,10 @@
       ],"layers":[],"name":"HUD","properties":[],"resourceType":"GMRInstanceLayer","resourceVersion":"2.0","userdefinedDepth":false,"visible":true,},
     {"$GMRInstanceLayer":"","%Name":"Weapons","depth":100,"effectEnabled":true,"effectType":null,"gridX":32,"gridY":32,"hierarchyFrozen":false,"inheritLayerDepth":false,"inheritLayerSettings":false,"inheritSubLayers":true,"inheritVisibility":true,"instances":[
         {"$GMRInstance":"v4","%Name":"inst_3359CDC1","colour":4294967295,"frozen":false,"hasCreationCode":false,"ignore":false,"imageIndex":0,"imageSpeed":1.0,"inheritCode":false,"inheritedItemId":null,"inheritItemSettings":false,"isDnd":false,"name":"inst_3359CDC1","objectId":{"name":"oMouseIcon_falso","path":"objects/oMouseIcon_falso/oMouseIcon_falso.yy",},"properties":[],"resourceType":"GMRInstance","resourceVersion":"2.0","rotation":0.0,"scaleX":2.6842105,"scaleY":2.6,"x":239.1579,"y":432.0,},
+        {"$GMRInstance":"v4","%Name":"inst_2585531D","colour":4294967295,"frozen":false,"hasCreationCode":true,"ignore":false,"imageIndex":0,"imageSpeed":1.0,"inheritCode":false,"inheritedItemId":null,"inheritItemSettings":false,"isDnd":false,"name":"inst_2585531D","objectId":{"name":"oSpawnPoint","path":"objects/oSpawnPoint/oSpawnPoint.yy",},"properties":[],"resourceType":"GMRInstance","resourceVersion":"2.0","rotation":0.0,"scaleX":1.0,"scaleY":1.0,"x":435.0,"y":561.0,},
+        {"$GMRInstance":"v4","%Name":"inst_775FE7A2","colour":4294967295,"frozen":false,"hasCreationCode":true,"ignore":false,"imageIndex":0,"imageSpeed":1.0,"inheritCode":false,"inheritedItemId":null,"inheritItemSettings":false,"isDnd":false,"name":"inst_775FE7A2","objectId":{"name":"oSpawnPoint","path":"objects/oSpawnPoint/oSpawnPoint.yy",},"properties":[],"resourceType":"GMRInstance","resourceVersion":"2.0","rotation":0.0,"scaleX":1.0,"scaleY":1.0,"x":305.0,"y":428.0,},
+        {"$GMRInstance":"v4","%Name":"inst_3B325698","colour":4294967295,"frozen":false,"hasCreationCode":true,"ignore":false,"imageIndex":0,"imageSpeed":1.0,"inheritCode":false,"inheritedItemId":null,"inheritItemSettings":false,"isDnd":false,"name":"inst_3B325698","objectId":{"name":"oSpawnPoint","path":"objects/oSpawnPoint/oSpawnPoint.yy",},"properties":[],"resourceType":"GMRInstance","resourceVersion":"2.0","rotation":0.0,"scaleX":1.0,"scaleY":1.0,"x":574.0,"y":561.0,},
+        {"$GMRInstance":"v4","%Name":"inst_1AFE06D7","colour":4294967295,"frozen":false,"hasCreationCode":true,"ignore":false,"imageIndex":0,"imageSpeed":1.0,"inheritCode":false,"inheritedItemId":null,"inheritItemSettings":false,"isDnd":false,"name":"inst_1AFE06D7","objectId":{"name":"oSpawnPoint","path":"objects/oSpawnPoint/oSpawnPoint.yy",},"properties":[],"resourceType":"GMRInstance","resourceVersion":"2.0","rotation":0.0,"scaleX":1.0,"scaleY":1.0,"x":435.0,"y":428.0,},
       ],"layers":[],"name":"Weapons","properties":[],"resourceType":"GMRInstanceLayer","resourceVersion":"2.0","userdefinedDepth":false,"visible":true,},
     {"$GMRInstanceLayer":"","%Name":"Instances","depth":200,"effectEnabled":true,"effectType":null,"gridX":32,"gridY":32,"hierarchyFrozen":false,"inheritLayerDepth":false,"inheritLayerSettings":false,"inheritSubLayers":true,"inheritVisibility":true,"instances":[
         {"$GMRInstance":"v4","%Name":"inst_17316497_1","colour":4294967295,"frozen":false,"hasCreationCode":false,"ignore":false,"imageIndex":0,"imageSpeed":1.0,"inheritCode":false,"inheritedItemId":null,"inheritItemSettings":false,"isDnd":false,"name":"inst_17316497_1","objectId":{"name":"obj_base_blue","path":"objects/obj_base_blue/obj_base_blue.yy",},"properties":[],"resourceType":"GMRInstance","resourceVersion":"2.0","rotation":0.0,"scaleX":4.0,"scaleY":2.0,"x":0.0,"y":544.0,},

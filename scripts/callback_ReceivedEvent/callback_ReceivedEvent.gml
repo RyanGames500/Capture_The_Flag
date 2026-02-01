@@ -26,36 +26,31 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		}
 		break;
 
-		case "request_pickup_weapon":
-		{
-		    if (!oBrain.AmIPseudoHost) break;
+case "request_pickup_weapon":
+{
+    if (!oBrain.AmIPseudoHost) break;
 
-		    var uid = theMessageStruct.uid;
+    var uid = theMessageStruct.uid;
 
-		    // buscar pickup real en host
-		    var pick = noone;
-		    with (oGun) {
-		        if (net_uid == uid) { pick = id; break; }
-		    }
-		    if (pick == noone) break;
+    // Buscar el pickup real en el mundo del host
+    var pick = noone;
+    with (oGun) {
+        if (net_uid == uid) { pick = id; break; }
+    }
+    
+    if (pick != noone) 
+    {
+        // 1. Liberamos el punto de spawn para que empiece el cooldown
+        scr_release_spawn_point(pick.x, pick.y);
+        
+        // 2. Lo destruimos (Ya NO dropeamos nada, la vieja desaparece)
+        instance_destroy(pick);
 
-		    // destruir pickup en host
-		    with (pick) instance_destroy();
-
-		    // si fue SWAP, dropear el arma vieja del cliente
-		    if (theMessageStruct.mode == "swap")
-		    {
-		        var oldW = theMessageStruct.oldWeapon;
-		        if (is_struct(oldW))
-		        {
-		            host_drop_weapon(oldW, theMessageStruct.dropX, theMessageStruct.dropY);
-		        }
-		    }
-
-		    // confirmar al cliente que se borre su copia del pickup
-		    SendEventToClient(senderClientId, "weapon_pickup_taken", { uid: uid });
-		}
-		break;
+        // 3. Confirmamos al cliente que lo borre de su pantalla
+        SendEventToClient(senderClientId, "weapon_pickup_taken", { uid: uid });
+    }
+}
+break;
 
 		case "weapon_pickup_taken":
 		{
@@ -67,23 +62,27 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		}
 		break;
 
-		case "request_ammo":
-		{
-		    if (!oBrain.AmIPseudoHost) exit;
+case "request_ammo":
+    if (!oBrain.AmIPseudoHost) exit;
+    var _uid = theMessageStruct.uid;
+    var _inst = noone;
 
-		    var uid = theMessageStruct.uid;
+    with (oAmmoPack) {
+        if (net_uid == _uid) { _inst = id; break; }
+    }
 
-		    var pick = noone;
-		    with (oAmmoPack) {
-		        if (net_uid == uid) { pick = id; break; } // ✅ break aquí
-		    }
-		    if (pick == noone) exit;
+    if (_inst != noone) {
+        // Liberamos el punto usando la nueva función
+        scr_release_spawn_point(_inst.x, _inst.y);
+        
+        // Destruimos y avisamos que se la dio
+        instance_destroy(_inst);
+        SendEventToClient(senderClientId, "ammo_taken", { uid: _uid });
+    }
+break;
 
-		    with (pick) instance_destroy();
 
-		    SendEventToClient(senderClientId, "ammo_taken", { uid: uid });
-		}
-		break;
+
 
 		case "ammo_taken":
 		{
@@ -95,23 +94,63 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		}
 		break;
 
-case "spawn_ammo_pack":
-    var _uid = theMessageStruct.uid;
-    var _xx  = theMessageStruct.x; // <--- DEBE USAR LA X DEL HOST
-    var _yy  = theMessageStruct.y; // <--- DEBE USAR LA Y DEL HOST
+case "sync_spawn_point":
+    var _id = theMessageStruct.pID;
+    var _state = theMessageStruct.isOcupado;
+    
+    with(oSpawnPoint) {
+        if (myID == _id) {
+            ocupado = _state;
+            // IMPORTANTE: El cliente NO debe tocar el cooldown, 
+            // solo esperar a que el host le mande el "spawn_ammo_pack"
+        }
+    }
+break;
 
-    // Evitar duplicados por ID
+case "point_occupied":
+    // ERROR CORREGIDO: Usamos theMessageStruct en lugar de data
+    var _id = theMessageStruct.pointID; 
+    with(oSpawnPoint) {
+        if (myID == _id) ocupado = true;
+    }
+break;
+
+case "point_free":
+    // ERROR CORREGIDO: Usamos theMessageStruct en lugar de data
+    var _id = theMessageStruct.pointID;
+    with(oSpawnPoint) {
+        if (myID == _id) {
+            ocupado = false;
+            cooldown = 600; // Ajusta este tiempo igual que en el host
+        }
+    }
+break;
+
+case "spawn_ammo_pack":
+    // Esto lo ejecuta el CLIENTE al recibir la orden del HOST
+    var uid = theMessageStruct.uid;
+    show_debug_message("--- CLIENTE RECIBIÓ SPAWN: " + string(uid) + " ---");
+
+    // Evitar duplicados
     var exists = false;
     with (oAmmoPack) {
-        if (net_uid == _uid) { exists = true; break; }
+        if (variable_instance_exists(id, "net_uid") && net_uid == uid) { 
+            exists = true; 
+            break; 
+        }
     }
     
     if (!exists) {
-        var a = instance_create_layer(_xx, _yy, "Instances", oAmmoPack);
-        a.net_uid = _uid;
+        // IMPORTANTE: Verifica que los nombres (x, y, amount) sean iguales a los que envías
+        var _x = theMessageStruct.x;
+        var _y = theMessageStruct.y;
+        var _amt = theMessageStruct.amount;
+
+        var a = instance_create_layer(_x, _y, "Instances", oAmmoPack);
+        a.net_uid = uid;
         a.taken   = false;
-        a.amount  = theMessageStruct.amount;
-        show_debug_message("CLIENTE: Spawn ammo en " + string(_xx) + "," + string(_yy));
+        a.amount  = _amt;
+        show_debug_message("+++ MUNICIÓN CREADA EN CLIENTE EN: " + string(_x) + "," + string(_y));
     }
 break;
 

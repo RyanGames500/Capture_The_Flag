@@ -56,27 +56,22 @@ if (global.sfx) audio_play_sound(snd_ammo_pickup, 1, false);
 // 5) Destrucción sincronizada
 var uid = other.net_uid;
 
-if (global.ONLINE)
-{
-    if (oBrain.AmIPseudoHost)
-    {
+if (global.ONLINE) {
+    if (oBrain.AmIPseudoHost) {
+        // El Host libera el punto y destruye
+        scr_release_spawn_point(other.x, other.y); 
         instance_destroy(other);
-
-        if (instance_exists(oOtherPlayer))
+        
+        if (instance_exists(oOtherPlayer)) {
             SendEventToClient(oOtherPlayer.clientId, "ammo_taken", { uid: uid });
-    }
-    else
-    {
-        // Cliente: pide al host que destruya la copia oficial
-        if (instance_exists(oOtherPlayer))
+        }
+    } else {
+        // El Cliente avisa al Host y destruye su copia local
+        if (instance_exists(oOtherPlayer)) {
             SendEventToClient(oOtherPlayer.clientId, "request_ammo", { uid: uid });
-
-        // (Opcional recomendado) destruir local también para evitar re-colisión rarísima por 1 frame:
+        }
         instance_destroy(other);
     }
-    exit;
-}
-else
-{
+} else {
     instance_destroy(other);
 }

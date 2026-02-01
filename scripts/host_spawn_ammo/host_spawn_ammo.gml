@@ -9,13 +9,13 @@ function host_spawn_ammo(_x, _y, _amount)
     if (!variable_global_exists("next_ammo_uid")) global.next_ammo_uid = 1;
     a.net_uid = global.next_ammo_uid++;
     
-    // Si el cliente ya existe, le mandamos la orden
+    // avisar al otro
     if (instance_exists(oOtherPlayer))
     {
         SendEventToClient(oOtherPlayer.clientId, "spawn_ammo_pack", {
             uid: a.net_uid,
-            x: floor(_x), // Enviamos la posición exacta que calculó el Host
-            y: floor(_y),
+            x: _x,
+            y: _y,
             amount: _amount
         });
     }

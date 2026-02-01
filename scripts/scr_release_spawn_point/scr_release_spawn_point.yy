@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"scr_release_spawn_point",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_release_spawn_point",
+  "parent":{
+    "name":"Funciones",
+    "path":"folders/Scripts/Funciones.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}
