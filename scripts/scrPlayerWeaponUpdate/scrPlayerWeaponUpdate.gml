@@ -258,7 +258,7 @@ function scrPlayerWeaponUpdate()
             // Crear el MISIL (Usamos oMyEntity pero le daremos comportamiento de misil)
             var missile = instance_create_layer(bx, by, "Instances", oMyEntity);
             missile.owner_name = global.myName;
-            missile.sprite_index = spr_rocket; // Tu sprite de misil
+            missile.sprite_index = sprBullet_bazooka; // Tu sprite de misil
             missile.speed = 8;                 // Más lento que una bala
             missile.direction = weapon.angle;
             missile.image_angle = weapon.angle;
