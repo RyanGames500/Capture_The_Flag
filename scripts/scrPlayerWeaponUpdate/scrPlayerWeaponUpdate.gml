@@ -67,7 +67,7 @@ function scrPlayerWeaponUpdate()
             bullet.sprite_index = sprBullet_gun;
             bullet.speed = 7;
             bullet.direction = point_direction(bx, by, mouse_x, mouse_y);
-            bullet.life = 25;
+            bullet.life = 35;
             bullet.damage = w.damage;
             bullet.owner_team = global.myTeam;
             bullet.owner_id = id;
@@ -262,7 +262,7 @@ function scrPlayerWeaponUpdate()
             missile.speed = 8;                 // Más lento que una bala
             missile.direction = weapon.angle;
             missile.image_angle = weapon.angle;
-            missile.life = 120;                // Vive bastante hasta chocar
+            missile.life = 200;                // Vive bastante hasta chocar
             missile.damage = w.damage;
             missile.owner_team = global.myTeam;
             missile.owner_id = id;

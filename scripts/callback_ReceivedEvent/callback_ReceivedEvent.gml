@@ -1,6 +1,34 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
 
+case "request_fx_explosion":
+{
+    if (!oBrain.AmIPseudoHost) break;
+
+    var ex = theMessageStruct.ex;
+    var ey = theMessageStruct.ey;
+
+    // Host la crea
+    scrCreateRocketExplosion(ex, ey);
+
+    // Host la reenvía al cliente
+    SendEventToClient(senderClientId, "fx_pearl_explosion", {
+        ex: ex,
+        ey: ey
+    });
+}
+break;
+
+
+case "fx_pearl_explosion":
+{
+    scrCreateRocketExplosion(
+        theMessageStruct.ex,
+        theMessageStruct.ey
+    );
+}
+break;
+
 
 		case "spawn_weapon_pickup":
 		{

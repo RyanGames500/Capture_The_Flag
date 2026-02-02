@@ -67,8 +67,8 @@ weapon_struct_smg = {
 };
 
 weapon_struct_bazooka = {
-    sprite_suelo: spr_bazooka, // Tu sprite de la bazooka en el suelo
-    sprite: spr_bazooka,           // Tu sprite de la bazooka en manos
+    sprite_suelo: spr_bazooka, // sprite de la bazooka en el suelo
+    sprite: spr_bazooka,           // sprite de la bazooka en manos
     object: oGun,
     subimage: 0,
     ammo: 1,                       // Solo 1 misil por carga
