@@ -135,6 +135,7 @@
     {"id":{"name":"ShowAllRooms","path":"scripts/ShowAllRooms/ShowAllRooms.yy",},},
     {"id":{"name":"ViewServerActivity","path":"scripts/ViewServerActivity/ViewServerActivity.yy",},},
     {"id":{"name":"snd_ammo_pickup","path":"sounds/snd_ammo_pickup/snd_ammo_pickup.yy",},},
+    {"id":{"name":"snd_bazooka","path":"sounds/snd_bazooka/snd_bazooka.yy",},},
     {"id":{"name":"snd_die","path":"sounds/snd_die/snd_die.yy",},},
     {"id":{"name":"snd_empy","path":"sounds/snd_empy/snd_empy.yy",},},
     {"id":{"name":"snd_escop","path":"sounds/snd_escop/snd_escop.yy",},},

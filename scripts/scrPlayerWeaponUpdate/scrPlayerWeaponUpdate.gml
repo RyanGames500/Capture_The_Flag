@@ -245,7 +245,7 @@ function scrPlayerWeaponUpdate()
         // ==========================
         else if (t2 == "bazooka")
         {
-            scrCamShake(4); // Sacudida fuerte
+            scrCamShake(10); // Sacudida fuerte
 
             // Recoil masivo hacia atrás
             var push = 3.5;
@@ -284,7 +284,7 @@ function scrPlayerWeaponUpdate()
             guns[weapon.index] = w;
             
             // Sonido potente
-            // if (global.sfx) audio_play_sound(snd_explosion_shot, 1, false);
+            if (global.sfx) audio_play_sound(snd_bazooka, 1, false);
 
             weapon.frequency = w.frequency;
             if (w.ammo <= 0) scrReloadWeapon();
