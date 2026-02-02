@@ -18,7 +18,7 @@ function host_spawn_weapon(_obj_weapon_pickup, _x, _y, _weaponStruct)
     
     // Solo asignamos el sprite si el struct es válido
     if (is_struct(w.weapon)) {
-        w.sprite_index = w.weapon.sprite;
+        w.sprite_index = w.weapon.sprite_suelo;
     }
 
     // avisar al cliente

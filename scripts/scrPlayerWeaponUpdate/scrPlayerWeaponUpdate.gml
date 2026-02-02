@@ -240,6 +240,55 @@ function scrPlayerWeaponUpdate()
 
             if (w.ammo <= 0) scrReloadWeapon();
         }
+		// ==========================
+        // BAZOOKA
+        // ==========================
+        else if (t2 == "bazooka")
+        {
+            scrCamShake(4); // Sacudida fuerte
+
+            // Recoil masivo hacia atrás
+            var push = 3.5;
+            hsp -= lengthdir_x(push, weapon.angle);
+            vsp -= lengthdir_y(push / 2, weapon.angle); // Te empuja un poco arriba también
+
+            recoil_kick += 8;
+            recoil_angle += random_range(-4, 4);
+
+            // Crear el MISIL (Usamos oMyEntity pero le daremos comportamiento de misil)
+            var missile = instance_create_layer(bx, by, "Instances", oMyEntity);
+            missile.owner_name = global.myName;
+            missile.sprite_index = spr_rocket; // Tu sprite de misil
+            missile.speed = 8;                 // Más lento que una bala
+            missile.direction = weapon.angle;
+            missile.image_angle = weapon.angle;
+            missile.life = 120;                // Vive bastante hasta chocar
+            missile.damage = w.damage;
+            missile.owner_team = global.myTeam;
+            missile.owner_id = id;
+            missile.is_rocket = true;          // Flag para identificarlo en la colisión
+
+            // FX de disparo
+            var flash = instance_create_layer(bx, by, "Instances", oMuzzleFlash);
+            flash.sprite_index = sprMuzzle_escop; // Puedes reusar el de escopeta o uno de humo
+            flash.image_angle = weapon.angle;
+            flash.image_xscale = 2;
+
+            if (global.ONLINE && instance_exists(oOtherPlayer)) {
+                SendEventToClient(oOtherPlayer.clientId, "fx_shot", {
+                    x: bx, y: by, ang: weapon.angle, muzzle: "escop" 
+                });
+            }
+
+            w.ammo -= 1;
+            guns[weapon.index] = w;
+            
+            // Sonido potente
+            // if (global.sfx) audio_play_sound(snd_explosion_shot, 1, false);
+
+            weapon.frequency = w.frequency;
+            if (w.ammo <= 0) scrReloadWeapon();
+        }
 
         // si llega un type2 raro, por seguridad:
         else

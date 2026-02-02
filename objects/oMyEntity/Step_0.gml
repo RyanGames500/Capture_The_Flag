@@ -13,6 +13,7 @@ entityProperties = {
 	_A : direction,
     _IMXS : image_xscale, // Para que la bandera mire a donde mira el portador
 	_SI: sprite_index,
+	_IR: is_rocket
 
 }
 
@@ -39,6 +40,51 @@ with(target_enemy)
     }
 }
     
+	// Al morir o chocar la bala
+if (variable_instance_exists(id, "is_rocket") && is_rocket) 
+{
+	// 1. Crear la explosión principal (un objeto con animación)
+    instance_create_layer(x, y, "Instances", oExplosionFX);
+
+    // 2. Crear varias nubes de humo volando en todas direcciones
+    repeat(10) {
+        var sm = instance_create_layer(x, y, "Instances", oSmokeTrail);
+        sm.direction = random(360);
+        sm.speed = random_range(1, 4);
+        sm.fade_speed = 0.02; // El humo de la explosión dura más
+    }
+    
+    // Sacudir cámara de todos los que estén cerca
+    scrCamShake(5);
+
+    // DAÑO EN ÁREA (Explosión)
+    var explosion_radius = 64;
+    
+    // Chequear si el otro jugador está en el rango
+    if (instance_exists(oOtherPlayer)) {
+        var dist = point_distance(x, y, oOtherPlayer.x, oOtherPlayer.y);
+        if (dist < explosion_radius) {
+            // Entre más cerca, más daño (opcional)
+            var damage_mult = 1 - (dist / explosion_radius);
+            var final_dmg = damage * damage_mult;
+            
+            if (global.ONLINE) {
+                SendEventToClient(oOtherPlayer.clientId, "hit", {
+                    damage: final_dmg,
+                    killer: owner_name,
+                    reason: "explosion"
+                });
+            }
+        }
+    }
+    
+    // Daño a ti mismo (¡Cuidado con disparar de cerca!)
+    var dist_me = point_distance(x, y, oPlayer.x, oPlayer.y);
+    if (dist_me < explosion_radius) {
+        oPlayer.health -= 20; // Daño por proximidad
+    }
+}
+	
     // Crear sangre y sonido al momento
     //instance_create_layer(x, y, "Instances", oBloodFX);
     if (global.sfx) audio_play_sound(snd_hit, 20, false, 1.1);
@@ -71,7 +117,19 @@ with(target_enemy)
 }
 
 
-
+// Step Event de oMyEntity
+if (variable_instance_exists(id, "is_rocket") && is_rocket) 
+{
+    // Solo creamos humo cada 2 o 3 frames para no saturar de objetos
+    if (irandom(2) == 0) 
+    {
+        var trail = instance_create_layer(x, y, "Instances", oSmokeTrail);
+        trail.color = c_gray;
+    }
+    
+    // El misil debe rotar hacia donde vuela
+    image_angle = direction;
+}
 
 
 

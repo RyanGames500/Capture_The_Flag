@@ -29,7 +29,7 @@ var target_y = EP._y;
         image_angle = real(EP._A);
         image_xscale = real(EP._IMXS);
         sprite_index = EP._SI;
-		
+		is_rocket = EP._IR;
 }
 }catch(e){
 

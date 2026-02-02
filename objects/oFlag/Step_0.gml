@@ -85,3 +85,30 @@ global.sharedProperties._flagY = y;
         }
     }
 }
+
+
+
+if (has_flag) 
+{
+    // 1. Si alguien la lleva, ponemos el sprite pequeño
+    sprite_index = spr_mano;
+    
+    // 2. Seguir al portador (esto ya lo tienes, pero asegúrate de que esté aquí)
+    if (instance_exists(portador_instancia)) {
+        x = portador_instancia.x;
+        y = portador_instancia.y - 16; // Ajusta la altura para que se vea bien
+        image_xscale = portador_instancia.image_xscale;
+    }
+} 
+else 
+{
+    // 3. Si está suelta (en base o caída), ponemos el sprite grande
+    sprite_index = spr_suela;
+    image_xscale = 1; // Reset de escala
+}
+
+if (has_flag) {
+    depth = portador_instancia.depth - 1; // Que se dibuje por delante del jugador
+} else {
+    depth = -y; // Profundidad normal de objeto en el suelo
+}

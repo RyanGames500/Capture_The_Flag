@@ -227,16 +227,29 @@ y += vsp;
 if (health <= 0 && !isDead)
 {
 //Soltar arma equipada 
-if (global.ONLINE) {
-    // Solo el Host o el dueño del jugador procesa el drop
-    if (oBrain.AmIPseudoHost) {
-        // El Host hace el drop del arma que llevaba el que murió
-        // 'weapon.index' es el slot actual
-        var weapon_to_drop = guns[weapon.index]; 
-        scr_drop_on_death(weapon_to_drop, x, y);
-    }
-}	
-
+if (global.ONLINE) 
+    {
+        var _weapon_to_drop = guns[weapon.index];
+        
+        if (oBrain.AmIPseudoHost) 
+        {
+            // EL HOST MUERE: Llama a la función de drop directamente
+            // Usamos x, y del jugador que acaba de morir
+            scr_drop_on_death(_weapon_to_drop, x, y);
+        } 
+        else 
+        {
+            // EL CLIENTE MUERE: Le pide al host que haga el drop
+            // IMPORTANTE: Asegúrate de que el Host sea el destino (oOtherPlayer en el cliente es el Host)
+            if (instance_exists(oOtherPlayer)) {
+                SendEventToClient(oOtherPlayer.clientId, "request_drop_on_death", {
+                    weapon: _weapon_to_drop,
+                    x: x,
+                    y: y
+                });
+            }
+        }
+	}
     isDead = true;
     state = PLAYERSTATE.DEAD;
     invulnerable = true;
@@ -403,39 +416,45 @@ if (place_meeting(x, y, miBase) && has_flag)
 			});
         }
     }
-	
-	
-
-
-
-
 }
 
 
 // --- DEVOLVER MI BANDERA A BASE ---
-// Mi propia bandera (la que debo proteger)
 var miBandera = (global.myTeam == "AZUL") ? oFlag2 : oFlag;
 
-// Si toco MI bandera, no la tiene nadie y no está en su base...
-if (place_meeting(x, y, miBandera) && !miBandera.has_flag && (miBandera.x != miBandera.spawnX)) 
+if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (miBandera.x != miBandera.spawnX)) 
 {
-	has_flag = false//quitar despues
-    // Le pedimos al Host que la regrese a la base
+    score_pending = true; 
+
     if (oBrain.AmIPseudoHost) {
+        // --- LÓGICA DIRECTA PARA EL HOST ---
         with(miBandera) { x = spawnX; y = spawnY; }
-        // Avisamos a los demás
+        
+        // El Host crea su propia notificación de una vez
+        var notif = instance_create_layer(0, 0, "Instances", oNotification);
+        notif.text = "SALVASTE TU BANDERA!";
+        notif.color = c_aqua;
+        notif.target_scale = 1.2;
+        
+        // Avisa al cliente
         if (instance_exists(oOtherPlayer)) {
             SendEventToClient(oOtherPlayer.clientId, "sync_score", { 
                 azul: global.puntos_azul, 
                 rojo: global.puntos_rojo, 
-                resetFlag: (global.myTeam == "AZUL") ? "AZUL" : "ROJA" 
+                resetFlag: (global.myTeam == "AZUL") ? "AZUL" : "ROJA",
+                reason: "RETORNO" 
             });
         }
-    } else {
-        // Si soy cliente, mando un request para resetearla
+        
+        // IMPORTANTE: El Host se desbloquea a sí mismo
+        score_pending = false; 
+    } 
+    else 
+    {
+        // EL CLIENTE PIDE AL HOST
         if (instance_exists(oOtherPlayer)) {
             SendEventToClient(oOtherPlayer.clientId, "request_point", { 
-                team: "SISTEMA", // Un tag diferente para no sumar puntos
+                team: "SISTEMA", 
                 resetFlag: (global.myTeam == "AZUL") ? "AZUL" : "ROJA" 
             });
         }

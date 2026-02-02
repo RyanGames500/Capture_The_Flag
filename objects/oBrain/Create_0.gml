@@ -18,6 +18,7 @@ alert_out_frames = 12;  // salida
 
 #region // --- PRESETS DE ARMAS ---
 weapon_struct_pistola = {
+	sprite_suelo: spr_gun,
     sprite: spr_gun,
     object: oGun,
     subimage: 0,
@@ -33,6 +34,7 @@ weapon_struct_pistola = {
 };
 
 weapon_struct_escopeta = {
+	sprite_suelo: spr_escopeta,
     sprite: spr_escopeta,
     object: oGun,
     subimage: 0,
@@ -49,6 +51,7 @@ weapon_struct_escopeta = {
 };
 
 weapon_struct_smg = {
+	sprite_suelo: spr_smg,
     sprite: spr_smg,
     object: oGun,
     subimage: 0,
@@ -63,6 +66,21 @@ weapon_struct_smg = {
     reloadTime: room_speed * 1.2,
 };
 
+weapon_struct_bazooka = {
+    sprite_suelo: spr_bazooka, // Tu sprite de la bazooka en el suelo
+    sprite: spr_bazooka,           // Tu sprite de la bazooka en manos
+    object: oGun,
+    subimage: 0,
+    ammo: 1,                       // Solo 1 misil por carga
+    maxAmmo: 1,
+    frequency: room_speed * 1.5,   // Tarda 1.5 seg entre disparos
+    type2: "bazooka",
+    damage: 50,                    // Daño directo alto
+    
+    ammoType: "heavy",
+    clipSize: 5,                   // Reserva total pequeña
+    reloadTime: room_speed * 2.5   // Recarga lenta
+};
 #endregion
 
 

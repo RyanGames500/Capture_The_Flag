@@ -16,3 +16,4 @@ amount=0;
 taken = false; // El cerrojo
 t2=0;
 temp=0;
+is_rocket=false;

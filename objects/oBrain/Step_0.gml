@@ -157,12 +157,13 @@ if (oBrain.AmIPseudoHost)
                 else if (tipo_spawn == "weapon") {
                     var _struct_a_usar = arma_struct;
                     
-                    if (_struct_a_usar == noone) {
-                        var _pick = irandom(2);
-                        // IMPORTANTE: Usamos "other." para sacar las variables del oBrain
+					if (_struct_a_usar == noone) {
+                        // Cambiamos irandom(2) por irandom(3) para incluir la 4ta arma
+                        var _pick = irandom(3);                        
                         if (_pick == 0)      _struct_a_usar = other.weapon_struct_pistola;
                         else if (_pick == 1) _struct_a_usar = other.weapon_struct_escopeta;
-                        else                 _struct_a_usar = other.weapon_struct_smg;
+                        else if (_pick == 2) _struct_a_usar = other.weapon_struct_smg;
+                        else                 _struct_a_usar = other.weapon_struct_bazooka; // <--- Nueva
                     }
                     
                     host_spawn_weapon(oGun, x, y, _struct_a_usar);

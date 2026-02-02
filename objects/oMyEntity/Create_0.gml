@@ -37,4 +37,4 @@ damage = 10;
 owner_name = "";   // <- nombre del que disparó
 owner_id = noone;
 owner_team = "";
-
+is_rocket=false;

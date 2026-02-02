@@ -26,31 +26,31 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 		}
 		break;
 
-case "request_pickup_weapon":
-{
-    if (!oBrain.AmIPseudoHost) break;
+		case "request_pickup_weapon":
+		{
+		    if (!oBrain.AmIPseudoHost) break;
 
-    var uid = theMessageStruct.uid;
+		    var uid = theMessageStruct.uid;
 
-    // Buscar el pickup real en el mundo del host
-    var pick = noone;
-    with (oGun) {
-        if (net_uid == uid) { pick = id; break; }
-    }
+		    // Buscar el pickup real en el mundo del host
+		    var pick = noone;
+		    with (oGun) {
+		        if (net_uid == uid) { pick = id; break; }
+		    }
     
-    if (pick != noone) 
-    {
-        // 1. Liberamos el punto de spawn para que empiece el cooldown
-        scr_release_spawn_point(pick.x, pick.y);
+		    if (pick != noone) 
+		    {
+		        // 1. Liberamos el punto de spawn para que empiece el cooldown
+		        scr_release_spawn_point(pick.x, pick.y);
         
-        // 2. Lo destruimos (Ya NO dropeamos nada, la vieja desaparece)
-        instance_destroy(pick);
+		        // 2. Lo destruimos (Ya NO dropeamos nada, la vieja desaparece)
+		        instance_destroy(pick);
 
-        // 3. Confirmamos al cliente que lo borre de su pantalla
-        SendEventToClient(senderClientId, "weapon_pickup_taken", { uid: uid });
-    }
-}
-break;
+		        // 3. Confirmamos al cliente que lo borre de su pantalla
+		        SendEventToClient(senderClientId, "weapon_pickup_taken", { uid: uid });
+		    }
+		}
+		break;
 
 		case "weapon_pickup_taken":
 		{
@@ -62,25 +62,25 @@ break;
 		}
 		break;
 
-case "request_ammo":
-    if (!oBrain.AmIPseudoHost) exit;
-    var _uid = theMessageStruct.uid;
-    var _inst = noone;
+		case "request_ammo":
+		{    if (!oBrain.AmIPseudoHost) exit;
+		    var _uid = theMessageStruct.uid;
+		    var _inst = noone;
 
-    with (oAmmoPack) {
-        if (net_uid == _uid) { _inst = id; break; }
-    }
+		    with (oAmmoPack) {
+		        if (net_uid == _uid) { _inst = id; break; }
+		    }
 
-    if (_inst != noone) {
-        // Liberamos el punto usando la nueva función
-        scr_release_spawn_point(_inst.x, _inst.y);
+		    if (_inst != noone) {
+		        // Liberamos el punto usando la nueva función
+		        scr_release_spawn_point(_inst.x, _inst.y);
         
-        // Destruimos y avisamos que se la dio
-        instance_destroy(_inst);
-        SendEventToClient(senderClientId, "ammo_taken", { uid: _uid });
-    }
-break;
-
+		        // Destruimos y avisamos que se la dio
+		        instance_destroy(_inst);
+		        SendEventToClient(senderClientId, "ammo_taken", { uid: _uid });
+			}
+		}
+		break;
 
 
 
@@ -94,66 +94,81 @@ break;
 		}
 		break;
 
-case "sync_spawn_point":
-    var _id = theMessageStruct.pID;
-    var _state = theMessageStruct.isOcupado;
+		case "sync_spawn_point":
+		{    var _id = theMessageStruct.pID;
+		    var _state = theMessageStruct.isOcupado;
     
-    with(oSpawnPoint) {
-        if (myID == _id) {
-            ocupado = _state;
-            // IMPORTANTE: El cliente NO debe tocar el cooldown, 
-            // solo esperar a que el host le mande el "spawn_ammo_pack"
-        }
-    }
-break;
+		    with(oSpawnPoint) {
+		        if (myID == _id) {
+		            ocupado = _state;
+		            // IMPORTANTE: El cliente NO debe tocar el cooldown, 
+		            // solo esperar a que el host le mande el "spawn_ammo_pack"
+		        }
+			 }
+			}
+		break;
 
-case "point_occupied":
-    // ERROR CORREGIDO: Usamos theMessageStruct en lugar de data
-    var _id = theMessageStruct.pointID; 
-    with(oSpawnPoint) {
-        if (myID == _id) ocupado = true;
-    }
-break;
+		case "point_occupied":
+		    // ERROR CORREGIDO: Usamos theMessageStruct en lugar de data
+		    var _id = theMessageStruct.pointID; 
+		    with(oSpawnPoint) {
+		        if (myID == _id) ocupado = true;
+		    }
+		break;
 
-case "point_free":
-    // ERROR CORREGIDO: Usamos theMessageStruct en lugar de data
-    var _id = theMessageStruct.pointID;
-    with(oSpawnPoint) {
-        if (myID == _id) {
-            ocupado = false;
-            cooldown = 600; // Ajusta este tiempo igual que en el host
-        }
-    }
-break;
+		case "point_free":
+		    // ERROR CORREGIDO: Usamos theMessageStruct en lugar de data
+		    var _id = theMessageStruct.pointID;
+		    with(oSpawnPoint) {
+		        if (myID == _id) {
+		            ocupado = false;
+		            cooldown = 600; // Ajusta este tiempo igual que en el host
+		        }
+		    }
+		break;
 
-case "spawn_ammo_pack":
-    // Esto lo ejecuta el CLIENTE al recibir la orden del HOST
-    var uid = theMessageStruct.uid;
-    show_debug_message("--- CLIENTE RECIBIÓ SPAWN: " + string(uid) + " ---");
+		case "spawn_ammo_pack":
+		    // Esto lo ejecuta el CLIENTE al recibir la orden del HOST
+		    var uid = theMessageStruct.uid;
+		    show_debug_message("--- CLIENTE RECIBIÓ SPAWN: " + string(uid) + " ---");
 
-    // Evitar duplicados
-    var exists = false;
-    with (oAmmoPack) {
-        if (variable_instance_exists(id, "net_uid") && net_uid == uid) { 
-            exists = true; 
-            break; 
-        }
-    }
+		    // Evitar duplicados
+		    var exists = false;
+		    with (oAmmoPack) {
+		        if (variable_instance_exists(id, "net_uid") && net_uid == uid) { 
+		            exists = true; 
+		            break; 
+		        }
+		    }
     
-    if (!exists) {
-        // IMPORTANTE: Verifica que los nombres (x, y, amount) sean iguales a los que envías
-        var _x = theMessageStruct.x;
-        var _y = theMessageStruct.y;
-        var _amt = theMessageStruct.amount;
+		    if (!exists) {
+		        // IMPORTANTE: Verifica que los nombres (x, y, amount) sean iguales a los que envías
+		        var _x = theMessageStruct.x;
+		        var _y = theMessageStruct.y;
+		        var _amt = theMessageStruct.amount;
 
-        var a = instance_create_layer(_x, _y, "Instances", oAmmoPack);
-        a.net_uid = uid;
-        a.taken   = false;
-        a.amount  = _amt;
-        show_debug_message("+++ MUNICIÓN CREADA EN CLIENTE EN: " + string(_x) + "," + string(_y));
-    }
-break;
+		        var a = instance_create_layer(_x, _y, "Instances", oAmmoPack);
+		        a.net_uid = uid;
+		        a.taken   = false;
+		        a.amount  = _amt;
+		        show_debug_message("+++ MUNICIÓN CREADA EN CLIENTE EN: " + string(_x) + "," + string(_y));
+		    }
+		break;
 
+
+		case "request_drop_on_death":
+		{
+		    // Solo el host procesa esto
+		    if (!oBrain.AmIPseudoHost) break;
+
+		    var _wStruct = theMessageStruct.weapon;
+		    var _xx = theMessageStruct.x;
+		    var _yy = theMessageStruct.y;
+
+		    // El host ejecuta la función de drop en la posición del cliente
+		    scr_drop_on_death(_wStruct, _xx, _yy);
+		}
+		break;
 
 		case "init_pos_color":
 		{
@@ -244,6 +259,7 @@ break;
 
 		    with(banderaObjetivo) {
 		        has_flag = true;
+				sprite_index = spr_mano; //Cambio a sprite pequeño
 		        // Si el que capturó NO soy yo, el portador es el otro
 		        if (equipoCapturador != global.myTeam) {
 		            if (instance_exists(oOtherPlayer)) portador_instancia = oOtherPlayer.id;
@@ -297,107 +313,110 @@ break;
 			break;
 
 case "request_point":
-    {
-        if (oBrain.AmIPseudoHost) {
-            var teamRequest = theMessageStruct.team;
-            var flagToReset = theMessageStruct.resetFlag;
+{
+    if (oBrain.AmIPseudoHost) {
+        var teamRequest = theMessageStruct.team;
+        var flagToReset = theMessageStruct.resetFlag;
+        var isSystem = (teamRequest == "SISTEMA");
 
-            // 1. Sumar puntos (Lógica simplificada para evitar fallos de texto)
-            if (teamRequest == "AZUL") {
-                global.puntos_azul++;
-            } else if (teamRequest == "ROJA" || teamRequest == "SISTEMA") {
-                // Si no es azul, asumimos que es el rival (Rojo)
-                // Usamos SISTEMA para cuando solo devuelven la bandera sin anotar
-                if (teamRequest != "SISTEMA") global.puntos_rojo++;
-            }
+        if (!isSystem) {
+            if (teamRequest == "AZUL") global.puntos_azul++; else global.puntos_rojo++;
+        }
 
-            // 2. Reset físico de la bandera en el Host
-            if (flagToReset == "ROJA") {
-                with (oFlag) { x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
+        // Reset físico
+        if (flagToReset == "ROJA") with (oFlag) { x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
+        else with (oFlag2){ x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
+
+        // El Host crea su propia notificación aquí si él es el que recibe el pedido
+        var notif = instance_create_layer(0, 0, "Instances", oNotification);
+        if (isSystem) {
+            // Si el host es el mismo equipo de la bandera que regresó
+            var miColor = (global.myTeam == "AZUL") ? "AZUL" : "ROJA";
+            if (flagToReset == miColor) {
+                notif.text = "SALVASTE TU BANDERA!";
+                notif.color = c_aqua;
             } else {
-                with (oFlag2){ x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
+                notif.text = "EL ENEMIGO RECUPERO SU BANDERA";
+                notif.color = c_gray;
             }
+        } else {
+            notif.text = "EL ENEMIGO ANOTO!";
+            notif.color = c_orange;
+            notif.target_scale = 1.5;
+        }
 
-            // 3. Notificación Sexy para el Host (Él ve que le anotaron)
-            if (teamRequest != "SISTEMA") {
-                var notif = instance_create_layer(0, 0, "Instances", oNotification);
-                notif.target_scale = 1.5;
-                notif.text = "EL ENEMIGO ANOTO!";
-                notif.color = c_orange;
-            }
-
-            // 4. SYNC TOTAL: Esto es lo que saca al Player 2 del estado "esperando"
-            with(oOtherPlayer) {
-                SendEventToClient(id.clientId, "sync_score", {
-                    azul: global.puntos_azul,
-                    rojo: global.puntos_rojo,
-                    resetFlag: flagToReset
-                });
-            }
+        // MANDAR SYNC AL CLIENTE
+        if (instance_exists(oOtherPlayer)) {
+            SendEventToClient(oOtherPlayer.clientId, "sync_score", {
+                azul: global.puntos_azul,
+                rojo: global.puntos_rojo,
+                resetFlag: flagToReset,
+                reason: (isSystem) ? "RETORNO" : "PUNTO"
+            });
         }
     }
-    break;
+}
+break;
 
 
 
-		case "sync_score":
-		{
-			    global.puntos_azul = theMessageStruct.azul;
-			    global.puntos_rojo = theMessageStruct.rojo;
-
-				oPlayer.score_pending = false;
-				
-			    var flag_scored = theMessageStruct.resetFlag; // "ROJA" o "AZUL"
-
-			    if (flag_scored == "ROJA") {
-			        with (oFlag) {
-			            has_flag = false;
-			            portador_instancia = noone;
-			            x = spawnX; y = spawnY;
-			            velocidad_caida = 0;
-			        }
-			    } else {
-			        with (oFlag2) {
-			            has_flag = false;
-			            portador_instancia = noone;
-			            x = spawnX; y = spawnY;
-			            velocidad_caida = 0;
-			        }
-			    }
-
-
-				// Si la bandera que se reseteó es la que yo traía, me aseguro de soltarla
-			    var miObjetivo = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
-			    if (flag_scored == miObjetivo) {
-			        oPlayer.has_flag = false;
-			    }
+case "sync_score":
+{
+    global.puntos_azul = theMessageStruct.azul;
+    global.puntos_rojo = theMessageStruct.rojo;
+    oPlayer.score_pending = false;
     
-				// Solo le quitamos la bandera al oOtherPlayer si la bandera que se reseteó 
-				// es la que ÉL traía.
-				var objetivoRival = (global.myTeam == "AZUL") ? "AZUL" : "ROJA"; 
-				if (flag_scored == objetivoRival && instance_exists(oOtherPlayer)) {
-				    oOtherPlayer.has_flag = false;
-				}
+    var flag_scored = theMessageStruct.resetFlag; // "ROJA" o "AZUL"
+    var reason = variable_struct_exists(theMessageStruct, "reason") ? theMessageStruct.reason : "PUNTO";
 
-			// CREAR NOTIFICACIÓN PARA EL CLIENTE
-			    var notif = instance_create_layer(0, 0, "Instances", oNotification);
-			    notif.target_scale = 1.5;
+    // --- 1. RESET FÍSICO (Para todos) ---
+    if (flag_scored == "ROJA") {
+        with (oFlag) { has_flag = false; portador_instancia = noone; x = spawnX; y = spawnY; velocidad_caida = 0; }
+    } else {
+        with (oFlag2) { has_flag = false; portador_instancia = noone; x = spawnX; y = spawnY; velocidad_caida = 0; }
+    }
 
-			    // LÓGICA SEXY: 
-			    // Si la bandera que se reseteó es la del ENEMIGO, significa que MI EQUIPO anotó.
-			    var miBanderaEnemiga = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
-    
-			    if (flag_scored == miBanderaEnemiga) {
-			        notif.text = "TU EQUIPO ANOTO!";
-			        notif.color = c_lime;
-			    } else {
-			        notif.text = "EL ENEMIGO ANOTO!";
-			        notif.color = c_orange;
-			        //if(global.sfx) audio_play_sound(snd_goal_enemy, 10, false);
-			    }
+    // --- 2. LÓGICA DE PORTADORES ---
+    var miObjetivo = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
+    if (flag_scored == miObjetivo) oPlayer.has_flag = false;
+    var objetivoRival = (global.myTeam == "AZUL") ? "AZUL" : "ROJA"; 
+    if (flag_scored == objetivoRival && instance_exists(oOtherPlayer)) oOtherPlayer.has_flag = false;
 
-			}
-		break;
+    // --- 3. NOTIFICACIONES DIFERENCIADAS ---
+    var notif = instance_create_layer(0, 0, "Instances", oNotification);
+
+    if (reason == "RETORNO") 
+    {
+        // ¿La bandera que volvió es la de MI equipo?
+        var miColor = (global.myTeam == "AZUL") ? "AZUL" : "ROJA";
+        
+        if (flag_scored == miColor) {
+            // FUE MI EQUIPO
+            notif.text = "SALVASTE TU BANDERA!";
+            notif.color = c_aqua; // Un color que represente éxito aliado
+            notif.target_scale = 1.2;
+        } else {
+            // FUE EL ENEMIGO (Mensaje informativo discreto)
+            notif.text = "EL ENEMIGO RECUPERO SU BANDERA";
+            notif.color = c_gray;
+            notif.target_scale = 0.8;
+        }
+    } 
+    else // CASO: ANOTACIÓN (PUNTO)
+    {
+        notif.target_scale = 1.5;
+        var miBanderaEnemiga = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
+        
+        if (flag_scored == miBanderaEnemiga) {
+            notif.text = "TU EQUIPO ANOTO!";
+            notif.color = c_lime;
+        } else {
+            notif.text = "EL ENEMIGO ANOTO!";
+            notif.color = c_orange;
+        }
+    }
+}
+break;
 
 		case "flag_dropped":
 		{
@@ -410,6 +429,7 @@ case "request_point":
     
 		    with(bandera) {
 		        has_flag = false;
+				sprite_index = spr_suela; // ✅ Cambio a sprite grande
 		        portador_instancia = noone;
 		        x = dropX;
 		        y = dropY;
