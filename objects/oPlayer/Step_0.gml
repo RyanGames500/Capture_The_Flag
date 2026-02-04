@@ -121,7 +121,7 @@ if (canShoot && melee_active <= 0)
 
         hsp = 0;
         sprite_index = spr_player_idle;
-        if (key_jump && place_meeting(x, y + 1, obj_wall)) { vsp = jumpsp; state = PLAYERSTATE.JUMP; }
+        if (key_jump && is_grounded) {is_grounded = false; vsp = jumpsp; state = PLAYERSTATE.JUMP; }
         if (key_right || key_left) state = PLAYERSTATE.WALK;
         break;
 
@@ -138,7 +138,7 @@ if (canShoot && melee_active <= 0)
         if (hsp != 0) image_xscale = sign(hsp) * 1.5;
         
         if (hsp == 0) state = PLAYERSTATE.IDLE;
-        if (key_jump && place_meeting(x, y + 1, obj_wall)) { vsp = jumpsp; state = PLAYERSTATE.JUMP; }
+        if (key_jump && is_grounded) {is_grounded = false;  vsp = jumpsp; state = PLAYERSTATE.JUMP; }
         
         break;
 
@@ -153,7 +153,7 @@ if (canShoot && melee_active <= 0)
         hsp = move * walksp;
         if (hsp != 0) image_xscale = sign(hsp) * 1.5;
         // Aquí podrías poner sprite_index de salto
-        if (place_meeting(x, y + 1, obj_wall)) state = PLAYERSTATE.IDLE;
+        if (is_grounded) state = PLAYERSTATE.IDLE;
         break;
 
     case PLAYERSTATE.SHOT:
@@ -210,6 +210,30 @@ if (plat != noone && vsp >= 0)
 }
 
 
+//plataforma traspasable
+if (vsp > 0)
+{
+    var plat = instance_place(x, y + vsp, oPlataformaPasable);
+    if (plat != noone)
+    {
+        // evitar enganchar desde abajo
+        if (bbox_bottom <= plat.bbox_top + vsp)
+        {
+            y = plat.bbox_top - (bbox_bottom - y);
+            vsp = 0;
+            is_grounded = true;
+
+            if (state == PLAYERSTATE.JUMP)
+                state = PLAYERSTATE.IDLE;
+        }
+		
+    }
+	
+}
+
+
+
+
 
 // 4. Colisiones (El código que ya teníamos)
 if (place_meeting(x + hsp, y, obj_wall)) {
@@ -219,9 +243,17 @@ if (place_meeting(x + hsp, y, obj_wall)) {
 x += hsp;
 
 if (place_meeting(x, y + vsp, obj_wall)) {
-    while (!place_meeting(x, y + sign(vsp), obj_wall)) y += sign(vsp);
+    while (!place_meeting(x, y + sign(vsp), obj_wall)) {
+        y += sign(vsp);
+    }
     vsp = 0;
+    is_grounded = true;
 }
+else
+{
+	is_grounded = false;
+}
+
 y += vsp;
 
 if (health <= 0 && !isDead)

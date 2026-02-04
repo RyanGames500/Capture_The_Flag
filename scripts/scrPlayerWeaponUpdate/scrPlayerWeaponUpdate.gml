@@ -67,7 +67,7 @@ function scrPlayerWeaponUpdate()
             bullet.sprite_index = sprBullet_gun;
             bullet.speed = 7;
             bullet.direction = point_direction(bx, by, mouse_x, mouse_y);
-            bullet.life = 35;
+            bullet.life = 40;
             bullet.damage = w.damage;
             bullet.owner_team = global.myTeam;
             bullet.owner_id = id;
@@ -256,20 +256,20 @@ function scrPlayerWeaponUpdate()
             recoil_angle += random_range(-4, 4);
 
             // Crear el MISIL (Usamos oMyEntity pero le daremos comportamiento de misil)
-            var missile = instance_create_layer(bx, by, "Instances", oMyEntity);
+            var missile = instance_create_layer(bx, by, "Weapons", oMyEntity);
             missile.owner_name = global.myName;
             missile.sprite_index = sprBullet_bazooka; // Tu sprite de misil
             missile.speed = 8;                 // Más lento que una bala
             missile.direction = weapon.angle;
             missile.image_angle = weapon.angle;
-            missile.life = 200;                // Vive bastante hasta chocar
+            missile.life = 500;                // Vive bastante hasta chocar
             missile.damage = w.damage;
             missile.owner_team = global.myTeam;
             missile.owner_id = id;
             missile.is_rocket = true;          // Flag para identificarlo en la colisión
 
             // FX de disparo
-            var flash = instance_create_layer(bx, by, "Instances", oMuzzleFlash);
+            var flash = instance_create_layer(bx, by, "Weapons", oMuzzleFlash);
             flash.sprite_index = sprMuzzle_escop; // Puedes reusar el de escopeta o uno de humo
             flash.image_angle = weapon.angle;
             flash.image_xscale = 2;

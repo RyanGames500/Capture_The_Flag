@@ -26,9 +26,11 @@ var target_y = EP._y;
 		x = real(EP._x);
 		y = real(EP._y);
 	}
-        image_angle = real(EP._A);
+        image_angle = real(EP._IA);
         image_xscale = real(EP._IMXS);
+		image_yscale = real(EP._IMYS);
         sprite_index = EP._SI;
+		direction = EP._A;
 		is_rocket = EP._IR;
 }
 }catch(e){
@@ -40,4 +42,18 @@ var target_y = EP._y;
 
 
 
+// ======================================================
+// 🚀 TRAIL DEL ROCKET (SE VE EN TODAS LAS PANTALLAS)
+// ======================================================
+if (is_rocket)
+{
+    // cada cliente crea su propio humo
+    if (irandom(2) == 0)
+    {
+        var sm = instance_create_layer(x, y, "Instances", oSmokeTrail);
+        sm.color = c_gray;
+    }
+
+    image_angle = direction;
+}
 

@@ -1,6 +1,31 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
 
+
+case "request_rocket_explosion":
+{
+    if (!oBrain.AmIPseudoHost) break;
+
+    var ex = theMessageStruct.ex;
+    var ey = theMessageStruct.ey;
+
+    // 🔥 HOST CREA SU FX
+    scrCreateRocketExplosion(ex, ey);
+
+    // 🔁 HOST LA REENVÍA
+    if (instance_exists(oOtherPlayer))
+    {
+        SendEventToClient(
+            oOtherPlayer.clientId,
+            "fx_pearl_explosion",
+            { ex: ex, ey: ey }
+        );
+    }
+}
+break;
+
+
+
 case "request_fx_explosion":
 {
     if (!oBrain.AmIPseudoHost) break;

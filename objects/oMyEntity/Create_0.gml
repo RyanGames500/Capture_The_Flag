@@ -38,3 +38,7 @@ owner_name = "";   // <- nombre del que disparó
 owner_id = noone;
 owner_team = "";
 is_rocket=false;
+exploded = false;
+net_trail_timer = 0;
+smoke_timer = 0;
+

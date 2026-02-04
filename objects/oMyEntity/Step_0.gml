@@ -10,8 +10,10 @@ entityProperties = {
 	_y        : y,
 	_A        : direction,
     _IMXS     : image_xscale,
+	_IMYS     : image_yscale,
 	_SI       : sprite_index,
-	_IR       : is_rocket
+	_IR       : is_rocket,
+	_IA		  : image_angle
 };
 
 // ======================================================
@@ -23,6 +25,53 @@ if (life > 0) {
         instance_destroy();
     }
 }
+if (place_meeting(x, y, obj_wall) || place_meeting(x, y, oPlataformaPasable))
+{
+    // ============================
+    // 💥 MISIL
+    // ============================
+    if (is_rocket && !exploded)
+    {
+        exploded = true;
+
+        // FX LOCAL (feedback inmediato)
+		//scrCreateRocketExplosion(x,y);
+        instance_create_layer(x, y, "Weapons", oExplosionFX);
+        if (global.sfx) audio_play_sound(snd_pearl_explodes, 10, false);
+        scrCamShake(15);
+
+        // ============================
+        // 🌐 AVISAR AL HOST
+        // ============================
+        if (global.ONLINE)
+        {
+            if (!oBrain.AmIPseudoHost)
+            {
+                // el cliente le dice al host: "exploté aquí"
+                SendEventToClient(
+                    oOtherPlayer.clientId,
+                    "request_rocket_explosion",
+                    { ex: x, ey: y }
+                );
+            }
+            else
+            {
+                // si YO soy el host, sincronizo de una vez
+                if (instance_exists(oOtherPlayer))
+                {
+                    SendEventToClient(
+                        oOtherPlayer.clientId,
+                        "fx_pearl_explosion",
+                        { ex: x, ey: y }
+                    );
+                }
+            }
+        }
+    }
+
+    instance_destroy();
+}
+
 
 // ======================================================
 // 🎯 COLISIÓN CON JUGADOR
@@ -113,18 +162,21 @@ if (target_enemy != noone)
     }
 
     instance_destroy();
-    exit;
 }
 
 // ======================================================
 // 🚀 COMPORTAMIENTO DEL ROCKET (TRAIL + ROTACIÓN)
 // ======================================================
+// ======================================================
+// 🚀 COMPORTAMIENTO DEL ROCKET (TRAIL + ROTACIÓN)
+// ======================================================
 if (is_rocket)
 {
+    // SOLO LOCAL
     if (irandom(2) == 0)
     {
-        var trail = instance_create_layer(x, y, "Instances", oSmokeTrail);
-        trail.color = c_gray;
+        var sm = instance_create_layer(x, y, "Instances", oSmokeTrail);
+        sm.color = c_gray;
     }
 
     image_angle = direction;

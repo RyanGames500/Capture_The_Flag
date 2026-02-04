@@ -69,6 +69,7 @@
     {"id":{"name":"oOtherPlayer","path":"objects/oOtherPlayer/oOtherPlayer.yy",},},
     {"id":{"name":"oOtherPlayersEntity","path":"objects/oOtherPlayersEntity/oOtherPlayersEntity.yy",},},
     {"id":{"name":"oPersistentObject","path":"objects/oPersistentObject/oPersistentObject.yy",},},
+    {"id":{"name":"oPlataformaPasable","path":"objects/oPlataformaPasable/oPlataformaPasable.yy",},},
     {"id":{"name":"oPlayer_1","path":"objects/oPlayer_1/oPlayer_1.yy",},},
     {"id":{"name":"oPlayer_bullet","path":"objects/oPlayer_bullet/oPlayer_bullet.yy",},},
     {"id":{"name":"oPlayer_local","path":"objects/oPlayer_local/oPlayer_local.yy",},},

@@ -86,4 +86,4 @@ if (reloading)
 
 
 
-//draw_text(x,y-10,has_flag)
+draw_text(x,y-10,is_grounded)

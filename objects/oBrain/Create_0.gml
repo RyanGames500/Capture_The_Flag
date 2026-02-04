@@ -42,7 +42,7 @@ weapon_struct_escopeta = {
     maxAmmo: 6,//6
     frequency: room_speed / 1.2,
     type2: "escop",
-	damage: 8,
+	damage: 16,
 	pellets: 7,
 	
     ammoType:"escop",
