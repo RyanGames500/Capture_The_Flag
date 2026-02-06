@@ -168,6 +168,9 @@ if (oBrain.AmIPseudoHost)
                     
                     host_spawn_weapon(oGun, x, y, _struct_a_usar);
                 }
+				else if (tipo_spawn == "powerup") { // <--- NUEVO
+				    host_spawn_powerup(x, y);
+				}
 
                 if (instance_exists(oOtherPlayer)) {
                     SendEventToClient(oOtherPlayer.clientId, "sync_spawn_point", { 
@@ -206,6 +209,12 @@ if (oBrain.AmIPseudoHost)
                     });
                 }
             }
+			
+			with(oPowerUp) {
+			    SendEventToClient(oOtherPlayer.clientId, "spawn_powerup", {
+			        uid: net_uid, x: x, y: y, tipo: tipo
+			    });
+			}
         }
     } else {
         sync_done = false;

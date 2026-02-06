@@ -1,6 +1,27 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
 
+case "barrel_dead":
+{
+    var _bx = theMessageStruct.bx;
+    var _by = theMessageStruct.by;
+
+    // Buscamos el barril más cercano a esa posición (con un margen de error pequeño)
+    var _inst = instance_nearest(_bx, _by, oExplosiveBarrel);
+    
+    if (_inst != noone) {
+        // Verificamos que sea el barril correcto por distancia (por si hay varios cerca)
+        if (point_distance(_inst.x, _inst.y, _bx, _by) < 5) {
+            // Creamos la explosión visual para este jugador también
+            instance_create_layer(_inst.x, _inst.y, "Weapons", oExplosionFX);
+            if (global.sfx) audio_play_sound(sndMissileExplode, 10, false);
+            
+            // Lo destruimos sin ejecutar su código de daño otra vez (porque ya se procesó)
+            instance_destroy(_inst);
+        }
+    }
+}
+break;
 
 case "request_rocket_explosion":
 {
@@ -135,7 +156,64 @@ break;
 		}
 		break;
 
+case "request_powerup":
+{
+    if (!oBrain.AmIPseudoHost) break;
+    var _uid = theMessageStruct.uid;
+    var _tipo = theMessageStruct.tipo;
+    var _sender = senderClientId;
 
+    var _inst = noone;
+    with (oPowerUp) { if (net_uid == _uid) _inst = id; }
+
+    if (_inst != noone) {
+        // 1. El Host le dice al cliente: "¡Es tuyo!"
+        SendEventToClient(_sender, "powerup_taken", { tipo: _tipo, uid: _uid });
+        
+        // 2. El Host avisa a TODOS que el item ya no existe
+        if (instance_exists(oOtherPlayer)) {
+             SendEventToClient(oOtherPlayer.clientId, "destroy_powerup", { uid: _uid });
+        }
+        
+        // 3. El Host lo borra y libera el spawn
+        scr_release_spawn_point(_inst.x, _inst.y);
+        instance_destroy(_inst);
+    }
+}
+break;
+
+case "spawn_powerup":
+{
+    var _uid = theMessageStruct.uid;
+    // Evitar duplicados
+    var exists = false;
+    with(oPowerUp) { if (net_uid == _uid) exists = true; }
+    
+    if (!exists) {
+        var p = instance_create_layer(theMessageStruct.x, theMessageStruct.y, "Instances", oPowerUp);
+        p.net_uid = _uid;
+        p.tipo = theMessageStruct.tipo;
+    }
+}
+break;
+
+case "powerup_taken": // Lo recibe quien lo tocó
+{
+    var _tipo = theMessageStruct.tipo;
+    var _amt = 20; // O el valor que quieras
+    scr_apply_powerup(_tipo, _amt);
+    // Borrar localmente por si acaso
+    var _uid = theMessageStruct.uid;
+    with(oPowerUp) { if(net_uid == _uid) instance_destroy(); }
+}
+break;
+
+case "destroy_powerup": // Lo reciben los demás
+{
+    var _uid = theMessageStruct.uid;
+    with(oPowerUp) { if(net_uid == _uid) instance_destroy(); }
+}
+break;
 
 		case "ammo_taken":
 		{

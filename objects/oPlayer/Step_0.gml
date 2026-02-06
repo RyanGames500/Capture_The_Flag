@@ -1,5 +1,12 @@
 
-
+if(place_meeting(x,y+1,obj_wall) || place_meeting(x,y+1,oPlataformaPasable))
+{
+	is_grounded=true;	
+}
+else
+{
+	is_grounded=false;	
+}
 
 // 1. Obtener Entradas
 key_left  = keyboard_check(ord("A")) 
@@ -119,7 +126,7 @@ if (canShoot && melee_active <= 0)
 }
 
 
-        hsp = 0;
+        //hsp = 0;
         sprite_index = spr_player_idle;
         if (key_jump && is_grounded) {is_grounded = false; vsp = jumpsp; state = PLAYERSTATE.JUMP; }
         if (key_right || key_left) state = PLAYERSTATE.WALK;
@@ -221,7 +228,7 @@ if (vsp > 0)
         {
             y = plat.bbox_top - (bbox_bottom - y);
             vsp = 0;
-            is_grounded = true;
+ 
 
             if (state == PLAYERSTATE.JUMP)
                 state = PLAYERSTATE.IDLE;
@@ -247,12 +254,9 @@ if (place_meeting(x, y + vsp, obj_wall)) {
         y += sign(vsp);
     }
     vsp = 0;
-    is_grounded = true;
+    
 }
-else
-{
-	is_grounded = false;
-}
+
 
 y += vsp;
 
