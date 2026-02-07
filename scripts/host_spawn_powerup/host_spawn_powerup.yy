@@ -1,9 +1,9 @@
 {
   "$GMScript":"v1",
-  "%Name":"Script53",
+  "%Name":"host_spawn_powerup",
   "isCompatibility":false,
   "isDnD":false,
-  "name":"Script53",
+  "name":"host_spawn_powerup",
   "parent":{
     "name":"Funciones",
     "path":"folders/Scripts/Funciones.yy",

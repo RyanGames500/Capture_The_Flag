@@ -85,5 +85,5 @@ if (reloading)
 }
 
 
-
-draw_text(x,y-10,is_grounded)
+draw_text(x,y-20,health)
+draw_text(x,y-10,walksp)
