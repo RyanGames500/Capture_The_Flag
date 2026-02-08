@@ -1,1 +1,0 @@
-tipo = "salud"; // Puede ser "velocidad" o "salud"

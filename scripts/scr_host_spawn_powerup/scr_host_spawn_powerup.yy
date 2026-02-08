@@ -1,9 +1,9 @@
 {
   "$GMScript":"v1",
-  "%Name":"host_spawn_powerup",
+  "%Name":"scr_host_spawn_powerup",
   "isCompatibility":false,
   "isDnD":false,
-  "name":"host_spawn_powerup",
+  "name":"scr_host_spawn_powerup",
   "parent":{
     "name":"Funciones",
     "path":"folders/Scripts/Funciones.yy",

@@ -1,6 +1,123 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
 
+case "spawn_powerup":
+{
+    var uid = theMessageStruct.uid;
+
+    // evitar duplicados
+    var exists = false;
+    with (oPowerupPickup)
+    {
+        if (net_uid == uid) { exists = true; break; }
+    }
+    if (exists) break;
+
+    var p = instance_create_layer(
+        theMessageStruct.x,
+        theMessageStruct.y,
+        "Instances",
+        oPowerupPickup
+    );
+
+    p.net_uid = uid;
+    p.taken   = false;
+    p.tipo    = theMessageStruct.tipo;
+    p.amount  = theMessageStruct.amount;
+    p.duration = theMessageStruct.duration;
+}
+break;
+
+case "request_powerup":
+{
+    if (!oBrain.AmIPseudoHost) break;
+
+    var _uid = theMessageStruct.uid;
+    var _already = variable_struct_exists(theMessageStruct, "already_applied") ? theMessageStruct.already_applied : false;
+    var _inst = noone;
+    with (oPowerupPickup) { if (net_uid == _uid) { _inst = id; break; } }
+
+    if (_inst != noone) {
+        // Mandamos el efecto, pero avisamos si ya fue aplicado localmente
+        SendEventToClient(senderClientId, "apply_powerup", {
+            tipo: _inst.tipo,
+            amount: _inst.amount,
+            duration: _inst.duration,
+            is_prediction: _already // <--- Le devolvemos la bandera
+        });
+
+        // Avisar a los demás
+        if (instance_exists(oOtherPlayer)) {
+            SendEventToClient(oOtherPlayer.clientId, "powerup_taken", { uid: _uid });
+        }
+
+        scr_release_spawn_point(_inst.x, _inst.y);
+        instance_destroy(_inst);
+    }
+}
+break;
+
+case "apply_powerup":
+{
+    // Si el mensaje viene marcado como 'is_prediction', ignoramos la aplicación
+    // porque el oPlayer ya lo hizo en la colisión instantáneamente.
+    var _is_pred = variable_struct_exists(theMessageStruct, "is_prediction") ? theMessageStruct.is_prediction : false;
+    
+    if (_is_pred) {
+        show_debug_message("Confirmación recibida: El Host validó mi predicción.");
+        exit; // Salimos, no aplicamos el efecto dos veces
+    }
+
+    var _tipo = theMessageStruct.tipo; 
+    var _amount = theMessageStruct.amount;
+    var _duration = theMessageStruct.duration;
+
+    with (oPlayer) 
+    {
+        if (_tipo == "speed") {
+            speed_timer = _duration;
+            walksp_mult = 1.5;
+        } 
+        else if (_tipo == "heal") {
+            health = min(100, health + _amount);
+        }
+    }
+}
+break;
+
+case "powerup_fx":
+{
+    var p = oPlayer;
+    if (!instance_exists(p)) break;
+
+    switch (theMessageStruct.tipo)
+    {
+        case "speed":
+            //instance_create_layer(p.x, p.y, "Instances", oSpeedFX);
+        break;
+
+        case "heal":
+            //instance_create_layer(p.x, p.y, "Instances", oHealFX);
+        break;
+    }
+}
+break;
+
+case "powerup_taken":
+{
+    var uid = theMessageStruct.uid;
+
+    with (oPowerupPickup)
+    {
+        if (net_uid == uid)
+        {
+            instance_destroy();
+            break;
+        }
+    }
+}
+break;
+
 		case "barrel_dead":
 		{
 		    var _bx = theMessageStruct.bx;

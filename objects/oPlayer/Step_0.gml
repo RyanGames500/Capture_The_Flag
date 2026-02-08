@@ -17,6 +17,20 @@ key_melee = keyboard_check_pressed(ord("X"));
 if (melee_cd > 0) melee_cd--;
 if (melee_active > 0) melee_active--;
 if (crush_cd > 0) crush_cd--;
+// --- LÓGICA DE VELOCIDAD ---
+if (speed_timer > 0) 
+{
+    speed_timer--;
+    walksp_mult = 1.5; // El multiplicador del Power-Up
+} 
+else 
+{
+    walksp_mult = 1.0; // VELOCIDAD NORMAL (1 = sin cambios)
+}
+
+// Ahora sí, se calcula la velocidad final
+walksp = walksp_base * walksp_mult;
+
 
 if (!mouse_check_button(mb_left)) {
     ak_recoil = max(0, ak_recoil - 0.6); // qué tan rápido se “calma”

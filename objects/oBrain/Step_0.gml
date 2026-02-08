@@ -168,9 +168,16 @@ if (oBrain.AmIPseudoHost)
                     
                     host_spawn_weapon(oGun, x, y, _struct_a_usar);
                 }
-				else if (tipo_spawn == "powerup") { // <--- NUEVO
-				    host_spawn_powerup(x, y);
+				else if (tipo_spawn == "powerup")
+				{
+
+				    var pick = irandom(1); // 0 o 1
+				    var tipo1 = (pick == 0) ? "speed" : "heal";
+
+				    scr_host_spawn_powerup(x, y, tipo1, myID);
 				}
+
+
 
                 if (instance_exists(oOtherPlayer)) {
                     SendEventToClient(oOtherPlayer.clientId, "sync_spawn_point", { 
@@ -209,12 +216,20 @@ if (oBrain.AmIPseudoHost)
                     });
                 }
             }
-			
-			with(oPowerUp) {
+			with (oPowerupPickup)
+			{
 			    SendEventToClient(oOtherPlayer.clientId, "spawn_powerup", {
-			        uid: net_uid, x: x, y: y, tipo: tipo
+			        uid: net_uid,
+			        x: x,
+			        y: y,
+			        tipo: tipo,
+			        duration: duration,
+			        amount: amount,
+			        spawnID: spawn_id
 			    });
 			}
+
+			
         }
     } else {
         sync_done = false;

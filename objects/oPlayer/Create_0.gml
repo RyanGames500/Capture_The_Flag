@@ -48,9 +48,14 @@ melee_damage = 20;  // ajusta
 hsp = 0;
 vsp = 0;
 grv = 0.5;
-walksp = 4;
+walksp = 3;
 jumpsp = -13;
 move=0;
+// --- SPEED BOOST ---
+walksp_base = 3;   // guarda la velocidad original
+walksp_mult = 1;        // multiplicador (1 = normal)
+speed_timer = 0;
+
 invulnerable = false;
 invul_timer = 0;
 // Control de disparo

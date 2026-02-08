@@ -1,4 +1,5 @@
 tipo_spawn = ""; // Puede ser "ammo" o "weapon"
+powerup_tipo = ""; // "speed" | "heal"
 arma_struct = noone;  // Si es arma, qué struct (pistola, etc.)
 cooldown = 0;         // Tiempo para que reaparezca
 ocupado = false;      // ¿Hay algo encima ahora mismo?
