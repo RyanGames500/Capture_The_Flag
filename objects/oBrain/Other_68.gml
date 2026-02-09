@@ -128,11 +128,13 @@ if(type == network_type_data){
 			}
 		}
 		if(!found and real(realData.clientId!=global.clientId)){
-			//show_debug_message("creating a new player")
+			show_debug_message("creating a new player")
 			var new_enemy = instance_create_layer(0,0,global.OtherPlayersLayerName,oOtherPlayer);
 			new_enemy.clientId = real(realData.clientId);
 			new_enemy.roomId = realData.roomId;
 			new_enemy.sharedProperties = realData.SP;
+			// El Host le manda su nombre al Cliente y viceversa
+			SendEventToClient(oOtherPlayer.clientId, "sync_names", { name: global.myName });
 			
 		}
 		break;

@@ -83,7 +83,8 @@ weapon_struct_bazooka = {
 };
 #endregion
 
-
+//efecto fantasma
+global.EffectTrial = true;
 global.ONLINE=false;
 weapons_spawned = false;
 ammo_spawned = false;

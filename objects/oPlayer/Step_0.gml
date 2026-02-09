@@ -1,4 +1,5 @@
 
+
 if(place_meeting(x,y+1,obj_wall) || place_meeting(x,y+1,oPlataformaPasable))
 {
 	is_grounded=true;	
@@ -20,7 +21,12 @@ if (crush_cd > 0) crush_cd--;
 // --- LÓGICA DE VELOCIDAD ---
 if (speed_timer > 0) 
 {
+	//Rastro Fantasma
+	if !alarm[0] and global.EffectTrial
+	alarm[0] = TimeAlarmEffectTrail;
+	//timer
     speed_timer--;
+	//multiplo de velocidad
     walksp_mult = 1.5; // El multiplicador del Power-Up
 } 
 else 
@@ -133,7 +139,12 @@ if (state != PLAYERSTATE.DEAD) {
 
 // 3. Máquina de Estados
 switch (state) {
-    case PLAYERSTATE.IDLE:
+
+    case PLAYERSTATE.INTRO:
+
+    break;
+
+case PLAYERSTATE.IDLE:
 if (canShoot && melee_active <= 0)
 {
     scrPlayerWeaponUpdate();

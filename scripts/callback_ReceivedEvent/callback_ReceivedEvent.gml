@@ -1,6 +1,21 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
+		
+		//INTRO
+case "sync_names":
+{
+    var _nameOther = theMessageStruct.name;
+    
+    // Creamos la intro y le pasamos los datos
+    var intro = instance_create_layer(0, 0, "Instances", oIntroVersus);
+    intro.rivalName = _nameOther;
+    
+    //// Opcional: Bloquear movimiento un momento para que vean la intro
+    //if (instance_exists(oPlayer)) oPlayer.state = PLAYERSTATE.INTRO; 
+}
+break;
 
+//CREAR POWER UPS
 case "spawn_powerup":
 {
     var uid = theMessageStruct.uid;
@@ -34,24 +49,37 @@ case "request_powerup":
 
     var _uid = theMessageStruct.uid;
     var _already = variable_struct_exists(theMessageStruct, "already_applied") ? theMessageStruct.already_applied : false;
+    var _fx_ya_hecho = variable_struct_exists(theMessageStruct, "fx_done") ? theMessageStruct.fx_done : false;
+    
     var _inst = noone;
     with (oPowerupPickup) { if (net_uid == _uid) { _inst = id; break; } }
 
     if (_inst != noone) {
-        // Mandamos el efecto, pero avisamos si ya fue aplicado localmente
+        var _tipo_item = _inst.tipo;
+        var _item_x = _inst.x;
+        var _item_y = _inst.y;
+
+        // 1. Confirmar poder al que lo pidió
         SendEventToClient(senderClientId, "apply_powerup", {
-            tipo: _inst.tipo,
-            amount: _inst.amount,
-            duration: _inst.duration,
-            is_prediction: _already // <--- Le devolvemos la bandera
+            tipo: _tipo_item,
+            is_prediction: _already
         });
 
-        // Avisar a los demás
-        if (instance_exists(oOtherPlayer)) {
-            SendEventToClient(oOtherPlayer.clientId, "powerup_taken", { uid: _uid });
+        // 2. REPARTIR EL EFECTO VISUAL (Powerup_fx)
+        var fxData = { tipo: _tipo_item, targetId: senderClientId };
+
+        // Al que lo tomó: Solo si no lo ha hecho ya
+        if (!_fx_ya_hecho) {
+            SendEventToClient(senderClientId, "powerup_fx", fxData);
         }
 
-        scr_release_spawn_point(_inst.x, _inst.y);
+        // Al Host: El Host ejecuta el efecto localmente para ver al cliente brillar
+        callback_ReceivedEvent("powerup_fx", fxData, -1);
+
+        // A otros clientes (si tuvieras más de 2 jugadores):
+        // Aquí mandarías el fxData a los demás IDs.
+
+        scr_release_spawn_point(_item_x, _item_y);
         instance_destroy(_inst);
     }
 }
@@ -87,18 +115,27 @@ break;
 
 case "powerup_fx":
 {
-    var p = oPlayer;
-    if (!instance_exists(p)) break;
+    var _tipo = theMessageStruct.tipo;
+    var _targetId = theMessageStruct.targetId;
+    var _targetInst = noone;
 
-    switch (theMessageStruct.tipo)
-    {
-        case "speed":
-            //instance_create_layer(p.x, p.y, "Instances", oSpeedFX);
-        break;
+    // ¿El efecto es para MÍ? (Mi ID local vs el ID del objetivo)
+    // Nota: Usa la variable donde guardes TU propio ID de red, 
+    // si no tienes global.clientId, usa la que uses para identificarte.
+    if (global.clientId == _targetId) { 
+        _targetInst = oPlayer.id;
+    } else {
+        // ¿El efecto es para el OTRO?
+        if (instance_exists(oOtherPlayer) && oOtherPlayer.clientId == _targetId) {
+            _targetInst = oOtherPlayer.id;
+        }
+    }
 
-        case "heal":
-            //instance_create_layer(p.x, p.y, "Instances", oHealFX);
-        break;
+    if (instance_exists(_targetInst)) {
+        var _obj = (_tipo == "heal") ? oHealFX : oSpeedFX;
+        repeat(8) {
+            instance_create_layer(_targetInst.x + random_range(-20, 20), _targetInst.y + random_range(-10, 10), "Instances", _obj);
+        }
     }
 }
 break;

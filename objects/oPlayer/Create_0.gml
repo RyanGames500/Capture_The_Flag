@@ -12,10 +12,11 @@ enum PLAYERSTATE {
     JUMP,
     SHOT,
     HIT,
-    DEAD
+    DEAD,
+	INTRO
 }
 
-state = PLAYERSTATE.IDLE;
+state = PLAYERSTATE.INTRO;
 
 //ARMAS - 1 a la ves
 guns = [noone];

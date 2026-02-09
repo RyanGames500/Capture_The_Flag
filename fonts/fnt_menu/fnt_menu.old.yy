@@ -192,13 +192,14 @@
   "maintainGms1Font":false,
   "name":"fnt_menu",
   "parent":{
-    "name":"Capture de Flag",
-    "path":"Capture de Flag.yyp",
+    "name":"Fuentes",
+    "path":"folders/Fuentes.yy",
   },
   "pointRounding":0,
   "ranges":[
     {"lower":32,"upper":127,},
     {"lower":9647,"upper":9647,},
+    {"lower":9889,"upper":9889,},
   ],
   "regenerateBitmap":false,
   "resourceType":"GMFont",
