@@ -1,4 +1,6 @@
-// other = oAmmoPack
+// ======================================================
+// 📦 COLISIÓN CON MUNICIÓN (oAmmoPack)
+// ======================================================
 
 // 0) si ya fue tomado, no hacer nada
 if (other.taken) exit;
@@ -13,11 +15,10 @@ var t = w.ammoType;
 // si el arma no tiene ammoType, sal
 if (t == "" || is_undefined(t)) exit;
 
-// 3) LÍMITE opcional de reserva (para que no agarre si ya está full)
-// (ajusta estos límites como quieras)
+// 3) LÍMITE de reserva de balas
 var maxReserve = 999;
 switch (t) {
-    case "gun": maxReserve = 120; break;
+    case "gun":    maxReserve = 120; break;
     case "smg":    maxReserve = 240; break;
     case "escop":  maxReserve = 180; break;
     case "shell":  maxReserve = 40;  break;
@@ -27,33 +28,40 @@ switch (t) {
 var cur = 0;
 if (variable_struct_exists(reserve, t)) cur = reserve[$ t];
 
-// si ya estás full, ignora el pickup
-if (cur >= maxReserve) exit;
+// Si ya estás full de BALAS, no salimos aún, porque quizás necesitas GRANADAS
+// Pero si estás full de AMBAS cosas, ahí sí salimos.
+var can_take_ammo = (cur < maxReserve);
+var can_take_nades = (granadas < 5); // Límite de 5 granadas
 
-// 4) Ahora SÍ lo tomamos: marcar tomado ya
+if (!can_take_ammo && !can_take_nades) exit;
+
+// 4) MARCAR COMO TOMADO
 other.taken = true;
 other.visible = false;
 
-// sumar sin pasarte del límite
-var add = other.amount;
-reserve[$ t] = min(cur + add, maxReserve);
+// --- A) SUMAR BALAS (Si hay espacio) ---
+if (can_take_ammo) {
+    var add = other.amount;
+    reserve[$ t] = min(cur + add, maxReserve);
+    
+    // Sonido normal de balas
+    if (global.sfx) audio_play_sound(snd_ammo_pickup, 1, false);
+}
 
-// ✅ auto-recarga si estoy vacío y ahora sí tengo reserva
-if (guns[weapon.index] != noone)
-{
-    var ww = guns[weapon.index];
-
-    if (!reloading && ww.ammo <= 0)
-    {
-        scrReloadWeapon();
+// --- B) SUMAR GRANADA (30% de Probabilidad) ---
+if (can_take_nades) {
+    if (random(100) < 30) {
+        granadas += 1;
     }
 }
 
+// ✅ AUTO-RECARGA si el cargador estaba vacío
+if (!reloading && w.ammo <= 0)
+{
+    scrReloadWeapon();
+}
 
-// sonido 1 vez
-if (global.sfx) audio_play_sound(snd_ammo_pickup, 1, false);
-
-// 5) Destrucción sincronizada
+// 5) DESTRUCCIÓN SINCRONIZADA ONLINE
 var uid = other.net_uid;
 
 if (global.ONLINE) {
@@ -75,3 +83,4 @@ if (global.ONLINE) {
 } else {
     instance_destroy(other);
 }
+

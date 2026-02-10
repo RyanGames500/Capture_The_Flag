@@ -181,3 +181,88 @@ if (is_rocket)
 
     image_angle = direction;
 }
+
+
+
+// --- Lógica de Gravedad y Movimiento ---
+if (variable_instance_exists(id, "is_granada") && is_granada) {
+	
+    vsp += 0.22; // Gravedad
+    image_angle -= hsp * 5; // Girará hacia atrás si va a la izquierda y adelante si va a la derecha
+    
+// 1. CHEQUEAR COLISIÓN CON EL ENEMIGO
+    var target_enemy = instance_place(x + hsp, y + vsp, oOtherPlayer);
+    
+    // 2. CHEQUEAR COLISIÓN CON EL SUELO/PARED
+    var hit_wall = place_meeting(x + hsp, y + vsp, obj_wall);
+
+    // 3. CHEQUEAR PLATAFORMAS TRASPASABLES (Solo si caemos sobre ellas)
+    // Suponiendo que tu objeto de plataforma se llama oPlataforma o similar
+    var hit_platform = false;
+    var platform_id = instance_place(x, y + vsp, oPlataformaPasable); // Cambia oPlataforma por el nombre real de tu objeto
+    if (platform_id != noone && vsp > 0) {
+        // Solo explota si la granada está por encima de la plataforma (vsp > 0)
+        hit_platform = true;
+    }
+
+    // Si toca a un enemigo O toca una pared/suelo O toca plataforma... ¡BUM!
+    if (target_enemy != noone || hit_wall || hit_platform) {
+        
+        is_rocket = true; 
+        
+        // --- EFECTOS LOCALES Y EXPLOSIÓN ---
+        // Aquí ya tienes el true, ¡perfecto!
+        scrCreateRocketExplosion(x, y, true); 
+  
+        if (global.sfx) audio_play_sound(snd_hit, 20, false, 1.1);
+
+        // --- SI LE PEGASTE A UN ENEMIGO DIRECTO, APLICAR DAÑO ---
+        if (target_enemy != noone && !target_enemy.invulnerable) {
+            
+            // Predicción visual (ponerlo en estado HIT)
+            with (target_enemy) {
+                if (state != PLAYERSTATE.DEAD) {
+                    hit_bloqueo_timer = 10;
+                    state = PLAYERSTATE.HIT;
+                    image_index = 0;
+                }
+            }
+
+            // Sincronización de Daño Online (Tu sistema autoritativo)
+            if (global.ONLINE) {
+                if (oBrain.AmIPseudoHost) {
+                    SendEventToClient(target_enemy.clientId, "hit", {
+                        damage: damage,
+                        killer: global.myName,
+                        reason: "granada"
+                    });
+                } else {
+                    SendEventToClient(oOtherPlayer.clientId, "request_hit", {
+                        victimId: target_enemy.clientId,
+                        damage: damage,
+                        killer: global.myName,
+                        reason: "granada"
+                    });
+                }
+            }
+        }
+
+        // --- SINCRONIZACIÓN DE LA EXPLOSIÓN (Visual para el otro) ---
+        if (global.ONLINE) {
+            var explosionData = { ex: x, ey: y, isNade: true };
+            if (oBrain.AmIPseudoHost) {
+                if (instance_exists(oOtherPlayer)) 
+                    SendEventToClient(oOtherPlayer.clientId, "fx_pearl_explosion", explosionData);
+            } else {
+                SendEventToClient(oOtherPlayer.clientId, "request_fx_explosion", explosionData);
+            }
+        }
+
+        instance_destroy(); // Destruir la entidad granada tras explotar
+        exit; // Salir para no procesar más movimiento
+    }
+    
+    // Aplicar movimiento si no ha explotado
+    x += hsp;
+    y += vsp;
+}

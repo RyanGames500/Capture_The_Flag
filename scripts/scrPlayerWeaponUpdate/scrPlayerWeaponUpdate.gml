@@ -289,7 +289,71 @@ function scrPlayerWeaponUpdate()
             weapon.frequency = w.frequency;
             if (w.ammo <= 0) scrReloadWeapon();
         }
+		// ==========================
+        // M4 RIFLE (Asalto)
+        // ==========================
+        else if (t2 == "m4")
+        {
+            scrCamShake(1.5); // Más impacto que la SMG
 
+            // Recoil Visual (el arma se mueve hacia atrás)
+            var kick = 4.5;
+            var angKick = 1.5;
+            recoil_kick += kick;
+            recoil_angle += random_range(-angKick, angKick);
+
+            // --- Lógica de Dispersión (Spread) ---
+            var base_dir = point_direction(bx, by, mouse_x, mouse_y);
+            
+            // Reusamos ak_recoil para la precisión, pero la M4 es más estable
+            ak_recoil = clamp(ak_recoil + 0.7, 0, 8); 
+            
+            var rand_spread = random_range(-1.5, 1.5); // Un poco más precisa de base
+            var recoil_up    = ak_recoil * random_range(0.4, 0.7);
+            var shot_dir     = base_dir + rand_spread - recoil_up;
+
+            // Crear la bala
+            var bullet = instance_create_layer(bx, by, "Instances", oMyEntity);
+            bullet.owner_name = global.myName;
+            bullet.sprite_index = sprBullet_smg; // Puedes reusar o crear sprBullet_m4
+            bullet.speed = 14; // Más veloz que la SMG
+            bullet.direction = shot_dir;
+            bullet.image_angle = shot_dir;
+            bullet.life = 45; // Más rango
+            bullet.damage = w.damage;
+            bullet.owner_team = global.myTeam;
+            bullet.owner_id = id;
+
+            // FX Visual (Muzzle y Tracer)
+            var flash = instance_create_layer(bx, by, "Instances", oMuzzleFlash);
+            flash.sprite_index = sprMuzzle_smg; // O sprMuzzle_m4 si tienes uno
+            flash.image_angle = weapon.angle;
+            flash.image_xscale = 1.2;
+
+            var tr = instance_create_layer(bx, by, "Instances", oTracer);
+            tr.x1 = bx; tr.y1 = by;
+            tr.x2 = bx + lengthdir_x(len * 1.5, dir); // Tracer más largo
+            tr.y2 = by + lengthdir_y(len * 1.5, dir);
+
+            // Sincronización Online
+            if (global.ONLINE && instance_exists(oOtherPlayer))
+            {
+                SendEventToClient(oOtherPlayer.clientId, "fx_shot", {
+                    x: bx, y: by, ang: weapon.angle, muzzle: "smg" // Usamos el muzzle de smg como fallback
+                });
+            }
+
+            // Consumo de munición
+            w.ammo -= 1;
+            guns[weapon.index] = w;
+
+            // Sonido (Asegúrate de tener un snd_m4 o usa snd_smg por ahora)
+            if (global.sfx) audio_play_sound(snd_M4, 1, false, 0.8); // Pitch un poco más bajo
+
+            weapon.frequency = w.frequency;
+
+            if (w.ammo <= 0) scrReloadWeapon();
+        }
         // si llega un type2 raro, por seguridad:
         else
         {

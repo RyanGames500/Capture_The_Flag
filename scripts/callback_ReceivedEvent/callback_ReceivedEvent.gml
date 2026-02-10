@@ -1,19 +1,37 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
-		
+
+	case "spawn_granada":
+	    // 1. Extraer los datos del paquete
+	    var _gx    = theMessageStruct.gx;
+	    var _gy    = theMessageStruct.gy;
+	    var _angle = theMessageStruct.angle;
+
+	    // 2. Crear la granada visual para el cliente
+	    // Usamos el mismo objeto oGranada, pero hay que darle velocidad
+	    var gra = instance_create_layer(_gx, _gy, "Instances", oGranada);
+    
+	    // Calculamos la misma trayectoria para que se vea igual en ambas pantallas
+	    gra.hsp = lengthdir_x(8, _angle);
+	    gra.vsp = lengthdir_y(8, _angle) - 2;
+    
+	    // IMPORTANTE: Si la granada hace daño por colisión, 
+	    // asegúrate de que solo el dueño o el host valide el daño para no duplicarlo.
+	    break;
+	
 		//INTRO
-case "sync_names":
-{
-    var _nameOther = theMessageStruct.name;
+		case "sync_names":
+		{
+		    var _nameOther = theMessageStruct.name;
     
-    // Creamos la intro y le pasamos los datos
-    var intro = instance_create_layer(0, 0, "Instances", oIntroVersus);
-    intro.rivalName = _nameOther;
+		    // Creamos la intro y le pasamos los datos
+		    var intro = instance_create_layer(0, 0, "Instances", oIntroVersus);
+		    intro.rivalName = _nameOther;
     
-    //// Opcional: Bloquear movimiento un momento para que vean la intro
-    //if (instance_exists(oPlayer)) oPlayer.state = PLAYERSTATE.INTRO; 
-}
-break;
+		    //// Opcional: Bloquear movimiento un momento para que vean la intro
+		    //if (instance_exists(oPlayer)) oPlayer.state = PLAYERSTATE.INTRO; 
+		}
+		break;
 
 //CREAR POWER UPS
 case "spawn_powerup":
@@ -199,33 +217,39 @@ break;
 		}
 		break;
 
-		case "request_fx_explosion":
-		{
-		    if (!oBrain.AmIPseudoHost) break;
+case "request_fx_explosion":
+{
+    if (!oBrain.AmIPseudoHost) break;
 
-		    var ex = theMessageStruct.ex;
-		    var ey = theMessageStruct.ey;
+    var ex = theMessageStruct.ex;
+    var ey = theMessageStruct.ey;
+    var _isNade = variable_struct_exists(theMessageStruct, "isNade") ? theMessageStruct.isNade : false;
 
-		    // Host la crea
-		    scrCreateRocketExplosion(ex, ey);
+    // Host la crea
+    scrCreateRocketExplosion(ex, ey, _isNade);
 
-		    // Host la reenvía al cliente
-		    SendEventToClient(senderClientId, "fx_pearl_explosion", {
-		        ex: ex,
-		        ey: ey
-		    });
-		}
-		break;
+    // Host la reenvía al cliente incluyendo el dato
+    SendEventToClient(senderClientId, "fx_pearl_explosion", {
+        ex: ex,
+        ey: ey,
+        isNade: _isNade
+    });
+}
+break;
 
 
-		case "fx_pearl_explosion":
-		{
-		    scrCreateRocketExplosion(
-		        theMessageStruct.ex,
-		        theMessageStruct.ey
-		    );
-		}
-		break;
+case "fx_pearl_explosion":
+{
+    // Si 'isNade' no existe en el mensaje, nos devuelve 'false' automáticamente
+    var _isNade = variable_struct_exists(theMessageStruct, "isNade") ? theMessageStruct.isNade : false;
+
+    scrCreateRocketExplosion(
+        theMessageStruct.ex,
+        theMessageStruct.ey,
+        _isNade 
+    );
+}
+break;
 
 
 		case "spawn_weapon_pickup":

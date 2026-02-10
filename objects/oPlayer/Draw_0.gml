@@ -84,6 +84,6 @@ if (reloading)
     );
 }
 
-
+/*
 draw_text(x,y-20,health)
 draw_text(x,y-10,walksp)

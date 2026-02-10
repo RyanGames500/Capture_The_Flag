@@ -13,7 +13,7 @@ else
 key_left  = keyboard_check(ord("A")) 
 key_right = keyboard_check(ord("D")) 
 key_jump  = keyboard_check_pressed(ord("W")) 
-key_melee = keyboard_check_pressed(ord("X"));
+key_melee = mouse_check_button_pressed(mb_right);
  
 if (melee_cd > 0) melee_cd--;
 if (melee_active > 0) melee_active--;
@@ -85,23 +85,7 @@ if (global.ONLINE && spawn_lock > 0)
 // se recalcula SIEMPRE
 var canShoot = (!has_flag) && (state != PLAYERSTATE.DEAD);
 
-// =========================
-// MELEE SIEMPRE (tenga o no bandera)
-// =========================
-if (key_melee && melee_cd <= 0 && state != PLAYERSTATE.DEAD)
-{
-    melee_cd = room_speed div 3;
-    melee_active = 6;
 
-    if (global.sfx) audio_play_sound(snd_melee, 1, false);
-
-    if (global.ONLINE && instance_exists(oOtherPlayer))
-    {
-        SendEventToClient(oOtherPlayer.clientId, "fx_melee", {
-            x: x, y: y, dir: sign(image_xscale)
-        });
-    }
-}
 
 // daño melee mientras está activo
 if (melee_active > 0)
@@ -131,6 +115,62 @@ if (melee_active > 0)
     }
 }
 
+if (mouse_check_button_pressed(mb_right)) 
+{
+    
+    // CASO A: TIENE GRANADAS
+// --- LANZAMIENTO HACIA EL MOUSE ---
+if (granadas > 0) {
+    granadas -= 1;
+    melee_cd = room_speed div 3;
+	melee_active = 6;
+    // Ángulo hacia el mouse desde el jugador
+    var dir = point_direction(x, y - 16, mouse_x, mouse_y); 
+    var fuerza = 8; // Qué tan fuerte la lanza
+
+    var gx = x + lengthdir_x(15, dir);
+    var gy = y - 16 + lengthdir_y(15, dir);
+    
+    var nade = instance_create_layer(gx, gy, "Instances", oMyEntity);
+    
+    // Variables base
+    nade.owner_name = global.myName;
+    nade.sprite_index = spr_granada; 
+    nade.damage = 40;
+    nade.owner_team = global.myTeam;
+    nade.owner_id = id;
+    
+    // --- AQUÍ ESTÁ EL TRUCO PARA LA DIRECCIÓN ---
+    nade.is_granada = true;
+    nade.is_rocket = true;
+    
+    // Calculamos hsp y vsp según la dirección del mouse
+    nade.hsp = lengthdir_x(fuerza, dir);
+    nade.vsp = lengthdir_y(fuerza, dir) - 2; // El "-2" le da un poco de arco hacia arriba siempre
+    
+}
+    
+    // CASO B: NO TIENE GRANADAS -> ATAQUE MELEE NORMAL
+    else {
+	// =========================
+	// MELEE SIEMPRE (tenga o no bandera)
+	// =========================
+	if (melee_cd <= 0 && state != PLAYERSTATE.DEAD)
+	{
+	    melee_cd = room_speed div 3;
+	    melee_active = 6;
+
+	    if (global.sfx) audio_play_sound(snd_melee, 1, false);
+
+	    if (global.ONLINE && instance_exists(oOtherPlayer))
+	    {
+	        SendEventToClient(oOtherPlayer.clientId, "fx_melee", {
+	            x: x, y: y, dir: sign(image_xscale)
+	        });
+	    }
+	}
+    }
+}
 
 // 2. Aplicar Gravedad (Aplica para casi todos los estados)
 if (state != PLAYERSTATE.DEAD) {

@@ -81,6 +81,22 @@ weapon_struct_bazooka = {
     clipSize: 5,                   // Reserva total pequeña
     reloadTime: room_speed * 2.5   // Recarga lenta
 };
+
+weapon_struct_m4 = {
+    sprite_suelo: spr_M4, // Asegúrate de tener este sprite
+    sprite: spr_M4,
+    object: oGun,
+    subimage: 0,
+    ammo: 30,
+    maxAmmo: 30,
+    frequency: room_speed / 10, // Cadencia entre SMG y Pistola
+    type2: "m4",
+    damage: 15, // Más daño que la SMG (12) pero menos que la Escopeta (16)
+    
+    ammoType: "rifle",
+    clipSize: 30,
+    reloadTime: room_speed * 1.5 // Recarga un poquito más lenta que la pistola
+};
 #endregion
 
 //efecto fantasma
@@ -131,5 +147,5 @@ weap_min_on_map   = 3;   // opcional: mínimo de armas en el mapa
 weap_check_cd     = 0;
 weap_check_every  = 90;  // cada 1.5s
 
-ConnectToServer();
+//ConnectToServer();
 

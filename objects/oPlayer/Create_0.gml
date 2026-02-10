@@ -34,6 +34,7 @@ reserve = {
     shell: 0
 };
 
+granadas = 0; // Cantidad inicial
 
 reloading = false;
 reload_timer = 0;

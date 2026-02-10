@@ -154,20 +154,22 @@ if (oBrain.AmIPseudoHost)
                 if (tipo_spawn == "ammo") {
                     host_spawn_ammo(x, y, 25); 
                 } 
-                else if (tipo_spawn == "weapon") {
-                    var _struct_a_usar = arma_struct;
-                    
-					if (_struct_a_usar == noone) {
-                        // Cambiamos irandom(2) por irandom(3) para incluir la 4ta arma
-                        var _pick = irandom(3);                        
-                        if (_pick == 0)      _struct_a_usar = other.weapon_struct_pistola;
-                        else if (_pick == 1) _struct_a_usar = other.weapon_struct_escopeta;
-                        else if (_pick == 2) _struct_a_usar = other.weapon_struct_smg;
-                        else                 _struct_a_usar = other.weapon_struct_bazooka; // <--- Nueva
-                    }
-                    
-                    host_spawn_weapon(oGun, x, y, _struct_a_usar);
-                }
+				else if (tipo_spawn == "weapon") {
+				    var _struct_a_usar = arma_struct;
+    
+				    if (_struct_a_usar == noone) {
+				        // Subimos a irandom(4) porque ahora tenemos 5 opciones (0, 1, 2, 3, 4)
+				        var _pick = irandom(4);                        
+        
+				        if (_pick == 0)      _struct_a_usar = other.weapon_struct_pistola;
+				        else if (_pick == 1) _struct_a_usar = other.weapon_struct_escopeta;
+				        else if (_pick == 2) _struct_a_usar = other.weapon_struct_smg;
+				        else if (_pick == 3) _struct_a_usar = other.weapon_struct_bazooka;
+				        else                 _struct_a_usar = other.weapon_struct_m4; // <--- LA NUEVA M4
+				    }
+    
+				    host_spawn_weapon(oGun, x, y, _struct_a_usar);
+				}
 				else if (tipo_spawn == "powerup")
 				{
 
