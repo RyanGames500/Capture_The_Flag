@@ -266,3 +266,66 @@ if (variable_instance_exists(id, "is_granada") && is_granada) {
     x += hsp;
     y += vsp;
 }
+
+
+//MODO DE JUEGO ATRACO SOLAMENTE
+// ======================================================
+// 🏰 COLISIÓN CON BASE (NUEVO MODO DESTROY)
+// ======================================================
+var target_base = instance_place(x, y, oBase);
+
+if (target_base != noone)
+{
+    // Solo hacemos daño si la base NO es de nuestro equipo
+    if (target_base.myTeam != global.myTeam) 
+    {
+        // 💥 EFECTO DE EXPLOSIÓN (Si es rocket/granada)
+        if (is_rocket) {
+            scrCreateRocketExplosion(x, y);
+            
+            if (global.ONLINE) {
+                var explosionData = { ex: x, ey: y };
+                if (oBrain.AmIPseudoHost) {
+                    if (instance_exists(oOtherPlayer)) 
+                        SendEventToClient(oOtherPlayer.clientId, "fx_pearl_explosion", explosionData);
+                } else {
+                    SendEventToClient(oOtherPlayer.clientId, "request_fx_explosion", explosionData);
+                }
+            }
+        }
+
+        // 🔊 SONIDO
+        if (global.sfx) audio_play_sound(snd_hit, 20, false, 0.8);
+
+        // 🧠 DAÑO A LA BASE (Networking)
+        if (global.ONLINE)
+        {
+            if (oBrain.AmIPseudoHost)
+            {
+                // El Host le resta vida directamente y avisa al cliente
+                target_base.hp -= damage;
+                if (instance_exists(oOtherPlayer)) {
+                    SendEventToClient(oOtherPlayer.clientId, "sync_base_hp", { 
+                        team: target_base.myTeam, 
+                        hp: target_base.hp 
+                    });
+                }
+            }
+            else
+            {
+                // El Cliente le pide al Host que le quite vida a la base
+                SendEventToClient(oOtherPlayer.clientId, "request_base_damage", { 
+                    team: target_base.myTeam, 
+                    dmg: damage 
+                });
+            }
+        }
+        else 
+        {
+            // Si juegas offline
+            target_base.hp -= damage;
+        }
+
+        instance_destroy(); // La bala desaparece al tocar la base
+    }
+}

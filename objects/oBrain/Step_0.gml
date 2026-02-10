@@ -34,6 +34,8 @@ for (var i = array_length(kill_feed)-1; i >= 0; i--)
     if (it.t >= it.life) array_delete(kill_feed, i, 1);
 }
 
+// --- LÓGICA DE CAPTURA LA BANDERA ---
+if (global.gameMode == MODOS.CTF) {
 // --- 1. LÓGICA MIENTRAS SE JUEGA (SOLO HOST) ---
 if (global.game_over == false) 
 {
@@ -84,7 +86,7 @@ else
 {
     victory_alpha = 0; // Reset si no hay game over
 }
-
+}
 
 if (oBrain.AmIPseudoHost) {
     with(oHammer) {
@@ -101,7 +103,9 @@ if (oBrain.AmIPseudoHost) {
         }
     }
 }
-	
+
+// --- LÓGICA DE CAPTURA LA BANDERA ---
+if (global.gameMode == MODOS.CTF) {	
 //Alertas Actualizar animacioes (Flag Capture etc)
 for (var i = array_length(alerts)-1; i >= 0; i--)
 {
@@ -136,6 +140,7 @@ for (var i = array_length(alerts)-1; i >= 0; i--)
     }
 
     alerts[i] = it;
+}
 }
 
 // --- SISTEMA DE GENERACIÓN DE ARMAS Y MUNICIÓN (Solo Host) ---
@@ -235,5 +240,21 @@ if (oBrain.AmIPseudoHost)
         }
     } else {
         sync_done = false;
+    }
+}
+
+
+
+
+
+// --- LÓGICA DE DESTRUIR BASE ---
+if (global.gameMode == MODOS.DESTROY) {
+    // Si no existen las bases, el Host las crea
+    if (oBrain.AmIPseudoHost && !instance_exists(oBase)) {
+        var b1 = instance_create_layer(100, 500, "Instances", oBase);
+        b1.myTeam = TEAM.RED;
+        
+        var b2 = instance_create_layer(2000, 500, "Instances", oBase);
+        b2.myTeam = TEAM.BLUE;
     }
 }

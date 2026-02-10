@@ -39,26 +39,44 @@ if (!input_activo) {
     if (index < 0) index = array_length(menu_options) - 1;
     if (index >= array_length(menu_options)) index = 0;
 
+    // Suavizado de posición (Lerp)
+    for (var i = 0; i < array_length(menu_options); i++) {
+        var target = (i == index) ? 30 : 0; // Se mueve 30px a la derecha si está seleccionada
+        menu_x_offset[i] = lerp(menu_x_offset[i], target, 0.15);
+    }
+
+    // Cambiar modo de juego solo si estamos en PLAY (Horizontal)
+    if (index == 0) {
+        var change_mode = keyboard_check_pressed(vk_right) - keyboard_check_pressed(vk_left);
+        if (change_mode != 0) {
+            mode_index = clamp(mode_index + change_mode, 0, array_length(game_modes) - 1);
+            if (global.sfx) audio_play_sound(snd_hit, 5, false, 2); // Sonido agudo de clic
+        }
+		
+		// Cambiar tipo de juego con la tecla ESPACIO o TAB
+    if (keyboard_check_pressed(vk_tab)) {
+        if (global.gameMode == MODOS.CTF) global.gameMode = MODOS.DESTROY;
+        else global.gameMode = MODOS.CTF;
+    }
+    }
+
     if (keyboard_check_pressed(vk_enter)) 
     {
-        // Por seguridad, si el jugador nunca hizo clic en el cuadro, 
-        // guardamos lo que haya en texto_input antes de entrar
         if (global.myName == "") global.myName = (texto_input == "" || texto_input == "Escribe tu nombre...") ? "Jugador" : texto_input;
 
         switch(index) {
             case 0: // PLAY
                 menu_state = "connecting";
-                // Aquí es vital: primero nos aseguramos de estar conectados 
-                // y luego cambiamos de room
-                //ChangeRoom("public");
-				ChangeRoom("auto_matchmake_2");
+                
+                // --- LÓGICA DE MATCHMAKING DINÁMICA ---
+                // Dependiendo del modo, entramos a una sala distinta
+                // auto_matchmake_2 (1vs1), auto_matchmake_4 (2vs2), etc.
+                var slots_necesarios = (mode_index + 1) * 2; 
+                ChangeRoom("auto_matchmake_" + string(slots_necesarios));
             break;
-            case 1: // OPTIONS
-                show_message("Opciones...");
-            break;
-            case 2: // EXIT
-                game_end();
-            break;
+            
+            case 1: show_message("Opciones..."); break;
+            case 2: game_end(); break;
         }
     }
 }

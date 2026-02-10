@@ -763,7 +763,59 @@ case "kill_event":
 break;
 
 
+#region Modo de juego: Atraco
 
+case "init_match_config":
+    global.myTeam = theMessageStruct.team;
+    global.gameMode = theMessageStruct.mode;
+break;
+
+case "request_base_damage":
+{
+    if (oBrain.AmIPseudoHost) 
+    {
+        var _team = theMessageStruct.team;
+        var _dmg  = theMessageStruct.dmg;
+        
+        // Buscar la base que recibió el golpe y restarle vida
+        with(oBase) {
+            if (myTeam == _team) {
+                hp -= _dmg;
+                // Reenviar la vida actualizada a todos para que se vea igual
+                if (instance_exists(oOtherPlayer)) {
+                    SendEventToClient(oOtherPlayer.clientId, "sync_base_hp", { 
+                        team: myTeam, 
+                        hp: hp 
+                    });
+                }
+            }
+        }
+    }
+}
+break;
+
+case "sync_base_hp":
+{
+    var _team = theMessageStruct.team;
+    var _hp = theMessageStruct.hp;
+    
+    with(oBase) {
+        if (myTeam == _team) hp = _hp;
+    }
+}
+break;
+
+case "spawn_bases":
+{
+    // El cliente crea las bases cuando el host lo ordena
+    var b1 = instance_create_layer(theMessageStruct.rx, theMessageStruct.ry, "Instances", oBase);
+    b1.myTeam = "RED";
+    var b2 = instance_create_layer(theMessageStruct.bx, theMessageStruct.by, "Instances", oBase);
+    b2.myTeam = "BLUE";
+}
+break;
+
+#endregion
 
     }
 }
