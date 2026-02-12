@@ -74,153 +74,141 @@ if (place_meeting(x, y, obj_wall) || place_meeting(x, y, oPlataformaPasable))
 
 
 // ======================================================
-// 🎯 COLISIÓN CON JUGADOR
+// 🎯 COLISIÓN CON JUGADOR (BALAS Y ROCKETS)
 // ======================================================
 var target_enemy = instance_place(x, y, oOtherPlayer);
 
 if (target_enemy != noone)
 {
-    if (target_enemy.invulnerable) exit;
-
-    // ==========================================
-    // 🔥 PREDICCIÓN VISUAL (SOLO LOCAL)
-    // ==========================================
-    with (target_enemy)
+    // 🔥 FILTRO BRAWL STARS: Solo procesamos si NO es de nuestro equipo
+    if (variable_instance_exists(target_enemy, "team") && target_enemy.team != global.myTeam) 
     {
-        if (state != PLAYERSTATE.DEAD)
+        if (target_enemy.invulnerable) exit;
+
+        // ==========================================
+        // 🔥 PREDICCIÓN VISUAL (SOLO LOCAL)
+        // ==========================================
+        with (target_enemy)
         {
-            hit_bloqueo_timer = 10;
-            state = PLAYERSTATE.HIT;
-            image_index = 0;
+            if (state != PLAYERSTATE.DEAD)
+            {
+                hit_bloqueo_timer = 10;
+                state = PLAYERSTATE.HIT;
+                image_index = 0;
+            }
         }
-    }
 
-    // ==========================================
-    // 💥 EXPLOSIÓN (SOLO SI ES ROCKET)
-    // ==========================================
-    if (is_rocket)
-    {
-        // ---- efectos locales SIEMPRE ----
-        scrCreateRocketExplosion(x, y);
+        // ==========================================
+        // 💥 EXPLOSIÓN (SOLO SI ES ROCKET)
+        // ==========================================
+        if (is_rocket)
+        {
+            scrCreateRocketExplosion(x, y);
 
-        // ---- sincronización ONLINE ----
+            if (global.ONLINE)
+            {
+                var explosionData = { ex: x, ey: y };
+                if (oBrain.AmIPseudoHost)
+                {
+                    if (instance_exists(oOtherPlayer))
+                    {
+                        SendEventToClient(oOtherPlayer.clientId, "fx_pearl_explosion", explosionData);
+                    }
+                }
+                else
+                {
+                    SendEventToClient(oOtherPlayer.clientId, "request_fx_explosion", explosionData);
+                }
+            }
+        }
+
+        // ==========================================
+        // 🔊 SONIDO DE HIT
+        // ==========================================
+        if (global.sfx)
+            audio_play_sound(snd_hit, 20, false, 1.1);
+
+        // ==========================================
+        // 🧠 DAÑO AUTORITATIVO
+        // ==========================================
         if (global.ONLINE)
         {
-            var explosionData = { ex: x, ey: y };
-
             if (oBrain.AmIPseudoHost)
             {
-                if (instance_exists(oOtherPlayer))
-                {
-                    SendEventToClient(
-                        oOtherPlayer.clientId,
-                        "fx_pearl_explosion",
-                        explosionData
-                    );
-                }
+                SendEventToClient(target_enemy.clientId, "hit", {
+                    damage: damage,
+                    killer: global.myName,
+                    reason: "pvp"
+                });
             }
             else
             {
-                // cliente pide al host
-                SendEventToClient(
-                    oOtherPlayer.clientId,
-                    "request_fx_explosion",
-                    explosionData
-                );
+                SendEventToClient(oOtherPlayer.clientId, "request_hit", {
+                    victimId: target_enemy.clientId,
+                    damage: damage,
+                    killer: global.myName,
+                    reason: "pvp"
+                });
             }
         }
+
+        instance_destroy();
+        exit; // Importante para no seguir procesando
     }
-
-    // ==========================================
-    // 🔊 SONIDO DE HIT
-    // ==========================================
-    if (global.sfx)
-        audio_play_sound(snd_hit, 20, false, 1.1);
-
-    // ==========================================
-    // 🧠 DAÑO AUTORITATIVO
-    // ==========================================
-    if (global.ONLINE)
-    {
-        if (oBrain.AmIPseudoHost)
-        {
-            SendEventToClient(target_enemy.clientId, "hit", {
-                damage: damage,
-                killer: global.myName,
-                reason: "pvp"
-            });
-        }
-        else
-        {
-            SendEventToClient(oOtherPlayer.clientId, "request_hit", {
-                victimId: target_enemy.clientId,
-                damage: damage,
-                killer: global.myName,
-                reason: "pvp"
-            });
-        }
-    }
-
-    instance_destroy();
 }
 
-// ======================================================
-// 🚀 COMPORTAMIENTO DEL ROCKET (TRAIL + ROTACIÓN)
-// ======================================================
 // ======================================================
 // 🚀 COMPORTAMIENTO DEL ROCKET (TRAIL + ROTACIÓN)
 // ======================================================
 if (is_rocket)
 {
-    // SOLO LOCAL
     if (irandom(2) == 0)
     {
         var sm = instance_create_layer(x, y, "Instances", oSmokeTrail);
         sm.color = c_gray;
     }
-
     image_angle = direction;
 }
 
-
-
-// --- Lógica de Gravedad y Movimiento ---
+// ======================================================
+// 💣 LÓGICA DE GRANADAS (GRAVEDAD Y MOVIMIENTO)
+// ======================================================
 if (variable_instance_exists(id, "is_granada") && is_granada) {
-	
-    vsp += 0.22; // Gravedad
-    image_angle -= hsp * 5; // Girará hacia atrás si va a la izquierda y adelante si va a la derecha
     
-// 1. CHEQUEAR COLISIÓN CON EL ENEMIGO
-    var target_enemy = instance_place(x + hsp, y + vsp, oOtherPlayer);
+    vsp += 0.22; // Gravedad
+    image_angle -= hsp * 5; 
+    
+    // 1. CHEQUEAR COLISIÓN CON EL ENEMIGO (Ignorando aliados)
+    var target_enemy_nad = instance_place(x + hsp, y + vsp, oOtherPlayer);
+    
+    // Si detectamos a alguien, verificamos que sea enemigo
+    if (target_enemy_nad != noone) {
+        if (variable_instance_exists(target_enemy_nad, "team") && target_enemy_nad.team == global.myTeam) {
+            target_enemy_nad = noone; // Es aliado, hacemos como que no lo vimos
+        }
+    }
     
     // 2. CHEQUEAR COLISIÓN CON EL SUELO/PARED
     var hit_wall = place_meeting(x + hsp, y + vsp, obj_wall);
 
-    // 3. CHEQUEAR PLATAFORMAS TRASPASABLES (Solo si caemos sobre ellas)
-    // Suponiendo que tu objeto de plataforma se llama oPlataforma o similar
+    // 3. CHEQUEAR PLATAFORMAS
     var hit_platform = false;
-    var platform_id = instance_place(x, y + vsp, oPlataformaPasable); // Cambia oPlataforma por el nombre real de tu objeto
+    var platform_id = instance_place(x, y + vsp, oPlataformaPasable); 
     if (platform_id != noone && vsp > 0) {
-        // Solo explota si la granada está por encima de la plataforma (vsp > 0)
         hit_platform = true;
     }
 
-    // Si toca a un enemigo O toca una pared/suelo O toca plataforma... ¡BUM!
-    if (target_enemy != noone || hit_wall || hit_platform) {
+    // EXPLOSIÓN DE GRANADA
+    if (target_enemy_nad != noone || hit_wall || hit_platform) {
         
         is_rocket = true; 
-        
-        // --- EFECTOS LOCALES Y EXPLOSIÓN ---
-        // Aquí ya tienes el true, ¡perfecto!
         scrCreateRocketExplosion(x, y, true); 
   
         if (global.sfx) audio_play_sound(snd_hit, 20, false, 1.1);
 
-        // --- SI LE PEGASTE A UN ENEMIGO DIRECTO, APLICAR DAÑO ---
-        if (target_enemy != noone && !target_enemy.invulnerable) {
-            
-            // Predicción visual (ponerlo en estado HIT)
-            with (target_enemy) {
+        // DAÑO DIRECTO SI PEGÓ A UN ENEMIGO
+        if (target_enemy_nad != noone && !target_enemy_nad.invulnerable) {
+            with (target_enemy_nad) {
                 if (state != PLAYERSTATE.DEAD) {
                     hit_bloqueo_timer = 10;
                     state = PLAYERSTATE.HIT;
@@ -228,26 +216,20 @@ if (variable_instance_exists(id, "is_granada") && is_granada) {
                 }
             }
 
-            // Sincronización de Daño Online (Tu sistema autoritativo)
             if (global.ONLINE) {
                 if (oBrain.AmIPseudoHost) {
-                    SendEventToClient(target_enemy.clientId, "hit", {
-                        damage: damage,
-                        killer: global.myName,
-                        reason: "granada"
+                    SendEventToClient(target_enemy_nad.clientId, "hit", {
+                        damage: damage, killer: global.myName, reason: "granada"
                     });
                 } else {
                     SendEventToClient(oOtherPlayer.clientId, "request_hit", {
-                        victimId: target_enemy.clientId,
-                        damage: damage,
-                        killer: global.myName,
-                        reason: "granada"
+                        victimId: target_enemy_nad.clientId, damage: damage, killer: global.myName, reason: "granada"
                     });
                 }
             }
         }
 
-        // --- SINCRONIZACIÓN DE LA EXPLOSIÓN (Visual para el otro) ---
+        // SINCRONIZACIÓN VISUAL BUM
         if (global.ONLINE) {
             var explosionData = { ex: x, ey: y, isNade: true };
             if (oBrain.AmIPseudoHost) {
@@ -258,74 +240,10 @@ if (variable_instance_exists(id, "is_granada") && is_granada) {
             }
         }
 
-        instance_destroy(); // Destruir la entidad granada tras explotar
-        exit; // Salir para no procesar más movimiento
+        instance_destroy(); 
+        exit; 
     }
     
-    // Aplicar movimiento si no ha explotado
     x += hsp;
     y += vsp;
-}
-
-
-//MODO DE JUEGO ATRACO SOLAMENTE
-// ======================================================
-// 🏰 COLISIÓN CON BASE (NUEVO MODO DESTROY)
-// ======================================================
-var target_base = instance_place(x, y, oBase);
-
-if (target_base != noone)
-{
-    // Solo hacemos daño si la base NO es de nuestro equipo
-    if (target_base.myTeam != global.myTeam) 
-    {
-        // 💥 EFECTO DE EXPLOSIÓN (Si es rocket/granada)
-        if (is_rocket) {
-            scrCreateRocketExplosion(x, y);
-            
-            if (global.ONLINE) {
-                var explosionData = { ex: x, ey: y };
-                if (oBrain.AmIPseudoHost) {
-                    if (instance_exists(oOtherPlayer)) 
-                        SendEventToClient(oOtherPlayer.clientId, "fx_pearl_explosion", explosionData);
-                } else {
-                    SendEventToClient(oOtherPlayer.clientId, "request_fx_explosion", explosionData);
-                }
-            }
-        }
-
-        // 🔊 SONIDO
-        if (global.sfx) audio_play_sound(snd_hit, 20, false, 0.8);
-
-        // 🧠 DAÑO A LA BASE (Networking)
-        if (global.ONLINE)
-        {
-            if (oBrain.AmIPseudoHost)
-            {
-                // El Host le resta vida directamente y avisa al cliente
-                target_base.hp -= damage;
-                if (instance_exists(oOtherPlayer)) {
-                    SendEventToClient(oOtherPlayer.clientId, "sync_base_hp", { 
-                        team: target_base.myTeam, 
-                        hp: target_base.hp 
-                    });
-                }
-            }
-            else
-            {
-                // El Cliente le pide al Host que le quite vida a la base
-                SendEventToClient(oOtherPlayer.clientId, "request_base_damage", { 
-                    team: target_base.myTeam, 
-                    dmg: damage 
-                });
-            }
-        }
-        else 
-        {
-            // Si juegas offline
-            target_base.hp -= damage;
-        }
-
-        instance_destroy(); // La bala desaparece al tocar la base
-    }
 }

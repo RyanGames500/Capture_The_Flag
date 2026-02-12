@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"scr_trigger_intro",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_trigger_intro",
+  "parent":{
+    "name":"Funciones",
+    "path":"folders/Scripts/Funciones.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

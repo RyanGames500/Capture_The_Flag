@@ -76,13 +76,18 @@ empty_cd = 0; // cooldown sonido sin balas
 
 
 
-if (oBrain.AmIPseudoHost) {
+// --- LÓGICA DE EQUIPOS ESTILO BRAWL STARS ---
+// El clientId 0 es el Host, el 1 es el primer cliente, etc.
+// Dividimos: IDs pares vs IDs impares
+if (global.clientId % 2 == 0) {
     global.myTeam = "AZUL";
     global.enemyTeam = "ROJO";
 } else {
     global.myTeam = "ROJO";
     global.enemyTeam = "AZUL";
 }
+
+team = global.myTeam; // Tu equipo local
 
 spawn_x = x;
 spawn_y = y;
@@ -106,6 +111,5 @@ spawn_y_fixed = 400;
 crush_cd = 0;
 death_reason = "pvp";      // "pvp" o "crush"
 last_killer  = "";         // nombre del que te mató (para PVP)
-team=global.myTeam;
 is_grounded = false;
 

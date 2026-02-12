@@ -1,15 +1,4 @@
-// oBrain - Room Start
-if (AmIPseudoHost) {
-    global.myTeam = "BLUE"; // Host siempre Azul
-    if (instance_exists(oOtherPlayer)) {
-        SendEventToClient(oOtherPlayer.clientId, "init_match_config", { 
-            team: "RED", 
-            mode: global.gameMode 
-        });
-    }
-}
-
-
+// --- Alarm[1] de oBrain ---
 if (AmIPseudoHost) {
 
     // 1) Mover al host a la izquierda

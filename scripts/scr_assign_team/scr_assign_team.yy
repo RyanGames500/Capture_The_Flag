@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"scr_assign_team",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_assign_team",
+  "parent":{
+    "name":"Funciones",
+    "path":"folders/Scripts/Funciones.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

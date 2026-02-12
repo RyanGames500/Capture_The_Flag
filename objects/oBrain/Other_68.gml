@@ -108,36 +108,64 @@ if(type == network_type_data){
 		break;
 		
 		
-		case "state_update":
-		//show_message(buffer_processed)
-		var found = false;
-		with(oOtherPlayer){
-			if(clientId==real(realData.clientId)){
-				afk = realData.afk
-				sharedProperties = realData.SP;
-				found = true;
-				//show_debug_message("found this player")
-				//Now also update the entities for this player
-				entities =(realData.entities);
-				
-				
-				
-				
-				
-				
-			}
-		}
-		if(!found and real(realData.clientId!=global.clientId)){
-			show_debug_message("creating a new player")
-			var new_enemy = instance_create_layer(0,0,global.OtherPlayersLayerName,oOtherPlayer);
-			new_enemy.clientId = real(realData.clientId);
-			new_enemy.roomId = realData.roomId;
-			new_enemy.sharedProperties = realData.SP;
-			// El Host le manda su nombre al Cliente y viceversa
-			SendEventToClient(oOtherPlayer.clientId, "sync_names", { name: global.myName });
-			
-		}
-		break;
+case "state_update":
+    var found = false;
+    with(oOtherPlayer){
+        if(clientId == real(realData.clientId)){
+            afk = realData.afk;
+            sharedProperties = realData.SP;
+            found = true;
+            entities = (realData.entities);
+        }
+    }
+
+    if(!found && real(realData.clientId) != global.clientId){
+        var new_enemy = instance_create_layer(0, 0, global.OtherPlayersLayerName, oOtherPlayer);
+        new_enemy.clientId = real(realData.clientId);
+        
+        // Asignar equipo por ID
+        new_enemy.team = (new_enemy.clientId % 2 == 0) ? "AZUL" : "ROJO";
+        new_enemy.sharedProperties = realData.SP;
+
+        if (oBrain.AmIPseudoHost) {
+// --- RECOLECTAR NOMBRES DE EQUIPOS ---
+var listaAzul = (global.myTeam == "AZUL") ? global.myName : "";
+var listaRojo = (global.myTeam == "ROJO") ? global.myName : "";
+
+with(oOtherPlayer) {
+    // 🛡️ FIX: Verificamos que sharedProperties sea un struct antes de leerlo
+    var nameStr = "Jugador"; // Nombre por defecto
+    
+    if (is_struct(sharedProperties)) {
+        if (variable_struct_exists(sharedProperties, "name")) {
+            nameStr = sharedProperties.name;
+        }
+    } else {
+        // Si no es struct, intentamos usar la variable Name si existe
+        if (variable_instance_exists(id, "Name")) nameStr = Name;
+    }
+    
+    // Armar las listas
+    if (team == "AZUL") {
+        listaAzul += (listaAzul == "" ? "" : " & ") + nameStr;
+    } else {
+        listaRojo += (listaRojo == "" ? "" : " & ") + nameStr;
+    }
+}
+
+            // --- MANDAR A TODOS ---
+            with(oOtherPlayer) {
+                SendEventToClient(clientId, "sync_names_teams", { 
+                    azules: listaAzul, 
+                    rojos: listaRojo 
+                });
+            }
+            
+            // Host activa su intro local
+            scr_trigger_intro(listaAzul, listaRojo);
+        }
+    }
+    break;
 		
 		
 		case "pO_update":

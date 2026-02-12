@@ -19,19 +19,15 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
 	    // asegúrate de que solo el dueño o el host valide el daño para no duplicarlo.
 	    break;
 	
-		//INTRO
-		case "sync_names":
-		{
-		    var _nameOther = theMessageStruct.name;
-    
-		    // Creamos la intro y le pasamos los datos
-		    var intro = instance_create_layer(0, 0, "Instances", oIntroVersus);
-		    intro.rivalName = _nameOther;
-    
-		    //// Opcional: Bloquear movimiento un momento para que vean la intro
-		    //if (instance_exists(oPlayer)) oPlayer.state = PLAYERSTATE.INTRO; 
-		}
-		break;
+case "sync_names_teams":
+{
+    var _azules = theMessageStruct.azules;
+    var _rojos = theMessageStruct.rojos;
+
+    // Usamos una función para no repetir código
+    scr_trigger_intro(_azules, _rojos);
+}
+break;
 
 //CREAR POWER UPS
 case "spawn_powerup":
@@ -763,59 +759,7 @@ case "kill_event":
 break;
 
 
-#region Modo de juego: Atraco
 
-case "init_match_config":
-    global.myTeam = theMessageStruct.team;
-    global.gameMode = theMessageStruct.mode;
-break;
-
-case "request_base_damage":
-{
-    if (oBrain.AmIPseudoHost) 
-    {
-        var _team = theMessageStruct.team;
-        var _dmg  = theMessageStruct.dmg;
-        
-        // Buscar la base que recibió el golpe y restarle vida
-        with(oBase) {
-            if (myTeam == _team) {
-                hp -= _dmg;
-                // Reenviar la vida actualizada a todos para que se vea igual
-                if (instance_exists(oOtherPlayer)) {
-                    SendEventToClient(oOtherPlayer.clientId, "sync_base_hp", { 
-                        team: myTeam, 
-                        hp: hp 
-                    });
-                }
-            }
-        }
-    }
-}
-break;
-
-case "sync_base_hp":
-{
-    var _team = theMessageStruct.team;
-    var _hp = theMessageStruct.hp;
-    
-    with(oBase) {
-        if (myTeam == _team) hp = _hp;
-    }
-}
-break;
-
-case "spawn_bases":
-{
-    // El cliente crea las bases cuando el host lo ordena
-    var b1 = instance_create_layer(theMessageStruct.rx, theMessageStruct.ry, "Instances", oBase);
-    b1.myTeam = "RED";
-    var b2 = instance_create_layer(theMessageStruct.bx, theMessageStruct.by, "Instances", oBase);
-    b2.myTeam = "BLUE";
-}
-break;
-
-#endregion
 
     }
 }

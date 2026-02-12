@@ -147,13 +147,5 @@ weap_min_on_map   = 3;   // opcional: mínimo de armas en el mapa
 weap_check_cd     = 0;
 weap_check_every  = 90;  // cada 1.5s
 
-enum MODOS {
-    CTF,      // Capture The Flag
-    DESTROY,  // Destruir la Base
-    DM        // Deathmatch (por si acaso)
-}
-
-global.gameMode = MODOS.CTF; // Por defecto
-
 //ConnectToServer();
 
