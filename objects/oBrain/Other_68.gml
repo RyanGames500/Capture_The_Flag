@@ -123,46 +123,16 @@ case "state_update":
         var new_enemy = instance_create_layer(0, 0, global.OtherPlayersLayerName, oOtherPlayer);
         new_enemy.clientId = real(realData.clientId);
         
-        // Asignar equipo por ID
+        // Asignar equipo por ID (Par = Azul, Impar = Rojo)
         new_enemy.team = (new_enemy.clientId % 2 == 0) ? "AZUL" : "ROJO";
         new_enemy.sharedProperties = realData.SP;
 
+        // 🔥 SOLO ACTIVAMOS EL TIMER
         if (oBrain.AmIPseudoHost) {
-// --- RECOLECTAR NOMBRES DE EQUIPOS ---
-var listaAzul = (global.myTeam == "AZUL") ? global.myName : "";
-var listaRojo = (global.myTeam == "ROJO") ? global.myName : "";
-
-with(oOtherPlayer) {
-    // 🛡️ FIX: Verificamos que sharedProperties sea un struct antes de leerlo
-    var nameStr = "Jugador"; // Nombre por defecto
-    
-    if (is_struct(sharedProperties)) {
-        if (variable_struct_exists(sharedProperties, "name")) {
-            nameStr = sharedProperties.name;
-        }
-    } else {
-        // Si no es struct, intentamos usar la variable Name si existe
-        if (variable_instance_exists(id, "Name")) nameStr = Name;
-    }
-    
-    // Armar las listas
-    if (team == "AZUL") {
-        listaAzul += (listaAzul == "" ? "" : " & ") + nameStr;
-    } else {
-        listaRojo += (listaRojo == "" ? "" : " & ") + nameStr;
-    }
-}
-
-            // --- MANDAR A TODOS ---
-            with(oOtherPlayer) {
-                SendEventToClient(clientId, "sync_names_teams", { 
-                    azules: listaAzul, 
-                    rojos: listaRojo 
-                });
-            }
-            
-            // Host activa su intro local
-            scr_trigger_intro(listaAzul, listaRojo);
+            // Cada vez que entra alguien nuevo, reiniciamos el timer a 2 segundos (120 frames)
+            // Esto da tiempo a que la red mande los nombres de TODOS antes de empezar
+            oBrain.timer_intro = 60; //120
+            oBrain.intro_disparada = false; 
         }
     }
     break;

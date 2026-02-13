@@ -1,3 +1,42 @@
+// --- LÓGICA DE INTRO ESTILO BRAWL STARS (Solo Host) ---
+if (oBrain.AmIPseudoHost && !intro_disparada) {
+    if (timer_intro > 0) {
+        timer_intro--;
+    } 
+    else if (timer_intro == 0) {
+        timer_intro = -1; // Desactivar timer
+        intro_disparada = true; // No repetir esto en la misma partida
+
+        var listaAzul = (global.myTeam == "AZUL") ? global.myName : "";
+        var listaRojo = (global.myTeam == "ROJO") ? global.myName : "";
+
+        with(oOtherPlayer) {
+            var nameStr = "Jugador"; 
+            if (is_struct(sharedProperties) && variable_struct_exists(sharedProperties, "name")) {
+                nameStr = sharedProperties.name;
+            } else if (variable_instance_exists(id, "Name") && Name != "") {
+                nameStr = Name;
+            }
+            
+            if (team == "AZUL") {
+                listaAzul += (listaAzul == "" ? "" : " & ") + nameStr;
+            } else {
+                listaRojo += (listaRojo == "" ? "" : " & ") + nameStr;
+            }
+        }
+
+        // MANDAR EL GRITO FINAL A TODOS LOS CLIENTES
+        with(oOtherPlayer) {
+            SendEventToClient(clientId, "sync_names_teams", { 
+                azules: listaAzul, 
+                rojos: listaRojo 
+            });
+        }
+        
+        // El Host activa su intro
+        scr_trigger_intro(listaAzul, listaRojo);
+    }
+}
 // ======================================================
 // 📜 TEXTOS DE AVISO DE BAJAS (KILL FEED)
 // ======================================================
@@ -132,7 +171,7 @@ for (var i = array_length(alerts)-1; i >= 0; i--)
 }
 
 // ======================================================
-// 📦 4. SISTEMA DE GENERACIÓN DE ARMAS/MUNICIÓN (Solo Host)
+// 📦 4. SISTEMA DE GENERACIÓN (Solo Host - Tiempo Real)
 // ======================================================
 if (oBrain.AmIPseudoHost) 
 {
@@ -145,9 +184,13 @@ if (oBrain.AmIPseudoHost)
             } else {
                 ocupado = true;
                 
-                if (tipo_spawn == "ammo") {
-                    host_spawn_ammo(x, y, 25); 
-                } 
+				// --- SPAWN DE MUNICIÓN ---
+				if (tipo_spawn == "ammo") {
+				    // Solo llamas a la función. 
+				    // Ella crea el objeto en el servidor y le avisa a TODOS los clientes.
+				    host_spawn_ammo(x, y, 25); 
+				}
+				// --- SPAWN DE ARMAS ---
                 else if (tipo_spawn == "weapon") {
                     var _struct_a_usar = arma_struct;
                     if (_struct_a_usar == noone) {
@@ -158,65 +201,74 @@ if (oBrain.AmIPseudoHost)
                         else if (_pick == 3) _struct_a_usar = other.weapon_struct_bazooka;
                         else                 _struct_a_usar = other.weapon_struct_m4;
                     }
+                    
+                    // Ahora solo llamamos a la función. 
+                    // Ella se encarga de crear el objeto Y avisar a todos los clientes.
                     host_spawn_weapon(oGun, x, y, _struct_a_usar);
                 }
-                else if (tipo_spawn == "powerup") {
-                    var pick = irandom(1); 
-                    var tipo1 = (pick == 0) ? "speed" : "heal";
-                    scr_host_spawn_powerup(x, y, tipo1, myID);
-                }
+                // --- SPAWN DE POWERUPS ---
+				else if (tipo_spawn == "powerup") {
+				    var pick = irandom(1); 
+				    var tipo1 = (pick == 0) ? "speed" : "heal";
+				    // La función ya se encarga de crear y avisar a todos
+				    scr_host_spawn_powerup(x, y, tipo1, myID);
+				}
 
-                // 🔥 CAMBIO: Avisar a TODOS que este punto se ocupó
+                // Avisar a todos que el punto se ocupó
                 with(oOtherPlayer) {
-                    SendEventToClient(clientId, "sync_spawn_point", { 
-                        pID: other.myID, 
-                        isOcupado: true 
-                    });
+                    SendEventToClient(clientId, "sync_spawn_point", { pID: other.myID, isOcupado: true });
                 }
             }
         }
     }
 
-    // ======================================================
-    // 🔄 5. RE-SINCRONIZACIÓN INICIAL (PARA NUEVOS JUGADORES)
+// ======================================================
+    // 🔄 5. RE-SINCRONIZACIÓN (Para jugadores que recién entran)
     // ======================================================
     if (instance_exists(oOtherPlayer)) 
     {
-        if (!variable_instance_exists(id, "sync_done")) sync_done = false;
-
-        if (!sync_done) {
-            sync_done = true;
-            
-            // 🔥 CAMBIO CLAVE: Para cada cliente conectado, mandamos todo lo que ya existe
-            with(oOtherPlayer) {
-                var targetID = clientId; // Guardamos el ID del cliente al que le hablamos
+        with(oOtherPlayer) 
+        {
+            if (!variable_instance_exists(id, "i_am_synced")) 
+            {
+                i_am_synced = true; 
+                var targetID = clientId; 
                 
-                // Sincronizar Packs de Munición
+                // 1. Municiones
                 with(oAmmoPack) {
                     SendEventToClient(targetID, "spawn_ammo_pack", { uid: net_uid, x: x, y: y, amount: amount });
                 }
                 
-                // Sincronizar Armas en el suelo
+                // 2. Armas
                 with(oGun) {
-                    SendEventToClient(targetID, "spawn_weapon_pickup", { uid: net_uid, x: x, y: y, weapon: weapon });
+                    if (variable_instance_exists(id, "weapon") && is_struct(weapon)) {
+                        SendEventToClient(targetID, "spawn_weapon_pickup", { uid: net_uid, x: x, y: y, weapon: weapon });
+                    }
                 }
                 
-                // Sincronizar puntos de spawn ocupados
+                // 3. Powerups (CORREGIDO PARA EVITAR EL CRASH)
+                with (oPowerupPickup) {
+                    // Verificamos si existe la variable antes de mandarla
+                    var _sid = variable_instance_exists(id, "spawn_id") ? id.spawn_id : -1;
+                    
+                    SendEventToClient(targetID, "spawn_powerup", {
+                        uid: net_uid, 
+                        x: x, 
+                        y: y, 
+                        tipo: tipo, 
+                        duration: duration, 
+                        amount: amount, 
+                        spawnID: _sid  // Usamos la variable segura
+                    });
+                }
+
+                // 4. Spawns ocupados
                 with(oSpawnPoint) {
                     if (ocupado) {
                         SendEventToClient(targetID, "sync_spawn_point", { pID: myID, isOcupado: true });
                     }
                 }
-                
-                // Sincronizar Powerups
-                with (oPowerupPickup) {
-                    SendEventToClient(targetID, "spawn_powerup", {
-                        uid: net_uid, x: x, y: y, tipo: tipo, duration: duration, amount: amount, spawnID: spawn_id
-                    });
-                }
             }
         }
-    } else {
-        sync_done = false;
     }
 }

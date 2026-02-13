@@ -1,4 +1,4 @@
-// --- Dentro de tu Alarma 1 ---
+
 if (global.ONLINE) {
     if (oBrain.AmIPseudoHost) x = spawn_left_x; else x = spawn_right_x;
     y = spawn_y_fixed;

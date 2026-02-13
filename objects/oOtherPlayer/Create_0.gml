@@ -17,7 +17,7 @@ DO NOT TAMPER
 roomId = -1
 
 //add your personal variables under this line
-
+isHost = false;
 guns = [noone, noone];
 
 weapon = {

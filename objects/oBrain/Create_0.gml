@@ -147,5 +147,7 @@ weap_min_on_map   = 3;   // opcional: mínimo de armas en el mapa
 weap_check_cd     = 0;
 weap_check_every  = 90;  // cada 1.5s
 
+timer_intro = -1;
+intro_disparada = false; // Para que solo pase una vez por partida
 //ConnectToServer();
 

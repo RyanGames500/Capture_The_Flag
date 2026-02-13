@@ -1,4 +1,3 @@
-// --- Alarm[1] de oBrain ---
 if (AmIPseudoHost) {
 
     // 1) Mover al host a la izquierda

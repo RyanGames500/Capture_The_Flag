@@ -3,47 +3,66 @@ var gh = display_get_gui_height();
 
 draw_set_alpha(alpha);
 
-// --- FONDO (Barras negras que se desvanecen) ---
+// --- 1. FONDO (Barras negras tipo cine) ---
 draw_set_color(c_black);
-draw_rectangle(0, 0, gw, 120 * alpha, false);
-draw_rectangle(0, gh - (120 * alpha), gw, gh, false);
+draw_set_alpha(alpha * 0.7); 
+draw_rectangle(0, 0, gw, 160 * alpha, false);
+draw_rectangle(0, gh - (160 * alpha), gw, gh, false);
+draw_set_alpha(alpha);
 
-// --- CONFIGURACIÓN DE FUENTE ---
 draw_set_font(fnt_intro);
 
+// --- 2. LOGICA DE TAMAÑO DINÁMICO (Aquí va puesto) ---
+var escala_dinamica = 2.0; // Tamaño gigante por defecto
+
+if (string_length(aliados) > 15 || string_length(rivales) > 15) {
+    escala_dinamica = 1.3; 
+}
+if (string_length(aliados) > 25 || string_length(rivales) > 25) {
+    escala_dinamica = 0.9; // Un poco más pequeño si son muchísimos
+}
+
 // ==========================================
-// 🔵 TUS ALIADOS (IZQUIERDA)
+// 🔵 EQUIPO ALIADO
 // ==========================================
-// Usamos "aliados" que contiene: "Nombre1 & Nombre2..."
-var x_me = lerp(-500, gw * 0.40, anim); // Un poco más de margen para nombres largos
+var x_me = lerp(-600, gw * 0.45, anim); 
 draw_set_halign(fa_right);
 draw_set_valign(fa_middle);
 
-// Dibujamos la lista de aliados
-draw_text_transformed_color(x_me, gh/2, aliados, 1.2, 1.2, 0, c_aqua, c_aqua, c_white, c_white, alpha);
+// Sombra (usando escala_dinamica)
+draw_text_transformed_color(x_me + 4, gh/2 + 4, aliados, escala_dinamica, escala_dinamica, 0, c_black, c_black, c_black, c_black, alpha * 0.5);
+// Texto principal (usando escala_dinamica)
+draw_text_transformed_color(x_me, gh/2, aliados, escala_dinamica, escala_dinamica, 0, c_aqua, c_aqua, c_white, c_white, alpha);
+
 
 // ==========================================
-// 🔴 TUS RIVALES (DERECHA)
+// 🔴 EQUIPO RIVAL
 // ==========================================
-// Usamos "rivales" que contiene: "Enemigo1 & Enemigo2..."
-var x_rival = lerp(gw + 500, gw * 0.60, anim);
+var x_rival = lerp(gw + 600, gw * 0.55, anim);
 draw_set_halign(fa_left);
 draw_set_valign(fa_middle);
 
-// Dibujamos la lista de rivales
-draw_text_transformed_color(x_rival, gh/2, rivales, 1.2, 1.2, 0, c_red, c_red, c_white, c_white, alpha);
+// Sombra (usando escala_dinamica)
+draw_text_transformed_color(x_rival + 4, gh/2 + 4, rivales, escala_dinamica, escala_dinamica, 0, c_black, c_black, c_black, c_black, alpha * 0.5);
+// Texto principal (usando escala_dinamica)
+draw_text_transformed_color(x_rival, gh/2, rivales, escala_dinamica, escala_dinamica, 0, c_red, c_red, c_white, c_white, alpha);
+
 
 // ==========================================
-// ⚡ EL "VS" (CENTRO)
+// ⚡ EL "VS"
 // ==========================================
 var vs_scale = (1 - (anim - 1)) * alpha; 
-if (estado == 1) vs_scale = anim; // 1 suele ser tu estado ENTRADA
+if (estado == INTRO_STATE.ENTRADA) vs_scale = anim * 2.5; 
 
 draw_set_halign(fa_center);
 draw_set_valign(fa_middle);
-draw_set_alpha(alpha);
+
+// Sombra del VS
+draw_text_transformed_color(gw/2 + 3, gh/2 + 3, "VS", vs_scale, vs_scale, 0, c_black, c_black, c_black, c_black, alpha * 0.5);
+// VS Principal
 draw_text_transformed(gw/2, gh/2, "VS", vs_scale, vs_scale, 0);
 
-// Reset de dibujo
+
+// --- RESET ---
 draw_set_alpha(1);
 draw_set_valign(fa_top);

@@ -1,30 +1,43 @@
-// 1. Dibujar el arma normal siempre
-draw_self();
+// 1. BLINDAJE: Si no hay arma, no dibujes NADA
+if (weapon == noone || !is_struct(weapon)) exit;
 
-// 2. EFECTO DE DESTELLO INTERMITENTE (Solo si no ha sido tomada)
+// 2. OBTENER EL SPRITE REAL
+// Usamos el sprite que viene dentro de la estructura 'weapon'
+var _mySprite = weapon.sprite;
+
+// Si por alguna razón el sprite no es válido, nos salimos
+if (!sprite_exists(_mySprite)) exit;
+
+// 3. DIBUJAR EL ARMA NORMAL
+draw_sprite_ext(
+    _mySprite, 
+    0, 
+    x, 
+    y, 
+    image_xscale, 
+    image_yscale, 
+    image_angle, 
+    c_white, 
+    1
+);
+
+// 4. EFECTO DE DESTELLO INTERMITENTE (Solo si no ha sido tomada)
 if (!taken) {
-    // Calculamos el "latido" (brillo) usando sin()
-    // current_time * 0.003 controla la velocidad del parpadeo
-    // abs() asegura que el valor sea siempre positivo
     var _alpha_destello = abs(sin(current_time * 0.003)); 
-    
-    // Elegimos el color del destello según el arma (opcional)
-    // Por ahora usemos blanco o naranja para que resalte
     var _color_destello = c_white; 
 
-    // Dibujamos una versión un poco más grande y brillante encima
     gpu_set_blendmode(bm_add); // Modo brillo "luz"
     
     draw_sprite_ext(
-        sprite_index, 
-        image_index, 
+        _mySprite, // USAMOS EL SPRITE DEL ARMA, NO EL DEL OBJETO
+        0, 
         x, 
         y, 
-        image_xscale * 1.15, // Un pelín más grande
+        image_xscale * 1.15, 
         image_yscale * 1.15, 
         image_angle, 
         _color_destello, 
-        _alpha_destello * 0.6 // El brillo sube y baja
+        _alpha_destello * 0.6 
     );
     
     gpu_set_blendmode(bm_normal); // Volver al modo normal

@@ -1,21 +1,55 @@
-// ======================================================
-// 📦 COLISIÓN CON MUNICIÓN (oAmmoPack)
-// ======================================================
+//if (other.taken) exit;
+//if (guns[weapon.index] == noone) exit;
 
-// 0) si ya fue tomado, no hacer nada
+
+
+//other.taken = true;
+//other.visible = false;
+
+//if (can_take_ammo) {
+//    var add = other.amount;
+//    reserve[$ t] = min(cur + add, maxReserve);
+//    if (global.sfx) audio_play_sound(snd_ammo_pickup, 1, false);
+//}
+
+//if (can_take_nades) {
+//    if (random(100) < 30) granadas += 1;
+//}
+
+//if (!reloading && w.ammo <= 0) scrReloadWeapon();
+
+//// --- NETWORKING ---
+//if (global.ONLINE) {
+//    var uid = other.net_uid;
+//    if (oBrain.AmIPseudoHost) {
+//        // Host la agarra: Avisa a todos
+//        scr_release_spawn_point(other.x, other.y); 
+//        instance_destroy(other);
+//        with(oOtherPlayer) { SendEventToClient(clientId, "ammo_taken", { uid: uid }); }
+//    } else {
+//        // Cliente la agarra: Pide permiso al Host
+//        var hostID = -1;
+//        with(oOtherPlayer) { if (isHost) hostID = clientId; } 
+//        if (hostID != -1) SendEventToClient(hostID, "request_ammo", { uid: uid });
+//        instance_destroy(other);
+//    }
+//} else {
+//    instance_destroy(other);
+//}
+
+
+
+
+
+
+
 if (other.taken) exit;
-
-// 1) Debes tener arma equipada para poder tomar munición
 if (guns[weapon.index] == noone) exit;
 
-// 2) Tipo de ammo según arma equipada
 var w = guns[weapon.index];
 var t = w.ammoType;
-
-// si el arma no tiene ammoType, sal
 if (t == "" || is_undefined(t)) exit;
 
-// 3) LÍMITE de reserva de balas
 var maxReserve = 999;
 switch (t) {
     case "gun":    maxReserve = 120; break;
@@ -24,63 +58,29 @@ switch (t) {
     case "shell":  maxReserve = 40;  break;
 }
 
-// valor actual en reserva
 var cur = 0;
 if (variable_struct_exists(reserve, t)) cur = reserve[$ t];
 
-// Si ya estás full de BALAS, no salimos aún, porque quizás necesitas GRANADAS
-// Pero si estás full de AMBAS cosas, ahí sí salimos.
 var can_take_ammo = (cur < maxReserve);
-var can_take_nades = (granadas < 5); // Límite de 5 granadas
+var can_take_nades = (granadas < 5);
 
 if (!can_take_ammo && !can_take_nades) exit;
 
-// 4) MARCAR COMO TOMADO
 other.taken = true;
 other.visible = false;
 
-// --- A) SUMAR BALAS (Si hay espacio) ---
-if (can_take_ammo) {
-    var add = other.amount;
-    reserve[$ t] = min(cur + add, maxReserve);
-    
-    // Sonido normal de balas
-    if (global.sfx) audio_play_sound(snd_ammo_pickup, 1, false);
-}
-
-// --- B) SUMAR GRANADA (30% de Probabilidad) ---
-if (can_take_nades) {
-    if (random(100) < 30) {
-        granadas += 1;
-    }
-}
-
-// ✅ AUTO-RECARGA si el cargador estaba vacío
-if (!reloading && w.ammo <= 0)
-{
-    scrReloadWeapon();
-}
-
-// 5) DESTRUCCIÓN SINCRONIZADA ONLINE
-var uid = other.net_uid;
-
 if (global.ONLINE) {
     if (oBrain.AmIPseudoHost) {
-        // El Host libera el punto y destruye
+        var uid = other.net_uid;
         scr_release_spawn_point(other.x, other.y); 
         instance_destroy(other);
-        
-        if (instance_exists(oOtherPlayer)) {
-            SendEventToClient(oOtherPlayer.clientId, "ammo_taken", { uid: uid });
-        }
+        with(oOtherPlayer) { SendEventToClient(clientId, "ammo_taken", { uid: uid }); }
     } else {
-        // El Cliente avisa al Host y destruye su copia local
-        if (instance_exists(oOtherPlayer)) {
-            SendEventToClient(oOtherPlayer.clientId, "request_ammo", { uid: uid });
-        }
+        var _targetHost = -1;
+        with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
+        if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
+        
+        if (_targetHost != -1) SendEventToClient(_targetHost, "request_ammo", { uid: other.net_uid });
         instance_destroy(other);
     }
-} else {
-    instance_destroy(other);
-}
-
+} else { instance_destroy(other); }
