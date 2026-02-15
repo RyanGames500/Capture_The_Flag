@@ -13,6 +13,7 @@ function callback_LeaveRoom(){
     global.winner_team = 0;
     oBrain.ammo_spawned=false;
 	oBrain.weapons_spawned=false;
+	//instance_destroy(oMouseIcon_falso);
     // 2. Quitamos el mensaje de "back to my private room" para que no moleste
     show_debug_message("Regresé a mi sala privada con éxito.");
 

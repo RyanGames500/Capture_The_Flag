@@ -6,19 +6,28 @@ function host_spawn_ammo(_x, _y, _amount)
     a.amount = _amount;
     a.taken = false;
 
-    if (!variable_global_exists("next_ammo_uid")) global.next_ammo_uid = 10000; // Rango distinto para ammo
+    // --- NUEVO: Decidir si es granada ---
+    // 25% de probabilidad (random(100) < 25)
+    var esGranada = (random(100) < 25); 
+    a.is_grenade_pack = esGranada;
+
+    if (esGranada) {
+        a.sprite_index = spr_pack_granadas; // Asegúrate que este sprite exista
+    }
+
+    if (!variable_global_exists("next_ammo_uid")) global.next_ammo_uid = 10000;
     a.net_uid = global.next_ammo_uid++;
     
-    // 🔥 DIFUSIÓN: Avisar a TODOS los clientes (para los 4 jugadores)
+    // DIFUSIÓN: Mandar a todos incluyendo la nueva variable "is_grenade"
     with(oOtherPlayer) {
         SendEventToClient(clientId, "spawn_ammo_pack", {
             uid: a.net_uid,
             x: _x,
             y: _y,
-            amount: _amount
+            amount: _amount,
+            is_grenade: esGranada // <--- TRANSMITIMOS LA DECISIÓN
         });
     }
 
-    // 🔥 EL FIX MAESTRO: Retornar la instancia
     return a; 
 }

@@ -42,7 +42,7 @@ case "spawn_powerup":
     {
         if (net_uid == uid) { exists = true; break; }
     }
-    if (exists) break;
+    //if (exists) break;
 
     var p = instance_create_layer(
         theMessageStruct.x,
@@ -71,38 +71,29 @@ case "request_powerup":
 
     if (_inst != noone) {
         var _tipo = _inst.tipo;
+        var _amt  = _inst.amount;
+        var _dur  = _inst.duration;
 
-        // 1. Confirmar al cliente que lo pidió
+        // A) Confirmar efecto al que lo pidió
         SendEventToClient(_sender, "apply_powerup", {
             tipo: _tipo,
+            amount: _amt,   
+            duration: _dur,  
             is_prediction: true
         });
 
-        // 2. 🔥 BROADCAST A TODOS LOS DEMÁS CLIENTES
-        // Esto asegura que los otros 3 jugadores borren el item y vean el FX
+        // B) 🔥 EL FIX: Mandar el borrado a ABSOLUTAMENTE TODOS los clientes
+        // Usamos un loop que incluya a todos sin filtros
         with(oOtherPlayer) {
-            // Borrar el item en sus pantallas
             SendEventToClient(clientId, "powerup_taken", { uid: _uid });
-            // Mostrar las partículas en sus pantallas
-            SendEventToClient(clientId, "powerup_fx", { tipo: _tipo, targetId: _sender });
-        }
-
-        // 3. LÓGICA LOCAL PARA EL HOST
-        // El Host busca al jugador que lo agarró para ver él también las partículas
-        var _playerToVisual = noone;
-        if (_sender == global.clientId) { // Caso raro donde el host es el sender
-             _playerToVisual = oPlayer.id;
-        } else {
-             with(oOtherPlayer) { if (clientId == _sender) _playerToVisual = id; }
-        }
-
-        if (instance_exists(_playerToVisual)) {
-            var _obj = (_tipo == "heal") ? oHealFX : oSpeedFX;
-            repeat(8) {
-                instance_create_layer(_playerToVisual.x + random_range(-20, 20), _playerToVisual.y + random_range(-10, 10), "Instances", _obj);
+            
+            // Mandar efectos visuales a todos menos al que ya los hizo localmente
+            if (clientId != _sender) {
+                SendEventToClient(clientId, "powerup_fx", { tipo: _tipo, targetId: _sender });
             }
         }
 
+        // C) El Host lo borra y libera spawn
         scr_release_spawn_point(_inst.x, _inst.y);
         instance_destroy(_inst);
     }
@@ -124,7 +115,6 @@ case "powerup_fx":
         with(oOtherPlayer) {
             if (clientId == _targetId) {
                 _targetInst = id;
-                break;
             }
         }
     }
@@ -153,29 +143,23 @@ break;
 
 case "apply_powerup":
 {
-    // Si el mensaje viene marcado como 'is_prediction', ignoramos la aplicación
-    // porque el oPlayer ya lo hizo en la colisión instantáneamente.
-    var _is_pred = variable_struct_exists(theMessageStruct, "is_prediction") ? theMessageStruct.is_prediction : false;
-    
-    if (_is_pred) {
-        show_debug_message("Confirmación recibida: El Host validó mi predicción.");
-        exit; // Salimos, no aplicamos el efecto dos veces
-    }
+    // Si es predicción, a veces es mejor ignorarlo porque oPlayer YA lo hizo en la colisión
+    var _is_pred = variable_struct_exists(theMessageStruct, "is_prediction") ? theMessageStruct.is_prediction : false;
+    
+    // Si eres el que lo recogió, ya tienes el efecto puesto por la colisión local
+    if (_is_pred) {
+        show_debug_message("Host confirmó mi PowerUp");
+    }
 
-    var _tipo = theMessageStruct.tipo; 
-    var _amount = theMessageStruct.amount;
-    var _duration = theMessageStruct.duration;
+    // Si llegas aquí, es porque el Host te ordena aplicarlo (y no fue por colisión local)
+    var _tipo = theMessageStruct.tipo;
+    var _amount = variable_struct_exists(theMessageStruct, "amount") ? theMessageStruct.amount : 25;
+    var _duration = variable_struct_exists(theMessageStruct, "duration") ? theMessageStruct.duration : 300;
 
-    with (oPlayer) 
-    {
-        if (_tipo == "speed") {
-            speed_timer = _duration;
-            walksp_mult = 1.5;
-        } 
-        else if (_tipo == "heal") {
-            health = min(100, health + _amount);
-        }
-    }
+    with (oPlayer) {
+        if (_tipo == "speed") { speed_timer = _duration; walksp_mult = 1.5; } 
+        else if (_tipo == "heal") { health = min(100, health + _amount); }
+    }
 }
 break;
 
@@ -203,27 +187,18 @@ break;
 		}
 		break;
 
-		case "request_rocket_explosion":
-		{
-		    if (!oBrain.AmIPseudoHost) break;
+case "request_rocket_explosion":
+{
+    if (!oBrain.AmIPseudoHost) break;
+    var ex = theMessageStruct.ex;
+    var ey = theMessageStruct.ey;
+    scrCreateRocketExplosion(ex, ey);
 
-		    var ex = theMessageStruct.ex;
-		    var ey = theMessageStruct.ey;
-
-		    // 🔥 HOST CREA SU FX
-		    scrCreateRocketExplosion(ex, ey);
-
-		    // 🔁 HOST LA REENVÍA
-		    if (instance_exists(oOtherPlayer))
-		    {
-		        SendEventToClient(
-		            oOtherPlayer.clientId,
-		            "fx_pearl_explosion",
-		            { ex: ex, ey: ey }
-		        );
-		    }
-		}
-		break;
+    with(oOtherPlayer) {
+        SendEventToClient(clientId, "fx_pearl_explosion", { ex: ex, ey: ey });
+    }
+}
+break;
 
 case "request_fx_explosion":
 {
@@ -410,32 +385,38 @@ break;
 		    }
 		break;
 
-		case "spawn_ammo_pack":
-		    // Esto lo ejecuta el CLIENTE al recibir la orden del HOST
-		    var uid = theMessageStruct.uid;
-		    show_debug_message("--- CLIENTE RECIBIÓ SPAWN: " + string(uid) + " ---");
+case "spawn_ammo_pack":
+{
+    var uid = theMessageStruct.uid;
+    show_debug_message("--- CLIENTE RECIBIÓ SPAWN: " + string(uid) + " ---");
 
-		    // Evitar duplicados
-		    var exists = false;
-		    with (oAmmoPack) {
-		        if (variable_instance_exists(id, "net_uid") && net_uid == uid) { 
-		            exists = true; 
-		        }
-		    }
-    
-		    if (!exists) {
-		        // IMPORTANTE: Verifica que los nombres (x, y, amount) sean iguales a los que envías
-		        var _x = theMessageStruct.x;
-		        var _y = theMessageStruct.y;
-		        var _amt = theMessageStruct.amount;
+    var exists = false;
+    with (oAmmoPack) {
+        if (variable_instance_exists(id, "net_uid") && net_uid == uid) { exists = true; break; }
+    }
+    
+    if (!exists) {
+        var _x = theMessageStruct.x;
+        var _y = theMessageStruct.y;
+        var _amt = theMessageStruct.amount;
+        // Leemos si el Host dijo que es granada (por defecto false si no viene)
+        var _isG = variable_struct_exists(theMessageStruct, "is_grenade") ? theMessageStruct.is_grenade : false;
 
-		        var a = instance_create_layer(_x, _y, "Instances", oAmmoPack);
-		        a.net_uid = uid;
-		        a.taken   = false;
-		        a.amount  = _amt;
-		        show_debug_message("+++ MUNICIÓN CREADA EN CLIENTE EN: " + string(_x) + "," + string(_y));
-		    }
-		break;
+        var a = instance_create_layer(_x, _y, "Instances", oAmmoPack);
+        a.net_uid = uid;
+        a.taken   = false;
+        a.amount  = _amt;
+        a.is_grenade_pack = _isG; // Guardamos el estado
+
+        // Cambiar sprite visualmente en el cliente
+        if (_isG) {
+            a.sprite_index = spr_pack_granadas; 
+        }
+
+        show_debug_message("+++ MUNICIÓN CREADA (" + (_isG ? "GRANADAS" : "BALAS") + ") EN: " + string(_x) + "," + string(_y));
+    }
+}
+break;
 
 
 		case "request_drop_on_death":

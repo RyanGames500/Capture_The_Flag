@@ -104,6 +104,7 @@ if (global.game_over == false)
 // ======================================================
 if (global.game_over == true) 
 {
+	with(oMouseIcon_falso){window_set_cursor(cr_arrow);}
     if (victory_alpha < 1) victory_alpha += 0.05; 
 
     if (victory_alpha >= 0.9) 

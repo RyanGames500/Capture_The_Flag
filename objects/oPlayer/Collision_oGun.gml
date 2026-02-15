@@ -40,7 +40,6 @@ if (same_weapon)
     else
     {
         instance_destroy(other);
-        exit;
     }
 }
 

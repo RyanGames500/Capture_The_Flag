@@ -192,6 +192,7 @@
     {"id":{"name":"spr_M4","path":"sprites/spr_M4/spr_M4.yy",},},
     {"id":{"name":"spr_Melee_sfx","path":"sprites/spr_Melee_sfx/spr_Melee_sfx.yy",},},
     {"id":{"name":"spr_Mouse_icon","path":"sprites/spr_Mouse_icon/spr_Mouse_icon.yy",},},
+    {"id":{"name":"spr_pack_granadas","path":"sprites/spr_pack_granadas/spr_pack_granadas.yy",},},
     {"id":{"name":"spr_ping","path":"sprites/spr_ping/spr_ping.yy",},},
     {"id":{"name":"spr_player_dead","path":"sprites/spr_player_dead/spr_player_dead.yy",},},
     {"id":{"name":"spr_player_hit","path":"sprites/spr_player_hit/spr_player_hit.yy",},},

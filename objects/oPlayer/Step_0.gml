@@ -1,4 +1,10 @@
-
+// CONGELAR ACCIONES AL FINAL
+if (global.game_over) 
+{
+    hsp = 0;
+    vsp = 0; 
+    exit;
+}
 
 if(place_meeting(x,y+1,obj_wall) || place_meeting(x,y+1,oPlataformaPasable))
 {
@@ -102,24 +108,30 @@ if (melee_active > 0)
     var hx = x + (range * sign(image_xscale));
     var hy = y - 10;
 
+    // Buscamos a alguien en el área
     var target = instance_place(hx, hy, oOtherPlayer);
+    
     if (target != noone)
     {
-        melee_active = 0;
+        // 🔥 FILTRO DE EQUIPO: Solo dañamos si el equipo es distinto al nuestro
+        // Asumiendo que oOtherPlayer tiene una variable 'team' o la lee de sharedProperties
+        if (target.team != global.myTeam) 
+        {
+            melee_active = 0; // Consumimos el ataque para no dañar 2 veces
 
-	if (global.ONLINE)
-	{
-	    SendEventToClient(target.clientId, "hit", {
-	        damage: melee_damage,
-	        killer: global.myName,   // o global.myName
-	        reason: "pvp"
-	    });
-	}
-	else
-	{
-	    target.health -= melee_damage;
-	}
-
+            if (global.ONLINE)
+            {
+                SendEventToClient(target.clientId, "hit", {
+                    damage: melee_damage,
+                    killer: global.myName,
+                    reason: "pvp"
+                });
+            }
+            else
+            {
+                target.health -= melee_damage;
+            }
+        }
     }
 }
 
@@ -170,12 +182,11 @@ if (granadas > 0) {
 
 	    if (global.sfx) audio_play_sound(snd_melee, 1, false);
 
-	    if (global.ONLINE && instance_exists(oOtherPlayer))
-	    {
-	        SendEventToClient(oOtherPlayer.clientId, "fx_melee", {
-	            x: x, y: y, dir: sign(image_xscale)
+		with(oOtherPlayer) {
+	        SendEventToClient(clientId, "fx_melee", {
+	            x: other.x, y: other.y, dir: sign(other.image_xscale)
 	        });
-	    }
+		}
 	}
     }
 }
