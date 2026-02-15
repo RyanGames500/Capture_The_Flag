@@ -56,23 +56,46 @@ if (!global.ONLINE || oBrain.AmIPseudoHost)
             }
         }
 
-        // ===== PLAYER REMOTO (TÍTERE) =====
-        if (global.ONLINE && !hit_this_swing && instance_exists(oOtherPlayer))
+// ===== PLAYER REMOTO (TÍTERE) =====
+if (global.ONLINE && !hit_this_swing && instance_exists(oOtherPlayer))
+{
+    with(oOtherPlayer) 
+    {
+        // Revisamos si la variable existe para evitar el error
+        var _muerto = false;
+        if (variable_instance_exists(id, "isDead")) {
+            _muerto = isDead;
+        }
+
+        // Si NO está muerto y lo toca el martillo
+        if (place_meeting(x, y, other) && !_muerto)
         {
-            if (place_meeting(x, y, oOtherPlayer))
-            {
-                hit_this_swing = true; // ✅ latch
+            other.hit_this_swing = true; 
 
-                //SendEventToClient(oOtherPlayer.clientId, "hit", { damage: 9999 });
-
-				SendEventToClient(oOtherPlayer.clientId, "hit", {
-				    damage: 9999,
-				    killer: "",
-				    reason: "crush"
-				});
-
-
+            SendEventToClient(clientId, "hit", {
+                damage: 9999,
+                killer: "Hammer",
+                reason: "crush"
+            });
+            
+            // Si tiene bandera, soltarla (con el fix de broadcast que vimos antes)
+            if (variable_instance_exists(id, "has_flag") && has_flag) {
+                var drop_x = x;
+                var drop_y = y;
+				var _flagObj = (thisPlayerTeam == "AZUL") ? "oFlag" : "oFlag2";
+                var _myTeam = variable_instance_exists(id, "thisPlayerTeam") ? thisPlayerTeam : "AZUL";
+                
+                with(oOtherPlayer) {
+                    SendEventToClient(clientId, "flag_dropped", {
+						flagObj: _flagObj,
+                        team: _myTeam, 
+                        dropX: drop_x, 
+                        dropY: drop_y 
+                    });
+                }
             }
         }
+    }
+}
     }
 }

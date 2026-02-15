@@ -84,12 +84,17 @@ function scrPlayerWeaponUpdate()
             tr.y2 = by + lengthdir_y(len, dir);
 
             // remoto fx
-            if (global.ONLINE && instance_exists(oOtherPlayer))
-            {
-                SendEventToClient(oOtherPlayer.clientId, "fx_shot", {
-                    x: bx, y: by, ang: weapon.angle, muzzle: mid
-                });
-            }
+if (global.ONLINE && instance_exists(oOtherPlayer))
+{
+    with(oOtherPlayer) {
+        SendEventToClient(clientId, "fx_shot", {
+            x: bx, 
+            y: by, 
+            ang: other.weapon.angle, 
+            muzzle: mid 
+        });
+    }
+}
 
             // gastar bala
             w.ammo -= 1;
@@ -148,12 +153,18 @@ function scrPlayerWeaponUpdate()
             tr.x2 = bx + lengthdir_x(len, dir);
             tr.y2 = by + lengthdir_y(len, dir);
 
-            if (global.ONLINE && instance_exists(oOtherPlayer))
-            {
-                SendEventToClient(oOtherPlayer.clientId, "fx_shot", {
-                    x: bx, y: by, ang: weapon.angle, muzzle: mid
-                });
-            }
+
+if (global.ONLINE && instance_exists(oOtherPlayer))
+{
+    with(oOtherPlayer) {
+        SendEventToClient(clientId, "fx_shot", {
+            x: bx, 
+            y: by, 
+            ang: other.weapon.angle, 
+            muzzle: mid 
+        });
+    }
+}
 
             // gastar bala
             w.ammo -= 1;
@@ -223,12 +234,17 @@ function scrPlayerWeaponUpdate()
                 b.owner_id = id;
             }
 
-            if (global.ONLINE && instance_exists(oOtherPlayer))
-            {
-                SendEventToClient(oOtherPlayer.clientId, "fx_shot", {
-                    x: bx, y: by, ang: weapon.angle, muzzle: mid
-                });
-            }
+if (global.ONLINE && instance_exists(oOtherPlayer))
+{
+    with(oOtherPlayer) {
+        SendEventToClient(clientId, "fx_shot", {
+            x: bx, 
+            y: by, 
+            ang: other.weapon.angle, 
+            muzzle: mid 
+        });
+    }
+}
 
             // gastar 1 ammo por disparo
             w.ammo -= 1;
@@ -274,11 +290,18 @@ function scrPlayerWeaponUpdate()
             flash.image_angle = weapon.angle;
             flash.image_xscale = 2;
 
-            if (global.ONLINE && instance_exists(oOtherPlayer)) {
-                SendEventToClient(oOtherPlayer.clientId, "fx_shot", {
-                    x: bx, y: by, ang: weapon.angle, muzzle: "escop" 
-                });
-            }
+
+if (global.ONLINE && instance_exists(oOtherPlayer))
+{
+    with(oOtherPlayer) {
+        SendEventToClient(clientId, "fx_shot", {
+            x: bx, 
+            y: by, 
+            ang: other.weapon.angle, 
+            muzzle: mid 
+        });
+    }
+}
 
             w.ammo -= 1;
             guns[weapon.index] = w;
@@ -335,13 +358,18 @@ function scrPlayerWeaponUpdate()
             tr.x2 = bx + lengthdir_x(len * 1.5, dir); // Tracer más largo
             tr.y2 = by + lengthdir_y(len * 1.5, dir);
 
-            // Sincronización Online
-            if (global.ONLINE && instance_exists(oOtherPlayer))
-            {
-                SendEventToClient(oOtherPlayer.clientId, "fx_shot", {
-                    x: bx, y: by, ang: weapon.angle, muzzle: "smg" // Usamos el muzzle de smg como fallback
-                });
-            }
+
+if (global.ONLINE && instance_exists(oOtherPlayer))
+{
+    with(oOtherPlayer) {
+        SendEventToClient(clientId, "fx_shot", {
+            x: bx, 
+            y: by, 
+            ang: other.weapon.angle, 
+            muzzle: mid 
+        });
+    }
+}
 
             // Consumo de munición
             w.ammo -= 1;

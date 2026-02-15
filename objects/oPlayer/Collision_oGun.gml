@@ -13,7 +13,7 @@ if (same_weapon)
     if (guns[weapon.index].ammo > 0) exit;
 
     guns[weapon.index].ammo = min(guns[weapon.index].ammo + other.weapon.ammo, guns[weapon.index].maxAmmo);
-    if (global.sfx) audio_play_sound(snd_ammo_pickup, 10, false); // <--- SONIDO AQUÍ
+    if (global.sfx) audio_play_sound(snd_ammo_pickup, 10, false);
 
     if (global.ONLINE)
     {
@@ -22,7 +22,6 @@ if (same_weapon)
         {
             scr_release_spawn_point(other.x, other.y);
             instance_destroy(other);
-            // BROADCAST a todos los demás clientes
             with(oOtherPlayer) { SendEventToClient(clientId, "weapon_pickup_taken", { uid: uid }); }
         }
         else
@@ -30,7 +29,6 @@ if (same_weapon)
             other.taken = true;
             other.visible = false; 
             
-            // --- BUSCAR AL HOST ENTRE LOS DEMÁS ---
             var _hostID = -1;
             with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _hostID = clientId; }
             if (_hostID == -1 && instance_exists(oOtherPlayer)) _hostID = instance_find(oOtherPlayer, 0).clientId;
@@ -46,17 +44,18 @@ if (same_weapon)
     }
 }
 
-// ====== 2) SWAP si es arma diferente ======
+// ====== 2) SWAP (REEMPLAZO SIN DEJAR ARMA EN EL SUELO) ======
+// Quitamos la lógica que crea un drop. Simplemente borramos la vieja de la mano.
+
 if (global.ONLINE && !oBrain.AmIPseudoHost)
 {
-    var oldWeapon = guns[weapon.index];
-    guns[weapon.index] = other.weapon;
-    if (global.sfx) audio_play_sound(snd_ammo_pickup, 10, false); // <--- SONIDO AQUÍ
+    // Cliente solo informa al Host pero ya no manda el 'oldWeapon' para spawnearla
+    guns[weapon.index] = other.weapon; // Reemplazo directo
+    if (global.sfx) audio_play_sound(snd_ammo_pickup, 10, false);
 
     other.taken = true;
     other.visible = false;
 
-    // --- BUSCAR AL HOST PARA PEDIR EL SWAP ---
     var _hostID = -1;
     with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _hostID = clientId; }
     if (_hostID == -1 && instance_exists(oOtherPlayer)) _hostID = instance_find(oOtherPlayer, 0).clientId;
@@ -64,37 +63,24 @@ if (global.ONLINE && !oBrain.AmIPseudoHost)
     if (_hostID != -1) {
         SendEventToClient(_hostID, "request_pickup_weapon", {
             uid: other.net_uid,
-            mode: "swap",
+            mode: "swap", // El Host recibirá esto y solo destruirá el pickup
             dropX: x,
-            dropY: y,
-            oldWeapon: oldWeapon
+            dropY: y
+            // No enviamos oldWeapon porque no queremos que se cree en el suelo
         });
     }
-    
-    instance_destroy(other); // Destruir localmente para que sea instantáneo
-    exit;
+    instance_destroy(other);
+    exit; // Importante para no ejecutar el código de abajo
 }
 
-// HOST (o offline): el host hace el swap completo y dropea
+// LÓGICA PARA HOST U OFFLINE (Reemplazo silencioso)
 if (guns[weapon.index] != noone)
 {
-    if (global.ONLINE && oBrain.AmIPseudoHost)
-    {
-        var dx = 24 * sign(image_xscale);
-        var dy = 0;
-        scr_drop_on_death(guns[weapon.index], x + dx, y + dy); // Usamos tu script de drop
-    }
-    else if (!global.ONLINE)
-    {
-        var drop = instance_create_layer(x, y, "Instances", oGun);
-        drop.weapon = guns[weapon.index];
-        drop.sprite_index = drop.weapon.sprite;
-        drop.image_index  = drop.weapon.subimage;
-        drop.taken = false;
-    }
+    // Antes aquí había un scr_drop_on_death o instance_create. 
+    // Al dejar esto vacío, el arma vieja simplemente desaparece de la memoria.
 }
 
-// Equipar nueva y sonido
+// Equipar nueva
 guns[weapon.index] = other.weapon;
 if (global.sfx) audio_play_sound(snd_ammo_pickup, 10, false);
 
@@ -105,7 +91,7 @@ if (global.ONLINE)
         var uid2 = other.net_uid;
         scr_release_spawn_point(other.x, other.y);
         instance_destroy(other);
-        // BROADCAST a todos
+        // Avisar a todos que el pickup ya no existe
         with(oOtherPlayer) { SendEventToClient(clientId, "weapon_pickup_taken", { uid: uid2 }); }
     }
 }

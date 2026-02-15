@@ -48,6 +48,7 @@
     {"id":{"name":"fnt_intro","path":"fonts/fnt_intro/fnt_intro.yy",},},
     {"id":{"name":"fnt_killfeed","path":"fonts/fnt_killfeed/fnt_killfeed.yy",},},
     {"id":{"name":"fnt_menu","path":"fonts/fnt_menu/fnt_menu.yy",},},
+    {"id":{"name":"fnt_small","path":"fonts/fnt_small/fnt_small.yy",},},
     {"id":{"name":"o_EffectTrail","path":"objects/o_EffectTrail/o_EffectTrail.yy",},},
     {"id":{"name":"oAmmoPack","path":"objects/oAmmoPack/oAmmoPack.yy",},},
     {"id":{"name":"obj_base_blue","path":"objects/obj_base_blue/obj_base_blue.yy",},},

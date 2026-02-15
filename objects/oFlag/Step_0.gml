@@ -1,114 +1,68 @@
-// Si NO tiene la bandera (está en el aire o suelo)
-if(global.ONLINE == false)
-{
+// --- LÓGICA DE BANDERA ROJA (oFlag) ---
 
-if (!has_flag) 
-{
-    // Aquí va todo tu código de gravedad que pusimos antes
-    if (!place_meeting(x, y + 1, obj_wall)) {
-        velocidad_caida += gravedad;
-        
+if (global.ONLINE == false) {
+    // --- MODO OFFLINE ---
+    if (!has_flag) {
+        if (!place_meeting(x, y + 1, obj_wall)) velocidad_caida += gravedad;
         if (place_meeting(x, y + velocidad_caida, obj_wall)) {
-            while (!place_meeting(x, y + sign(velocidad_caida), obj_wall)) {
-                y += sign(velocidad_caida);
-            }
+            while (!place_meeting(x, y + sign(velocidad_caida), obj_wall)) y += sign(velocidad_caida);
             velocidad_caida = 0;
         }
+        y += velocidad_caida;
     } else {
-        velocidad_caida = 0;
+        // En offline usualmente sigue a oPlayer_local
+        if (instance_exists(oPlayer_local)) {
+            x = oPlayer_local.x;
+            y = oPlayer_local.y - 16;
+        }
+        velocidad_caida = 0; 
     }
-    y += velocidad_caida;
 } 
-else // Si SÍ la tiene el jugador
-{
-    // La bandera sigue al jugador y reseteamos la velocidad para que no "acumule" fuerza
-    x = oPlayer_local.x;
-    y = oPlayer_local.y - 16;
-    velocidad_caida = 0; 
-}
-
-}
-
-else // --- MODO ONLINE ---
-{
-    if (has_flag) 
-    {
-        // Si alguien la lleva, que siga al portador (Local o Remoto)
-        // Usamos una variable 'portador_instancia' que asignarás en el callback
-
-			if (has_flag && portador_instancia != noone && instance_exists(portador_instancia)) 
-			{
-			    x = portador_instancia.x;
-			    y = portador_instancia.y - 16;
-			}
-    }
-    else 
-    {
-        // --- BANDERA EN EL SUELO ---
-        if (oBrain.AmIPseudoHost) 
-        {
- // HOST: físicas de bandera en el suelo
-if (!place_meeting(x, y + 1, obj_wall)) 
-{
-    velocidad_caida += gravedad;
-
-    // COLISIÓN vertical (el fix)
-    if (place_meeting(x, y + velocidad_caida, obj_wall)) 
-    {
-        while (!place_meeting(x, y + sign(velocidad_caida), obj_wall)) {
-            y += sign(velocidad_caida);
+else {
+    // --- MODO ONLINE ---
+    if (has_flag) {
+        // SEGUIMIENTO: Si alguien la lleva, seguir al portador asignado por el ID
+        if (portador_instancia != noone && instance_exists(portador_instancia)) {
+            x = portador_instancia.x;
+            y = portador_instancia.y - 16;
+            image_xscale = portador_instancia.image_xscale;
+            sprite_index = spr_mano;
+            depth = portador_instancia.depth - 1;
+        } else {
+            // Seguridad por si el portador sale de la partida o muere
+            has_flag = false;
+            portador_instancia = noone;
         }
-        velocidad_caida = 0;
-    }
+    } 
+    else {
+        // BANDERA EN EL SUELO: El Host manda, el Cliente obedece
+        sprite_index = spr_suela;
+        image_xscale = 1;
+        depth = -y;
 
-    y += velocidad_caida;
-}
-else 
-{
-    velocidad_caida = 0;
-}
+        if (oBrain.AmIPseudoHost) {
+            // Físicas del Host
+            if (!place_meeting(x, y + 1, obj_wall)) {
+                velocidad_caida += gravedad;
+                if (place_meeting(x, y + velocidad_caida, obj_wall)) {
+                    while (!place_meeting(x, y + sign(velocidad_caida), obj_wall)) y += sign(velocidad_caida);
+                    velocidad_caida = 0;
+                }
+            } else {
+                velocidad_caida = 0;
+            }
+            y += velocidad_caida;
 
-// publicar para el cliente
-global.sharedProperties._flagX = x;
-global.sharedProperties._flagY = y;
-
-
-        }
-        else 
-        {
-            // EL CLIENTE SOLO COPIA AL HOST
-            // SP es el struct que recibes del otro jugador (el Host)
+            // Publicar posición para los clientes
+            global.sharedProperties._flagX = x;
+            global.sharedProperties._flagY = y;
+        } 
+        else {
+            // El Cliente copia la posición que el Host envía en el struct SP
             if (variable_instance_exists(id, "SP")) {
                 x = SP._flagX;
                 y = SP._flagY;
             }
         }
     }
-}
-
-
-
-if (has_flag) 
-{
-    // 1. Si alguien la lleva, ponemos el sprite pequeño
-    sprite_index = spr_mano;
-    
-    // 2. Seguir al portador (esto ya lo tienes, pero asegúrate de que esté aquí)
-    if (instance_exists(portador_instancia)) {
-        x = portador_instancia.x;
-        y = portador_instancia.y - 16; // Ajusta la altura para que se vea bien
-        image_xscale = portador_instancia.image_xscale;
-    }
-} 
-else 
-{
-    // 3. Si está suelta (en base o caída), ponemos el sprite grande
-    sprite_index = spr_suela;
-    image_xscale = 1; // Reset de escala
-}
-
-if (has_flag) {
-    depth = portador_instancia.depth - 1; // Que se dibuje por delante del jugador
-} else {
-    depth = -y; // Profundidad normal de objeto en el suelo
 }

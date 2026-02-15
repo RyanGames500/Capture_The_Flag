@@ -35,6 +35,4 @@ if (global.ONLINE) {
         // El objeto ya es invisible y tiene 'taken = true', deja que el 
         // mensaje de confirmación del Host lo borre luego o se quede así.
     }
-} else { 
-    instance_destroy(other); 
-}
+} 

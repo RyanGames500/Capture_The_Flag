@@ -25,69 +25,58 @@ if (life > 0) {
         instance_destroy();
     }
 }
+// ======================================================
+// 🧱 COLISIÓN CON PAREDES / PLATAFORMAS (BALAS Y MISILES)
+// ======================================================
 if (place_meeting(x, y, obj_wall) || place_meeting(x, y, oPlataformaPasable))
 {
-    // ============================
-    // 💥 MISIL
-    // ============================
     if (is_rocket && !exploded)
     {
         exploded = true;
 
-        // FX LOCAL (feedback inmediato)
-		//scrCreateRocketExplosion(x,y);
+        // FX LOCAL inmediato
         instance_create_layer(x, y, "Weapons", oExplosionFX);
         if (global.sfx) audio_play_sound(snd_pearl_explodes, 10, false);
         scrCamShake(15);
 
-        // ============================
-        // 🌐 AVISAR AL HOST
-        // ============================
         if (global.ONLINE)
         {
-            if (!oBrain.AmIPseudoHost)
+            if (oBrain.AmIPseudoHost)
             {
-                // el cliente le dice al host: "exploté aquí"
-                SendEventToClient(
-                    oOtherPlayer.clientId,
-                    "request_rocket_explosion",
-                    { ex: x, ey: y }
-                );
+                // EL HOST LE AVISA A TODOS LOS DEMÁS
+                with(oOtherPlayer) {
+                    SendEventToClient(clientId, "fx_pearl_explosion", { ex: other.x, ey: other.y, isNade: false });
+                }
             }
             else
             {
-                // si YO soy el host, sincronizo de una vez
-                if (instance_exists(oOtherPlayer))
-                {
-                    SendEventToClient(
-                        oOtherPlayer.clientId,
-                        "fx_pearl_explosion",
-                        { ex: x, ey: y }
-                    );
+                // EL CLIENTE LE PIDE AL HOST QUE REPLIQUE LA EXPLOSIÓN
+                var _targetHost = -1;
+                with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
+                if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
+
+                if (_targetHost != -1) {
+                    SendEventToClient(_targetHost, "request_rocket_explosion", { ex: x, ey: y });
                 }
             }
         }
     }
-
     instance_destroy();
 }
 
-
 // ======================================================
-// 🎯 COLISIÓN CON JUGADOR (BALAS Y ROCKETS)
+// 🎯 COLISIÓN CON JUGADOR (TODOS LOS PROYECTILES)
 // ======================================================
 var target_enemy = instance_place(x, y, oOtherPlayer);
 
 if (target_enemy != noone)
 {
-    // 🔥 FILTRO BRAWL STARS: Solo procesamos si NO es de nuestro equipo
+    // Solo procesamos si NO es de nuestro equipo (Filtro Brawl Stars)
     if (variable_instance_exists(target_enemy, "team") && target_enemy.team != global.myTeam) 
     {
         if (target_enemy.invulnerable) exit;
 
-        // ==========================================
-        // 🔥 PREDICCIÓN VISUAL (SOLO LOCAL)
-        // ==========================================
+        // PREDICCIÓN VISUAL LOCAL
         with (target_enemy)
         {
             if (state != PLAYERSTATE.DEAD)
@@ -98,39 +87,32 @@ if (target_enemy != noone)
             }
         }
 
-        // ==========================================
-        // 💥 EXPLOSIÓN (SOLO SI ES ROCKET)
-        // ==========================================
+        // SI ES ROCKET, EXPLOTA
         if (is_rocket)
         {
-            scrCreateRocketExplosion(x, y);
+            scrCreateRocketExplosion(x, y, false);
 
             if (global.ONLINE)
             {
-                var explosionData = { ex: x, ey: y };
                 if (oBrain.AmIPseudoHost)
                 {
-                    if (instance_exists(oOtherPlayer))
-                    {
-                        SendEventToClient(oOtherPlayer.clientId, "fx_pearl_explosion", explosionData);
+                    with(oOtherPlayer) { 
+                        SendEventToClient(clientId, "fx_pearl_explosion", { ex: other.x, ey: other.y, isNade: false }); 
                     }
                 }
                 else
                 {
-                    SendEventToClient(oOtherPlayer.clientId, "request_fx_explosion", explosionData);
+                    var _targetHost = -1;
+                    with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
+                    if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
+                    if (_targetHost != -1) SendEventToClient(_targetHost, "request_fx_explosion", { ex: x, ey: y, isNade: false });
                 }
             }
         }
 
-        // ==========================================
-        // 🔊 SONIDO DE HIT
-        // ==========================================
-        if (global.sfx)
-            audio_play_sound(snd_hit, 20, false, 1.1);
+        if (global.sfx) audio_play_sound(snd_hit, 20, false, 1.1);
 
-        // ==========================================
-        // 🧠 DAÑO AUTORITATIVO
-        // ==========================================
+        // DAÑO AUTORITATIVO
         if (global.ONLINE)
         {
             if (oBrain.AmIPseudoHost)
@@ -143,22 +125,27 @@ if (target_enemy != noone)
             }
             else
             {
-                SendEventToClient(oOtherPlayer.clientId, "request_hit", {
-                    victimId: target_enemy.clientId,
-                    damage: damage,
-                    killer: global.myName,
-                    reason: "pvp"
-                });
+                var _targetHost = -1;
+                with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
+                if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
+                
+                if (_targetHost != -1) {
+                    SendEventToClient(_targetHost, "request_hit", {
+                        victimId: target_enemy.clientId,
+                        damage: damage,
+                        killer: global.myName,
+                        reason: "pvp"
+                    });
+                }
             }
         }
 
         instance_destroy();
-        exit; // Importante para no seguir procesando
     }
 }
 
 // ======================================================
-// 🚀 COMPORTAMIENTO DEL ROCKET (TRAIL + ROTACIÓN)
+// 🚀 COMPORTAMIENTO VISUAL (SMOKE TRAIL)
 // ======================================================
 if (is_rocket)
 {
@@ -171,77 +158,72 @@ if (is_rocket)
 }
 
 // ======================================================
-// 💣 LÓGICA DE GRANADAS (GRAVEDAD Y MOVIMIENTO)
+// 💣 LÓGICA DE GRANADAS (MOVIMIENTO Y GRAVEDAD)
 // ======================================================
 if (variable_instance_exists(id, "is_granada") && is_granada) {
     
+    // Evitar error de variable no definida para balas normales
+    if (!variable_instance_exists(id, "vsp")) vsp = 0;
+    if (!variable_instance_exists(id, "hsp")) hsp = 0;
+
     vsp += 0.22; // Gravedad
     image_angle -= hsp * 5; 
     
-    // 1. CHEQUEAR COLISIÓN CON EL ENEMIGO (Ignorando aliados)
+    // 1. Detección de enemigo para granada
     var target_enemy_nad = instance_place(x + hsp, y + vsp, oOtherPlayer);
-    
-    // Si detectamos a alguien, verificamos que sea enemigo
     if (target_enemy_nad != noone) {
         if (variable_instance_exists(target_enemy_nad, "team") && target_enemy_nad.team == global.myTeam) {
-            target_enemy_nad = noone; // Es aliado, hacemos como que no lo vimos
+            target_enemy_nad = noone; 
         }
     }
     
-    // 2. CHEQUEAR COLISIÓN CON EL SUELO/PARED
+    // 2. Colisión física
     var hit_wall = place_meeting(x + hsp, y + vsp, obj_wall);
-
-    // 3. CHEQUEAR PLATAFORMAS
     var hit_platform = false;
     var platform_id = instance_place(x, y + vsp, oPlataformaPasable); 
-    if (platform_id != noone && vsp > 0) {
-        hit_platform = true;
-    }
+    if (platform_id != noone && vsp > 0) hit_platform = true;
 
     // EXPLOSIÓN DE GRANADA
     if (target_enemy_nad != noone || hit_wall || hit_platform) {
         
-        is_rocket = true; 
         scrCreateRocketExplosion(x, y, true); 
-  
         if (global.sfx) audio_play_sound(snd_hit, 20, false, 1.1);
 
-        // DAÑO DIRECTO SI PEGÓ A UN ENEMIGO
+        // DAÑO SI ES ENEMIGO
         if (target_enemy_nad != noone && !target_enemy_nad.invulnerable) {
-            with (target_enemy_nad) {
-                if (state != PLAYERSTATE.DEAD) {
-                    hit_bloqueo_timer = 10;
-                    state = PLAYERSTATE.HIT;
-                    image_index = 0;
-                }
-            }
-
             if (global.ONLINE) {
                 if (oBrain.AmIPseudoHost) {
                     SendEventToClient(target_enemy_nad.clientId, "hit", {
                         damage: damage, killer: global.myName, reason: "granada"
                     });
                 } else {
-                    SendEventToClient(oOtherPlayer.clientId, "request_hit", {
-                        victimId: target_enemy_nad.clientId, damage: damage, killer: global.myName, reason: "granada"
-                    });
+                    var _targetHost = -1;
+                    with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
+                    if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
+                    if (_targetHost != -1) {
+                        SendEventToClient(_targetHost, "request_hit", {
+                            victimId: target_enemy_nad.clientId, damage: damage, killer: global.myName, reason: "granada"
+                        });
+                    }
                 }
             }
         }
 
         // SINCRONIZACIÓN VISUAL BUM
         if (global.ONLINE) {
-            var explosionData = { ex: x, ey: y, isNade: true };
             if (oBrain.AmIPseudoHost) {
-                if (instance_exists(oOtherPlayer)) 
-                    SendEventToClient(oOtherPlayer.clientId, "fx_pearl_explosion", explosionData);
+                with(oOtherPlayer) { 
+                    SendEventToClient(clientId, "fx_pearl_explosion", { ex: other.x, ey: other.y, isNade: true }); 
+                }
             } else {
-                SendEventToClient(oOtherPlayer.clientId, "request_fx_explosion", explosionData);
+                var _targetHost = -1;
+                with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
+                if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
+                if (_targetHost != -1) SendEventToClient(_targetHost, "request_fx_explosion", { ex: x, ey: y, isNade: true });
             }
         }
 
         instance_destroy(); 
-        exit; 
     }
     
     x += hsp;

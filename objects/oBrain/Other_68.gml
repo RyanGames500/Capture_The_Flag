@@ -126,6 +126,7 @@ case "state_update":
         // Asignar equipo por ID (Par = Azul, Impar = Rojo)
         new_enemy.team = (new_enemy.clientId % 2 == 0) ? "AZUL" : "ROJO";
         new_enemy.sharedProperties = realData.SP;
+		
 
         // 🔥 SOLO ACTIVAMOS EL TIMER
         if (oBrain.AmIPseudoHost) {

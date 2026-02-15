@@ -55,9 +55,19 @@ if (reloading)
     if (reload_timer <= 0)
     {
         var w = guns[weapon.index];
-        var t = w.ammoType;
+        
+        // 🔥 FILTRO DE SEGURIDAD: Si el arma no existe, abortamos
+        if (w == noone || !is_struct(w)) {
+            reloading = false;
+            exit; 
+        }
 
+        var t = w.ammoType;
         var res  = reserve[$ t];
+        
+        // Verificamos que el tipo de munición exista en la reserva
+        if (res == undefined) { reloading = false; exit; }
+
         var need = w.maxAmmo - w.ammo;
         var take = min(need, res);
 
@@ -66,8 +76,6 @@ if (reloading)
 
         guns[weapon.index] = w;
         reloading = false;
-
-        //if (global.sfx) audio_play_sound(snd_reload_done, 1, false);
     }
 }
 
@@ -327,70 +335,70 @@ y += vsp;
 
 if (health <= 0 && !isDead)
 {
-//Soltar arma equipada 
-if (global.ONLINE) 
+    reloading = false;
+    reload_timer = 0;
+
+    // ==========================================
+    // 🔫 SOLTAR ARMA EQUIPADA
+    // ==========================================
+    if (global.ONLINE) 
     {
         var _weapon_to_drop = guns[weapon.index];
         
         if (oBrain.AmIPseudoHost) 
         {
             // EL HOST MUERE: Llama a la función de drop directamente
-            // Usamos x, y del jugador que acaba de morir
             scr_drop_on_death(_weapon_to_drop, x, y);
         } 
         else 
         {
-            // EL CLIENTE MUERE: Le pide al host que haga el drop
-            // IMPORTANTE: Asegúrate de que el Host sea el destino (oOtherPlayer en el cliente es el Host)
+            // EL CLIENTE MUERE: Avisa a todos (el Host procesará el request)
             if (instance_exists(oOtherPlayer)) {
-                SendEventToClient(oOtherPlayer.clientId, "request_drop_on_death", {
-                    weapon: _weapon_to_drop,
-                    x: x,
-                    y: y
-                });
+                with(oOtherPlayer) {
+                    SendEventToClient(clientId, "request_drop_on_death", {
+                        weapon: _weapon_to_drop,
+                        x: other.x,
+                        y: other.y
+                    });
+                }
             }
         }
-	}
+    }
+
+    // ==========================================
+    // ESTADO DE MUERTE Y TIMERS
+    // ==========================================
     isDead = true;
     state = PLAYERSTATE.DEAD;
     invulnerable = true;
-    alarm[1] = 120;
+    alarm[1] = 120; // Timer para el Respawn
 
     var localText  = "";
     var remoteText = "";
 
-    // =========================
     // 1) MUERTE POR MARTILLO
-    // =========================
     if (death_reason == "crush")
     {
-        // en tu pantalla:
         localText = "Moriste aplastado";
-
-        // en la pantalla de los demás:
         remoteText = playerName + " murio aplastado";
     }
-    // =========================
     // 2) MUERTE NORMAL (PVP)
-    // =========================
     else
     {
         var killerName = (last_killer != "") ? last_killer : "Alguien";
-
-        // en tu pantalla:
         localText = killerName + " te elimino";
-
-        // en la pantalla de los demás:
         remoteText = killerName + " elimino a " + playerName;
     }
 
-    // ====== mostrar local ======
+    // ====== MOSTRAR EN MI PANTALLA ======
     scrAddKillFeed(localText);
 
-    // ====== mandar al remoto ======
+    // ====== MANDAR A TODOS LOS DEMÁS (Broadcast Killfeed) ======
     if (global.ONLINE && instance_exists(oOtherPlayer))
     {
-        SendEventToClient(oOtherPlayer.clientId, "kill_feed", { msg: remoteText });
+        with(oOtherPlayer) {
+            SendEventToClient(clientId, "kill_feed", { msg: remoteText });
+        }
     }
 }
 
@@ -398,39 +406,52 @@ if (global.ONLINE)
 
 
 
+// --- LÓGICA DE SOLTAR AL MORIR (ÚNICA Y DEFINITIVA) ---
+// Solo entramos si el jugador muere Y REALMENTE tiene una bandera capturada
 if (state == PLAYERSTATE.DEAD && has_flag == true) 
 {
+    // 1. Apagamos el switch inmediatamente para que no se repita
     has_flag = false;
     
-    // Identificamos qué bandera soltamos
-    var bandera_a_soltar = (global.myTeam == "AZUL") ? oFlag : oFlag2;
+    // 2. Identificamos la bandera ENEMIGA (la que llevamos robada)
+    // Si yo soy AZUL, la que suelto es la ROJA (oFlag)
+    // Si yo soy ROJO, la que suelto es la AZUL (oFlag2)
+    var bandera_robada = (global.myTeam == "AZUL") ? oFlag : oFlag2;
+    
+    var drop_x = x; 
+    var drop_y = y;
 
-    with (bandera_a_soltar) 
+    // 3. Movemos la bandera robada al suelo
+    with (bandera_robada) 
     {
         has_flag = false;
         portador_instancia = noone;
-        // La dejamos exactamente donde estaba el jugador
-        x = other.x;
-        y = other.y;
-        velocidad_caida = -2; // Un pequeño rebote hacia arriba para que se vea bien
+        x = drop_x;
+        y = drop_y;
+        velocidad_caida = -2; 
+        sprite_index = spr_suela;
     }
     
-    // IMPORTANTE: Avisar a los demás que la bandera cayó al suelo
-    if (instance_exists(oOtherPlayer)) {
-        SendEventToClient(oOtherPlayer.clientId, "flag_dropped", { 
-            team: global.myTeam, 
-            dropX: x, 
-            dropY: y 
-        });
+    // 4. Avisamos a los demás (Broadcast)
+    if (global.ONLINE && instance_exists(oOtherPlayer)) 
+    {
+        with(oOtherPlayer) {
+            SendEventToClient(clientId, "flag_dropped", { 
+                team: global.myTeam, 
+                dropX: drop_x, 
+                dropY: drop_y 
+            });
+        }
     }
 }
 
 
-// --- CÓDIGO DE CAPTURA DE BANDERA ---
-// Identificamos cuál es la bandera que debo capturar (la del enemigo)
-var objetivo = (global.myTeam == "AZUL") ? oFlag : oFlag2;
 
-if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD && !has_flag) 
+// --- CÓDIGO DE CAPTURA MEJORADO ---
+var objetivo = (global.myTeam == "AZUL") ? oFlag : oFlag2; // Bandera enemiga
+
+// Solo capturo si: No hay punto pendiente + Colisión + No estoy muerto + Yo no tengo bandera + NADIE la tiene
+if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD && !has_flag && !objetivo.has_flag) 
 {
     has_flag = true;
     with(objetivo) { 
@@ -438,83 +459,71 @@ if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD
         portador_instancia = other.id;
     }
 
+    // Avisar a todos
     if (instance_exists(oOtherPlayer)) {
-        SendEventToClient(oOtherPlayer.clientId, "flag_capture", { team: global.myTeam });
+        with(oOtherPlayer) {
+            SendEventToClient(clientId, "flag_capture", { team: global.myTeam });
+        }
     }
-    //audio_play_sound(snd_flag_taken, 10, false); // Pon tu sonido de captura
 }
 
 // --- CÓDIGO DE ANOTACIÓN EN BASE ---
-// Identificamos cuál es MI base
 var miBase = (global.myTeam == "AZUL") ? obj_base_blue : obj_base_red;
 
-if (place_meeting(x, y, miBase) && has_flag)
+// AÑADIMOS !score_pending para que solo entre una vez
+if (place_meeting(x, y, miBase) && has_flag && !score_pending) 
 {
-    // IMPORTANTE: NO resetees la bandera aquí en ONLINE
+    score_pending = true; // 🚩 BLOQUEO INMEDIATO
     has_flag = false;
 
-	// DETACH LOCAL: para evitar recaptura en loop mientras llega la confirmación del host
-	with (objetivo) {
-	    has_flag = false;
-	    portador_instancia = noone;
-	    velocidad_caida = 0; // opcional
-	}
+    with (objetivo) {
+        has_flag = false;
+        portador_instancia = noone;
+        velocidad_caida = 0;
+    }
 
-
-    // Dime cuál bandera era la que yo traía (la del enemigo)
     var flag_scored = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
 
     if (oBrain.AmIPseudoHost) {
-        // Host suma y aplica reset
         if (global.myTeam == "AZUL") global.puntos_azul++; else global.puntos_rojo++;
 
-        // Reset solo de la bandera anotada (la del enemigo)
         if (flag_scored == "ROJA") {
             with (oFlag) { x=spawnX; y=spawnY; velocidad_caida=0; has_flag=false; portador_instancia=noone; }
         } else {
             with (oFlag2){ x=spawnX; y=spawnY; velocidad_caida=0; has_flag=false; portador_instancia=noone; }
         }
 
-        // Enviar a cliente marcador + cuál bandera resetear
-        if (instance_exists(oOtherPlayer)) {
-            SendEventToClient(oOtherPlayer.clientId, "sync_score", {
+        // BROADCAST A TODOS LOS "OTHER"
+        with(oOtherPlayer) {
+            SendEventToClient(clientId, "sync_score", {
                 azul: global.puntos_azul,
                 rojo: global.puntos_rojo,
                 resetFlag: flag_scored
             });
         }
+        
+        // El Host se desbloquea tras procesar todo
+        score_pending = false;
 
-
-// 2. EL HOST CREA SU PROPIA NOTIFICACIÓN
+        // --- Tus notificaciones (Se quedan igual) ---
         var notif = instance_create_layer(0, 0, "Instances", oNotification);
         notif.target_scale = 1.5;
-        
-        // LÓGICA PARA EL HOST:
-        // flag_scored es la bandera que acaba de llegar a una base.
-        // Si la bandera reseteada es la del enemigo, ¡Anotó el Host!
         var miObjetivo = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
-        
         if (flag_scored == miObjetivo) {
-            notif.text = "TU EQUIPO ANOTO!";
+            notif.text = "¡TU EQUIPO ANOTO!";
             notif.color = c_lime;
         } else {
-            // Si se reseteó MI bandera, significa que el PLAYER 2 anotó en mi cara
-            notif.text = "EL ENEMIGO ANOTO!";
+            notif.text = "¡EL ENEMIGO ANOTO!";
             notif.color = c_orange;
         }
-		
-		
     } 
-	else 
-	{
-		score_pending = true;
-        // Cliente le pide al host el punto + cuál bandera anotó
-        if (instance_exists(oOtherPlayer)) {
-			// Asegúrate de que global.myTeam sea "ROJA" o cámbialo manualmente aquí para probar:
-			SendEventToClient(oOtherPlayer.clientId, "request_point", {
-			    team: (global.myTeam == "AZUL") ? "AZUL" : "ROJA", // Forzamos el nombre correcto
-			    resetFlag: flag_scored
-			});
+    else {
+        // CLIENTE: Envía a todos los OtherPlayer (aunque solo el Host lo procesará)
+        with(oOtherPlayer) {
+            SendEventToClient(clientId, "request_point", {
+                team: (global.myTeam == "AZUL") ? "AZUL" : "ROJA",
+                resetFlag: flag_scored
+            });
         }
     }
 }
@@ -528,33 +537,26 @@ if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (
     score_pending = true; 
 
     if (oBrain.AmIPseudoHost) {
-        // --- LÓGICA DIRECTA PARA EL HOST ---
         with(miBandera) { x = spawnX; y = spawnY; }
         
-        // El Host crea su propia notificación de una vez
         var notif = instance_create_layer(0, 0, "Instances", oNotification);
-        notif.text = "SALVASTE TU BANDERA!";
+        notif.text = "¡SALVASTE TU BANDERA!";
         notif.color = c_aqua;
         notif.target_scale = 1.2;
-        
-        // Avisa al cliente
-        if (instance_exists(oOtherPlayer)) {
-            SendEventToClient(oOtherPlayer.clientId, "sync_score", { 
+
+        with(oOtherPlayer) {
+            SendEventToClient(clientId, "sync_score", { 
                 azul: global.puntos_azul, 
                 rojo: global.puntos_rojo, 
                 resetFlag: (global.myTeam == "AZUL") ? "AZUL" : "ROJA",
                 reason: "RETORNO" 
             });
         }
-        
-        // IMPORTANTE: El Host se desbloquea a sí mismo
         score_pending = false; 
     } 
-    else 
-    {
-        // EL CLIENTE PIDE AL HOST
-        if (instance_exists(oOtherPlayer)) {
-            SendEventToClient(oOtherPlayer.clientId, "request_point", { 
+    else {
+        with(oOtherPlayer) {
+            SendEventToClient(clientId, "request_point", { 
                 team: "SISTEMA", 
                 resetFlag: (global.myTeam == "AZUL") ? "AZUL" : "ROJA" 
             });

@@ -1,7 +1,9 @@
-//draw a bar to show the speed
-var healthbarLength = speed*10
-draw_healthbar(x - healthbarLength, y -30, x+ healthbarLength,y-35,100, c_black, c_red ,c_lime,false,true,false)
-draw_healthbar(x - 30, y -40, x+ 30,y-45,health, c_black, c_blue ,c_blue,false,true,false)
+// Tu barra de salud siempre azul (porque eres de tu equipo)
+draw_healthbar(x - 30, y - 40, x + 30, y - 45, health, c_black, c_blue, c_blue, 0, true, false);
+
+// Tu barra de velocidad (esta la dejas como la tenías, está cool)
+var healthbarLength = speed * 10;
+draw_healthbar(x - healthbarLength, y - 30, x + healthbarLength, y - 35, 100, c_black, c_red, c_lime, 0, true, false);
 
 if (invulnerable) {
     // 1. Efecto de Brillo/Color (Mezcla de color aditiva)
@@ -20,11 +22,11 @@ if (invulnerable) {
     draw_self();
 }
 
-if (oBrain.AmIPseudoHost) {
-image_blend=c_blue
-} else {
-image_blend=c_red
-}
+//if (oBrain.AmIPseudoHost) {
+//image_blend=c_blue
+//} else {
+//image_blend=c_red
+//}
 
 if (melee_active > 0)
 {

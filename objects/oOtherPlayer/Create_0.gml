@@ -25,7 +25,7 @@ weapon = {
 	angle: 0,
 	frequency: 0
 };
-
+isDead = false;
 enemyHealth = 100
 state=0;
 team="";
@@ -41,3 +41,4 @@ recoil_angle=0;
 melee_active = 0;
 melee_prev_net = 0;
 hit_bloqueo_timer = 0;
+thisPlayerTeam="";

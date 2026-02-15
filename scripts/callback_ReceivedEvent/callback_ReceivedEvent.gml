@@ -1,23 +1,25 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
 
-	case "spawn_granada":
-	    // 1. Extraer los datos del paquete
-	    var _gx    = theMessageStruct.gx;
-	    var _gy    = theMessageStruct.gy;
-	    var _angle = theMessageStruct.angle;
+case "spawn_granada":
+    var _gx    = theMessageStruct.gx;
+    var _gy    = theMessageStruct.gy;
+    var _angle = theMessageStruct.angle;
 
-	    // 2. Crear la granada visual para el cliente
-	    // Usamos el mismo objeto oGranada, pero hay que darle velocidad
-	    var gra = instance_create_layer(_gx, _gy, "Instances", oGranada);
-    
-	    // Calculamos la misma trayectoria para que se vea igual en ambas pantallas
-	    gra.hsp = lengthdir_x(8, _angle);
-	    gra.vsp = lengthdir_y(8, _angle) - 2;
-    
-	    // IMPORTANTE: Si la granada hace daño por colisión, 
-	    // asegúrate de que solo el dueño o el host valide el daño para no duplicarlo.
-	    break;
+    var gra = instance_create_layer(_gx, _gy, "Instances", oGranada);
+    
+    // Usamos variables consistentes
+    gra.direction = _angle;
+    gra.speed = 8; 
+    gra.gravity = 0.2; // Si tu granada usa gravedad física
+    
+    // Si usas hsp/vsp manual:
+    gra.hsp = lengthdir_x(8, _angle);
+    gra.vsp = lengthdir_y(8, _angle) - 2;
+    
+    // Marcamos que es una granada remota para que no procese daño (solo el dueño daña)
+    gra.is_remote = true; 
+break;
 	
 case "sync_names_teams":
 {
@@ -225,21 +227,26 @@ break;
 
 case "request_fx_explosion":
 {
-    if (!oBrain.AmIPseudoHost) break;
+    if (!oBrain.AmIPseudoHost) break;
 
-    var ex = theMessageStruct.ex;
-    var ey = theMessageStruct.ey;
-    var _isNade = variable_struct_exists(theMessageStruct, "isNade") ? theMessageStruct.isNade : false;
+    var ex = theMessageStruct.ex;
+    var ey = theMessageStruct.ey;
+    var _isNade = variable_struct_exists(theMessageStruct, "isNade") ? theMessageStruct.isNade : false;
+    var _sender = senderClientId;
 
-    // Host la crea
-    scrCreateRocketExplosion(ex, ey, _isNade);
+    // 1. El Host crea su propio efecto
+    scrCreateRocketExplosion(ex, ey, _isNade);
 
-    // Host la reenvía al cliente incluyendo el dato
-    SendEventToClient(senderClientId, "fx_pearl_explosion", {
-        ex: ex,
-        ey: ey,
-        isNade: _isNade
-    });
+    // 2. 🔥 BROADCAST: El Host le avisa a todos los demás clientes
+    with(oOtherPlayer) {
+        if (clientId != _sender) { // No se lo mandamos al que disparó, él ya lo creó localmente
+            SendEventToClient(clientId, "fx_pearl_explosion", {
+                ex: ex,
+                ey: ey,
+                isNade: _isNade
+            });
+        }
+    }
 }
 break;
 
@@ -413,7 +420,6 @@ break;
 		    with (oAmmoPack) {
 		        if (variable_instance_exists(id, "net_uid") && net_uid == uid) { 
 		            exists = true; 
-		            break; 
 		        }
 		    }
     
@@ -465,29 +471,29 @@ break;
 		}	
 		break;
 
-	case "request_hit":
-	{
-	    // Solo el Host procesa peticiones de daño
-	    if (oBrain.AmIPseudoHost) 
-	    {
-	        var victimId = theMessageStruct.victimId;
-	        var dmg      = theMessageStruct.damage;
-	        var killer   = string(theMessageStruct.killer);
-	        var reason   = string(theMessageStruct.reason);
+		case "request_hit":
+		{
+		    // Solo el Host procesa peticiones de daño
+		    if (oBrain.AmIPseudoHost) 
+		    {
+		        var victimId = theMessageStruct.victimId;
+		        var dmg      = theMessageStruct.damage;
+		        var killer   = string(theMessageStruct.killer);
+		        var reason   = string(theMessageStruct.reason);
 
-	        // El Host le ordena a la víctima que reciba el golpe
-	        // (Esto disparará el caso "hit" en la pantalla de la víctima)
-	        SendEventToClient(victimId, "hit", {
-	            damage: dmg,
-	            killer: killer,
-	            reason: reason
-	        });
+		        // El Host le ordena a la víctima que reciba el golpe
+		        // (Esto disparará el caso "hit" en la pantalla de la víctima)
+		        SendEventToClient(victimId, "hit", {
+		            damage: dmg,
+		            killer: killer,
+		            reason: reason
+		        });
         
-	        // Opcional: El Host también podría avisarle al atacante que el golpe fue válido
-	        // SendEventToClient(senderClientId, "hit_confirmed", {});
-	    }
-	}
-	break;
+		        // Opcional: El Host también podría avisarle al atacante que el golpe fue válido
+		        // SendEventToClient(senderClientId, "hit_confirmed", {});
+		    }
+		}
+		break;
 
 		case "hit":
 		{
@@ -526,40 +532,37 @@ break;
 
 		case "flag_capture":
 		{
-		    var equipoCapturador = theMessageStruct.team;
-    
-		    // REGLA DE ORO: 
-		    // Si captura el AZUL -> Se mueve la ROJA (oFlag)
-		    // Si captura el ROJO -> Se mueve la AZUL (oFlag2)
-		    var banderaObjetivo = (equipoCapturador == "AZUL") ? oFlag : oFlag2;
+		    var equipoCapturador = theMessageStruct.team;
+		    var idDelQueCapturo = senderClientId; // <--- USAMOS EL ID ÚNICO DEL EMISOR
+		    var banderaObjetivo = (equipoCapturador == "AZUL") ? oFlag : oFlag2;
 
-		    with(banderaObjetivo) {
-		        has_flag = true;
-				sprite_index = spr_mano; //Cambio a sprite pequeño
-		        // Si el que capturó NO soy yo, el portador es el otro
-		        if (equipoCapturador != global.myTeam) {
-		            if (instance_exists(oOtherPlayer)) portador_instancia = oOtherPlayer.id;
-		        } else {
-		            portador_instancia = oPlayer.id;
-		        }
-		    }
-			
-			var teamWhoCaptured = theMessageStruct.team;
-		    var notif = instance_create_layer(0, 0, "Instances", oNotification);
-
-		    if (teamWhoCaptured == global.myTeam) {
-		        // MI EQUIPO capturó la bandera enemiga (Mensaje Sexy de éxito)
-		        notif.text = "TIENES LA BANDERA ENEMIGA!";
-		        notif.color = c_aqua; // Azul neón
-		    } else {
-		        // EL ENEMIGO capturó mi bandera (Mensaje Sexy de peligro)
-		        notif.text = "CUIDADO! ROBARON TU BANDERA";
-		        notif.color = c_red; // Rojo sangre/neón
-        
-		        //Sonido de alarma
-		        //if(global.sfx) audio_play_sound(snd_alarm, 10, false);
-		    }
-			
+		    with(banderaObjetivo) {
+		        has_flag = true;
+		        sprite_index = spr_mano;
+        
+		        // ¿Quién la capturó?
+		        if (idDelQueCapturo == global.clientId) {
+		            // Fui yo mismo (Local)
+		            portador_instancia = oPlayer.id;
+		        } else {
+		            // Fue alguien más. Buscamos EXACTAMENTE a quién entre todos los "Others"
+		            var elPortadorReal = noone;
+		            with(oOtherPlayer) {
+		                if (clientId == idDelQueCapturo) elPortadorReal = id;
+		            }
+		            portador_instancia = elPortadorReal;
+		        }
+		    }
+    
+		    // --- Tus notificaciones se quedan igual ---
+		    var notif = instance_create_layer(0, 0, "Instances", oNotification);
+		    if (equipoCapturador == global.myTeam) {
+		        notif.text = "¡TU EQUIPO TIENE LA BANDERA!";
+		        notif.color = c_aqua;
+		    } else {
+		        notif.text = "¡CUIDADO! ROBARON TU BANDERA";
+		        notif.color = c_red;
+		    }
 		}
 		break;
 
@@ -610,25 +613,28 @@ case "request_point":
             var miColor = (global.myTeam == "AZUL") ? "AZUL" : "ROJA";
             if (flagToReset == miColor) {
                 notif.text = "SALVASTE TU BANDERA!";
-                notif.color = c_aqua;
+                notif.color = c_blue;
             } else {
                 notif.text = "EL ENEMIGO RECUPERO SU BANDERA";
                 notif.color = c_gray;
             }
         } else {
             notif.text = "EL ENEMIGO ANOTO!";
-            notif.color = c_orange;
+            notif.color = c_red;
             notif.target_scale = 1.5;
         }
 
         // MANDAR SYNC AL CLIENTE
         if (instance_exists(oOtherPlayer)) {
-            SendEventToClient(oOtherPlayer.clientId, "sync_score", {
+			
+			with(oOtherPlayer){
+            SendEventToClient(clientId, "sync_score", {
                 azul: global.puntos_azul,
                 rojo: global.puntos_rojo,
                 resetFlag: flagToReset,
                 reason: (isSystem) ? "RETORNO" : "PUNTO"
             });
+			}
         }
     }
 }
@@ -640,7 +646,9 @@ case "sync_score":
 {
     global.puntos_azul = theMessageStruct.azul;
     global.puntos_rojo = theMessageStruct.rojo;
-    oPlayer.score_pending = false;
+    //DESBLOQUEO DEL JUGADOR LOCAL
+    oPlayer.score_pending = false;
+    oPlayer.has_flag = false; 
     
     var flag_scored = theMessageStruct.resetFlag; // "ROJA" o "AZUL"
     var reason = variable_struct_exists(theMessageStruct, "reason") ? theMessageStruct.reason : "PUNTO";
@@ -656,7 +664,7 @@ case "sync_score":
     var miObjetivo = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
     if (flag_scored == miObjetivo) oPlayer.has_flag = false;
     var objetivoRival = (global.myTeam == "AZUL") ? "AZUL" : "ROJA"; 
-    if (flag_scored == objetivoRival && instance_exists(oOtherPlayer)) oOtherPlayer.has_flag = false;
+    if (flag_scored == objetivoRival && instance_exists(oOtherPlayer)) with(oOtherPlayer) {has_flag = false;}
 
     // --- 3. NOTIFICACIONES DIFERENCIADAS ---
     var notif = instance_create_layer(0, 0, "Instances", oNotification);
@@ -685,37 +693,54 @@ case "sync_score":
         
         if (flag_scored == miBanderaEnemiga) {
             notif.text = "TU EQUIPO ANOTO!";
-            notif.color = c_lime;
+            notif.color = c_blue;
         } else {
             notif.text = "EL ENEMIGO ANOTO!";
-            notif.color = c_orange;
+            notif.color = c_red;
         }
     }
 }
 break;
 
-		case "flag_dropped":
-		{
-		    var equipoQueLaSolto = theMessageStruct.team;
-		    var dropX = theMessageStruct.dropX;
-		    var dropY = theMessageStruct.dropY;
-    
-		    // Si el equipo que la soltó es el Azul, la bandera es la Roja (oFlag) y viceversa
-		    var bandera = (equipoQueLaSolto == "AZUL") ? oFlag : oFlag2;
-    
-		    with(bandera) {
-		        has_flag = false;
-				sprite_index = spr_suela; // ✅ Cambio a sprite grande
-		        portador_instancia = noone;
-		        x = dropX;
-		        y = dropY;
-		        velocidad_caida = -2;
-		    }
-    
-		    // También reseteamos el has_flag del otro jugador en nuestra pantalla
-		    if (instance_exists(oOtherPlayer)) oOtherPlayer.has_flag = false;
-			}
-		break;
+case "flag_dropped":
+{
+    var equipoQueLaSolto = theMessageStruct.team;
+    var dropX = theMessageStruct.dropX;
+    var dropY = theMessageStruct.dropY;
+    
+    // 1. Identificar la bandera (Azul suelta Roja, Rojo suelta Azul)
+    var banderaAUsar = (equipoQueLaSolto == "AZUL") ? oFlag : oFlag2;
+
+    if (instance_exists(banderaAUsar)) {
+        // Quitamos el IF de seguridad que la bloqueaba y usamos la lógica de limpieza total
+        with(banderaAUsar) {
+            has_flag = false;
+            portador_instancia = noone;
+            x = dropX;
+            y = dropY;
+            velocidad_caida = -2;
+            sprite_index = spr_suela;
+            
+            // Debug por si acaso (puedes quitarlo luego)
+            show_debug_message("Bandera soltada por equipo: " + equipoQueLaSolto);
+        }
+    }
+
+    // 2. 🔥 IMPORTANTÍSIMO: Limpiar a TODOS los oOtherPlayer
+    // Si no hacemos esto, el objeto del jugador en la pantalla de los demás
+    // sigue pensando que tiene la bandera y la sigue dibujando.
+    with(oOtherPlayer) {
+        if (variable_instance_exists(id, "thisPlayerTeam") && thisPlayerTeam == equipoQueLaSolto) {
+            has_flag = false;
+        }
+    }
+    
+    // 3. Si yo soy el que la soltó, me aseguro de estar limpio
+    if (global.myTeam == equipoQueLaSolto) {
+        oPlayer.has_flag = false;
+    }
+}
+break;
 
 			// --- Dentro del switch(eventName) ---
 		case "finalizar_partida":
@@ -731,32 +756,36 @@ break;
 		    LeaveRoom(); 
 			break;
 			
-			case "fx_shot":
-			{
-			    var fx_x = theMessageStruct.x;
-			    var fx_y = theMessageStruct.y;
-			    var ang  = theMessageStruct.ang;
-			    var mid  = theMessageStruct.muzzle;
+case "fx_shot":
+{
+    var fx_x = theMessageStruct.x;
+    var fx_y = theMessageStruct.y;
+    var ang  = theMessageStruct.ang;
+    var mid  = theMessageStruct.muzzle;
 
-			    // MAPEAR ID → SPRITE (LOCAL)
-			    var spr = sprMuzzle_gun;
-			    switch (mid)
-			    {
-			        case "gun":  spr = sprMuzzle_gun; break;
-			        case "smg":     spr = sprMuzzle_smg; break;
-			        case "escop": spr = sprMuzzle_escop; break;
-			    }
+    // Mapeo de Sprites
+    var spr = sprMuzzle_smg;
+    switch (mid) {
+        case "gun":   spr = sprMuzzle_gun; break;
+        case "smg":   spr = sprMuzzle_smg; break;
+        case "escop": spr = sprMuzzle_escop; break;
+        case "m4":    spr = sprMuzzle_smg; break; // Puedes usar el de smg
+    }
 
-			    // crear muzzle flash
-			    var m = instance_create_layer(fx_x, fx_y, "Instances", oMuzzleFlash);
-			    m.sprite_index = spr;
-			    m.image_angle  = ang;
+    var m = instance_create_layer(fx_x, fx_y, "Instances", oMuzzleFlash);
+    m.sprite_index = spr;
+    m.image_angle  = ang;
+    if (mid == "bazooka") m.image_xscale = 2; // Efecto más grande para bazooka
 
-			    // tracer (opcional)
-			    var t = instance_create_layer(fx_x, fx_y, "Instances", oTracer);
-			    t.direction = ang;
-			}
-			break;
+    // Tracer corregido: necesita x1, y1, x2, y2 para dibujarse
+    var len = 60;
+    var t = instance_create_layer(fx_x, fx_y, "Instances", oTracer);
+    t.x1 = fx_x;
+    t.y1 = fx_y;
+    t.x2 = fx_x + lengthdir_x(len, ang);
+    t.y2 = fx_y + lengthdir_y(len, ang);
+}
+break;
 
 			case "fx_melee":
 			{

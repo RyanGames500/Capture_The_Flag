@@ -1,4 +1,8 @@
-draw_healthbar(x - 30, y -40, x+ 30,y-45,enemyHealth, c_black, c_red ,c_red,false,true,false)
+// --- VIDA DINÁMICA (Brawl Stars Style) ---
+// Si el equipo de este oOtherPlayer es el mismo que el mío, es azul (aliado), si no, rojo (enemigo)
+var barColor = (team == global.myTeam) ? c_blue : c_red;
+
+draw_healthbar(x - 30, y - 40, x + 30, y - 45, enemyHealth, c_black, barColor, barColor, 0, true, false);
 
 if (invulnerable) {
     // 1. Efecto de Brillo/Color (Mezcla de color aditiva)
@@ -50,9 +54,5 @@ if (WSI != 0 && !has_flag)
         c_white, 1
     );
 }
-
-
-
-
 
 
