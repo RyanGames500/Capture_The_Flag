@@ -112,4 +112,16 @@ crush_cd = 0;
 death_reason = "pvp";      // "pvp" o "crush"
 last_killer  = "";         // nombre del que te mató (para PVP)
 is_grounded = false;
+damage_alpha = 0; // Controla la transparencia del flash rojo
 
+
+// Power-ups
+has_shield = false;
+damage_boost = 1;    // 1 es normal, 2 es doble daño
+infinite_ammo = false;
+
+// Timers (para que duren, por ejemplo, 10 segundos)
+shield_timer = 0;
+damage_timer = 0;
+ammo_timer = 0;
+emote_cd = 0; // Timer para el cooldown de emotes

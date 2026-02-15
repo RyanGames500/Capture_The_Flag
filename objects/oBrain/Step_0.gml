@@ -207,12 +207,20 @@ if (oBrain.AmIPseudoHost)
                     // Ella se encarga de crear el objeto Y avisar a todos los clientes.
                     host_spawn_weapon(oGun, x, y, _struct_a_usar);
                 }
-                // --- SPAWN DE POWERUPS ---
+				//SPAWN DE POWERUPS
 				else if (tipo_spawn == "powerup") {
-				    var pick = irandom(1); 
-				    var tipo1 = (pick == 0) ? "speed" : "heal";
-				    // La función ya se encarga de crear y avisar a todos
-				    scr_host_spawn_powerup(x, y, tipo1, myID);
+				    // 0: Speed, 1: Heal, 2: Shield, 3: Damage, 4: Ammo
+				    var pick = irandom(4); 
+				    var tipo_final = "heal";
+    
+				    if (pick == 0) tipo_final = "speed";
+				    if (pick == 1) tipo_final = "heal";
+				    if (pick == 2) tipo_final = "shield";
+				    if (pick == 3) tipo_final = "damage";
+				    if (pick == 4) tipo_final = "ammo";
+
+				    // La función se encarga del resto
+				    scr_host_spawn_powerup(x, y, tipo_final, myID);
 				}
 
                 // Avisar a todos que el punto se ocupó

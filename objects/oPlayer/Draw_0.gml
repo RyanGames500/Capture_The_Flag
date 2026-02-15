@@ -109,6 +109,22 @@ if (reloading)
     );
 }
 
-/*
-draw_text(x,y-20,health)
-draw_text(x,y-10,walksp)
+
+if (has_shield) {
+    gpu_set_blendmode(bm_add);
+    
+    // 1. ESCALA: Aumentamos el tamaño (antes era ~1.1, probemos 1.4)
+    var _sc = 1.4 + sin(current_time/150) * 0.08; 
+    var _alp = 0.4 + random(0.1);
+    
+    // 2. POSICIÓN: Bajamos el origen. 
+    // Si antes era "y - 12", prueba con "y - 5" o simplemente "y" para centrarlo en los pies.
+    var _y_ajustada = y - 5; 
+    
+    // El radio ahora es 28 para que sea más grande
+    draw_set_alpha(_alp);
+    draw_circle_colour(x, _y_ajustada, 28 * _sc, c_aqua, c_blue, false);
+    
+    gpu_set_blendmode(bm_normal);
+    draw_set_alpha(1);
+}

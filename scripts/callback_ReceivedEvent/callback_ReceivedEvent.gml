@@ -121,7 +121,12 @@ case "powerup_fx":
 
     // 3. Crear partículas si encontramos al dueño
     if (instance_exists(_targetInst)) {
-        var _obj = (_tipo == "heal") ? oHealFX : oSpeedFX;
+        // Mapeo de efectos según el tipo
+        var _obj = oHealFX;
+        if (_tipo == "speed")  _obj = oSpeedFX;
+        if (_tipo == "shield") _obj = oSpeedFX;
+        if (_tipo == "damage") _obj = oSpeedFX;
+        if (_tipo == "ammo")   _obj = oSpeedFX;
         repeat(8) {
             instance_create_layer(_targetInst.x + random_range(-20, 20), _targetInst.y + random_range(-10, 10), "Instances", _obj);
         }
@@ -159,10 +164,12 @@ case "apply_powerup":
     with (oPlayer) {
         if (_tipo == "speed") { speed_timer = _duration; walksp_mult = 1.5; } 
         else if (_tipo == "heal") { health = min(100, health + _amount); }
+		else if (_tipo == "shield") { has_shield = true; shield_timer = _duration; }
+        else if (_tipo == "damage") { damage_boost = 2; damage_timer = _duration; }
+        else if (_tipo == "ammo")   { infinite_ammo = true; ammo_timer = _duration; }
     }
 }
 break;
-
 
 case "barrel_dead":
 {
@@ -240,6 +247,18 @@ case "fx_pearl_explosion":
 }
 break;
 
+case "fx_shield_hit":
+{
+    var _ex = theMessageStruct.ex;
+    var _ey = theMessageStruct.ey;
+
+    // Todos los que reciben esto crean el efecto visual
+    instance_create_layer(_ex, _ey, "Instances", oShieldSparkFX);
+    
+    // Opcional: Sonido de impacto para los demás
+    if (global.sfx) audio_play_sound(snd_shield_impact, 10, false, 1.8);
+}
+break;
 
 case "spawn_weapon_pickup":
 {
@@ -386,39 +405,38 @@ break;
 		    }
 		break;
 
-case "spawn_ammo_pack":
-{
-    var uid = theMessageStruct.uid;
-    show_debug_message("--- CLIENTE RECIBIÓ SPAWN: " + string(uid) + " ---");
+		case "spawn_ammo_pack":
+		{
+		    var uid = theMessageStruct.uid;
+		    show_debug_message("--- CLIENTE RECIBIÓ SPAWN: " + string(uid) + " ---");
 
-    var exists = false;
-    with (oAmmoPack) {
-        if (variable_instance_exists(id, "net_uid") && net_uid == uid) { exists = true; break; }
-    }
+		    var exists = false;
+		    with (oAmmoPack) {
+		        if (variable_instance_exists(id, "net_uid") && net_uid == uid) { exists = true; break; }
+		    }
     
-    if (!exists) {
-        var _x = theMessageStruct.x;
-        var _y = theMessageStruct.y;
-        var _amt = theMessageStruct.amount;
-        // Leemos si el Host dijo que es granada (por defecto false si no viene)
-        var _isG = variable_struct_exists(theMessageStruct, "is_grenade") ? theMessageStruct.is_grenade : false;
+		    if (!exists) {
+		        var _x = theMessageStruct.x;
+		        var _y = theMessageStruct.y;
+		        var _amt = theMessageStruct.amount;
+		        // Leemos si el Host dijo que es granada (por defecto false si no viene)
+		        var _isG = variable_struct_exists(theMessageStruct, "is_grenade") ? theMessageStruct.is_grenade : false;
 
-        var a = instance_create_layer(_x, _y, "Instances", oAmmoPack);
-        a.net_uid = uid;
-        a.taken   = false;
-        a.amount  = _amt;
-        a.is_grenade_pack = _isG; // Guardamos el estado
+		        var a = instance_create_layer(_x, _y, "Instances", oAmmoPack);
+		        a.net_uid = uid;
+		        a.taken   = false;
+		        a.amount  = _amt;
+		        a.is_grenade_pack = _isG; // Guardamos el estado
 
-        // Cambiar sprite visualmente en el cliente
-        if (_isG) {
-            a.sprite_index = spr_pack_granadas; 
-        }
+		        // Cambiar sprite visualmente en el cliente
+		        if (_isG) {
+		            a.sprite_index = spr_pack_granadas; 
+		        }
 
-        show_debug_message("+++ MUNICIÓN CREADA (" + (_isG ? "GRANADAS" : "BALAS") + ") EN: " + string(_x) + "," + string(_y));
-    }
-}
-break;
-
+		        show_debug_message("+++ MUNICIÓN CREADA (" + (_isG ? "GRANADAS" : "BALAS") + ") EN: " + string(_x) + "," + string(_y));
+		    }
+		}
+		break;
 
 		case "request_drop_on_death":
 		{
@@ -479,28 +497,44 @@ break;
 
 		case "hit":
 		{
-		    if (!instance_exists(oPlayer)) break;
+		    if (!instance_exists(oPlayer)) exit;
 
-		    with (oPlayer)
-		    {
-		        if (isDead || invulnerable) exit;
+		    with (oPlayer)
+		    {
+		        if (isDead || invulnerable) exit;
 
-		        var dmg = real(theMessageStruct.damage);
+		        var dmg = real(theMessageStruct.damage);
 
-		        // guardar killer/reason
-		        if (is_string(theMessageStruct.killer)) last_killer = theMessageStruct.killer;
-		        if (is_string(theMessageStruct.reason)) death_reason = theMessageStruct.reason;
-		
-		        else death_reason = "pvp";
+		        // --- 1. LÓGICA DEL ESCUDO (El "Freno") ---
+		        if (has_shield) {
+		            has_shield = false; // El escudo se rompe
+		            shield_timer = 0;   // Reseteamos el timer para que desaparezca la UI
+            
+		            // Efecto visual de escudo (Impacto azul claro en lugar de rojo)
+		            impact_alpha = 0.6;
+		            impact_color = c_aqua; 
+		            scrCamShake(12); // Sacudida de impacto de escudo
+            
+		            if (global.sfx) audio_play_sound(snd_hit, 20, false, 1.5); // Sonido más agudo para el escudo
+            
+		            exit; // <--- IMPORTANTE: Aquí cortamos el código. 
+		                  // No se resta vida, no hay flash rojo, ni estado de HIT.
+		        }
 
-		        health -= dmg;
+		        // --- 2. LÓGICA DE DAÑO NORMAL (Si no había escudo) ---
+		        if (is_string(theMessageStruct.killer)) last_killer = theMessageStruct.killer;
+		        if (is_string(theMessageStruct.reason)) death_reason = theMessageStruct.reason;
+		        else death_reason = "pvp";
 
-		        if (state != PLAYERSTATE.DEAD)
-		        {
-		            state = PLAYERSTATE.HIT;
-		            if (global.sfx) audio_play_sound(snd_hit, 20, false, .9);
-		        }
-		    }
+		        damage_alpha = 0.4; // Flash rojo sexy
+		        health -= dmg;
+
+		        if (state != PLAYERSTATE.DEAD)
+		        {
+		            state = PLAYERSTATE.HIT;
+		            if (global.sfx) audio_play_sound(snd_hit, 20, false, .9);
+		        }
+		    }
 		}
 		break;
 
@@ -573,54 +607,54 @@ break;
 		}
 			break;
 
-case "request_point":
-{
-    if (oBrain.AmIPseudoHost) {
-        var teamRequest = theMessageStruct.team;
-        var flagToReset = theMessageStruct.resetFlag;
-        var isSystem = (teamRequest == "SISTEMA");
+	case "request_point":
+	{
+	    if (oBrain.AmIPseudoHost) {
+	        var teamRequest = theMessageStruct.team;
+	        var flagToReset = theMessageStruct.resetFlag;
+	        var isSystem = (teamRequest == "SISTEMA");
 
-        if (!isSystem) {
-            if (teamRequest == "AZUL") global.puntos_azul++; else global.puntos_rojo++;
-        }
+	        if (!isSystem) {
+	            if (teamRequest == "AZUL") global.puntos_azul++; else global.puntos_rojo++;
+	        }
 
-        // Reset físico
-        if (flagToReset == "ROJA") with (oFlag) { x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
-        else with (oFlag2){ x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
+	        // Reset físico
+	        if (flagToReset == "ROJA") with (oFlag) { x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
+	        else with (oFlag2){ x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
 
-        // El Host crea su propia notificación aquí si él es el que recibe el pedido
-        var notif = instance_create_layer(0, 0, "Instances", oNotification);
-        if (isSystem) {
-            // Si el host es el mismo equipo de la bandera que regresó
-            var miColor = (global.myTeam == "AZUL") ? "AZUL" : "ROJA";
-            if (flagToReset == miColor) {
-                notif.text = "SALVASTE TU BANDERA!";
-                notif.color = c_blue;
-            } else {
-                notif.text = "EL ENEMIGO RECUPERO SU BANDERA";
-                notif.color = c_gray;
-            }
-        } else {
-            notif.text = "EL ENEMIGO ANOTO!";
-            notif.color = c_red;
-            notif.target_scale = 1.5;
-        }
+	        // El Host crea su propia notificación aquí si él es el que recibe el pedido
+	        var notif = instance_create_layer(0, 0, "Instances", oNotification);
+	        if (isSystem) {
+	            // Si el host es el mismo equipo de la bandera que regresó
+	            var miColor = (global.myTeam == "AZUL") ? "AZUL" : "ROJA";
+	            if (flagToReset == miColor) {
+	                notif.text = "SALVASTE TU BANDERA!";
+	                notif.color = c_blue;
+	            } else {
+	                notif.text = "EL ENEMIGO RECUPERO SU BANDERA";
+	                notif.color = c_gray;
+	            }
+	        } else {
+	            notif.text = "EL ENEMIGO ANOTO!";
+	            notif.color = c_red;
+	            notif.target_scale = 1.5;
+	        }
 
-        // MANDAR SYNC AL CLIENTE
-        if (instance_exists(oOtherPlayer)) {
+	        // MANDAR SYNC AL CLIENTE
+	        if (instance_exists(oOtherPlayer)) {
 			
-			with(oOtherPlayer){
-            SendEventToClient(clientId, "sync_score", {
-                azul: global.puntos_azul,
-                rojo: global.puntos_rojo,
-                resetFlag: flagToReset,
-                reason: (isSystem) ? "RETORNO" : "PUNTO"
-            });
-			}
-        }
-    }
-}
-break;
+				with(oOtherPlayer){
+	            SendEventToClient(clientId, "sync_score", {
+	                azul: global.puntos_azul,
+	                rojo: global.puntos_rojo,
+	                resetFlag: flagToReset,
+	                reason: (isSystem) ? "RETORNO" : "PUNTO"
+	            });
+				}
+	        }
+	    }
+	}
+	break;
 
 
 
@@ -802,7 +836,25 @@ case "kill_event":
 break;
 
 
+case "player_emote":
+{
+    var _oid = theMessageStruct.ownerId;
+    var _idx = theMessageStruct.emoteIndex;
+    var _inst = noone;
 
+    // Buscar quién lo envió
+    with(oOtherPlayer) {
+        if (clientId == _oid) _inst = id;
+    }
+    
+    // Si lo encontramos (y no somos nosotros), lo creamos
+    if (_inst != noone) {
+        var _e = instance_create_layer(_inst.x, _inst.y - 40, "Instances", oEmote);
+        _e.image_index = _idx;
+        _e.owner = _inst;
+    }
+}
+break;
 
     }
 }

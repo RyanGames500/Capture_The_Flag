@@ -25,6 +25,7 @@ if (life > 0) {
         instance_destroy();
     }
 }
+
 // ======================================================
 // 🧱 COLISIÓN CON PAREDES / PLATAFORMAS (BALAS Y MISILES)
 // ======================================================
@@ -74,6 +75,25 @@ if (target_enemy != noone)
     // Solo procesamos si NO es de nuestro equipo (Filtro Brawl Stars)
     if (variable_instance_exists(target_enemy, "team") && target_enemy.team != global.myTeam) 
     {
+
+		if (target_enemy.has_shield) 
+		{
+		    // 1. Efecto local (para el que dispara)
+		    instance_create_layer(x, y, "Instances", oShieldSparkFX);
+		    if (global.sfx) audio_play_sound(snd_shield_impact, 20, false, 2.0);
+
+		    // 2. AVISAR A LOS DEMÁS (Sincronización)
+		    if (global.ONLINE) {
+		        // Enviamos un evento simple con la posición del choque
+		        with(oOtherPlayer) {
+		            SendEventToClient(clientId, "fx_shield_hit", { ex: other.x, ey: other.y });
+		        }
+		    }
+
+		    instance_destroy();
+		    exit;
+		}
+		
         if (target_enemy.invulnerable) exit;
 
         // PREDICCIÓN VISUAL LOCAL

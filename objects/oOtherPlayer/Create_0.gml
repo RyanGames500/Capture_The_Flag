@@ -42,3 +42,4 @@ melee_active = 0;
 melee_prev_net = 0;
 hit_bloqueo_timer = 0;
 thisPlayerTeam="";
+has_shield = false;

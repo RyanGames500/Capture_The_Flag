@@ -68,9 +68,14 @@ function scrPlayerWeaponUpdate()
             bullet.speed = 7;
             bullet.direction = point_direction(bx, by, mouse_x, mouse_y);
             bullet.life = 40;
-            bullet.damage = w.damage;
             bullet.owner_team = global.myTeam;
             bullet.owner_id = id;
+			bullet.damage = w.damage * damage_boost; 
+
+			if (damage_boost > 1) {
+			    bullet.image_blend = c_red;
+			    bullet.image_xscale *= 1.2; // Un pelín más grande
+			}
 
             var flash = instance_create_layer(bx, by, "Instances", oMuzzleFlash);
             flash.sprite_index = sprMuzzle_gun;
@@ -97,7 +102,9 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
 }
 
             // gastar bala
-            w.ammo -= 1;
+           if (!infinite_ammo) {
+			    w.ammo -= 1;
+			}
             guns[weapon.index] = w;
 
             // sonido
@@ -138,7 +145,12 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
             bullet.speed = 11;
             bullet.direction = shot_dir;
             bullet.life = 35;
-            bullet.damage = w.damage;
+			bullet.damage = w.damage * damage_boost; 
+
+			if (damage_boost > 1) {
+			    bullet.image_blend = c_red;
+			    bullet.image_xscale *= 1.2; // Un pelín más grande
+			}
             bullet.owner_team = global.myTeam;
             bullet.owner_id = id;
 
@@ -167,7 +179,9 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
 }
 
             // gastar bala
-            w.ammo -= 1;
+           if (!infinite_ammo) {
+			    w.ammo -= 1;
+			}
             guns[weapon.index] = w;
 
             if (global.sfx) audio_play_sound(snd_smg, 1, false);
@@ -229,7 +243,12 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
                 b.speed = spd + random_range(-0.5, 0.5);
                 b.direction = ang;
                 b.life = 18 + irandom(6);
-                b.damage = w.damage;
+				b.damage = w.damage * damage_boost; 
+
+				if (damage_boost > 1) {
+				    b.image_blend = c_red;
+				    b.image_xscale *= 1.2; // Un pelín más grande
+				}
                 b.owner_team = global.myTeam;
                 b.owner_id = id;
             }
@@ -246,8 +265,9 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
     }
 }
 
-            // gastar 1 ammo por disparo
-            w.ammo -= 1;
+           if (!infinite_ammo) {
+			    w.ammo -= 1;
+			}
             guns[weapon.index] = w;
 
             if (global.sfx) audio_play_sound(snd_escop, 1, false);
@@ -279,7 +299,12 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
             missile.direction = weapon.angle;
             missile.image_angle = weapon.angle;
             missile.life = 500;                // Vive bastante hasta chocar
-            missile.damage = w.damage;
+			missile.damage = w.damage * damage_boost; 
+
+			if (damage_boost > 1) {
+			    missile.image_blend = c_red;
+			    missile.image_xscale *= 1.2; // Un pelín más grande
+			}
             missile.owner_team = global.myTeam;
             missile.owner_id = id;
             missile.is_rocket = true;          // Flag para identificarlo en la colisión
@@ -303,7 +328,9 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
     }
 }
 
-            w.ammo -= 1;
+           if (!infinite_ammo) {
+			    w.ammo -= 1;
+			}
             guns[weapon.index] = w;
             
             // Sonido potente
@@ -343,7 +370,12 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
             bullet.direction = shot_dir;
             bullet.image_angle = shot_dir;
             bullet.life = 45; // Más rango
-            bullet.damage = w.damage;
+			bullet.damage = w.damage * damage_boost; 
+
+			if (damage_boost > 1) {
+			    bullet.image_blend = c_red;
+			    bullet.image_xscale *= 1.2; // Un pelín más grande
+			}
             bullet.owner_team = global.myTeam;
             bullet.owner_id = id;
 
@@ -372,7 +404,9 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
 }
 
             // Consumo de munición
-            w.ammo -= 1;
+           if (!infinite_ammo) {
+			    w.ammo -= 1;
+			}
             guns[weapon.index] = w;
 
             // Sonido (Asegúrate de tener un snd_m4 o usa snd_smg por ahora)

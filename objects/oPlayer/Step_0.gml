@@ -6,6 +6,78 @@ if (global.game_over)
     exit;
 }
 
+// ======================================================
+// 💬 LÓGICA DE EMOTES (Con Anti-Spam)
+// ======================================================
+
+// Reducir el timer cada frame
+if (emote_cd > 0) emote_cd--;
+
+var _emote_to_send = -1;
+
+// Solo detectamos teclas si el cooldown llegó a cero
+if (emote_cd <= 0) 
+{
+    if (keyboard_check_pressed(ord("1"))) _emote_to_send = 0;
+    if (keyboard_check_pressed(ord("2"))) _emote_to_send = 1;
+    if (keyboard_check_pressed(ord("3"))) _emote_to_send = 2;
+    if (keyboard_check_pressed(ord("4"))) _emote_to_send = 3;
+
+    if (_emote_to_send != -1) 
+    {
+        // 1. Crearlo localmente
+        // (Ajusté la Y a -75 para que coincida con tu nuevo pop)
+        var _e = instance_create_layer(x, y - 75, "Instances", oEmote);
+        _e.image_index = _emote_to_send;
+        _e.owner = id;
+
+        // 2. Avisar a la red
+        if (global.ONLINE) {
+            with(oOtherPlayer) {
+                SendEventToClient(clientId, "player_emote", { 
+                    ownerId: global.clientId, 
+                    emoteIndex: _emote_to_send 
+                });
+            }
+        }
+
+        // 3. PONER EL COOLDOWN (Ejemplo: 120 frames = 2 segundos)
+        emote_cd = 120; 
+    }
+}
+
+// --- TIMERS DE POWERUPS ---
+if (shield_timer > 0) {
+    shield_timer--;
+    if (shield_timer <= 0) has_shield = false;
+}
+
+if (damage_timer > 0) {
+    damage_timer--;
+    if (damage_timer <= 0) damage_boost = 1;
+}
+
+if (ammo_timer > 0) {
+    ammo_timer--;
+    if (ammo_timer <= 0) infinite_ammo = false;
+}
+
+if (shield_timer > 0) {
+    shield_timer--;
+    
+    // Si quedan menos de 2 segundos (120 frames), que el alfa del HUD parpadee
+    if (shield_timer < 120) {
+        // Esto crea un parpadeo sexy
+        shield_alpha_hud = abs(sin(current_time / 100)); 
+    }
+
+    if (shield_timer <= 0) {
+        has_shield = false;
+        // Sonido de "se acabó el poder" (opcional)
+        if (global.sfx) audio_play_sound(snd_powerdown, 5, false);
+    }
+}
+
 if(place_meeting(x,y+1,obj_wall) || place_meeting(x,y+1,oPlataformaPasable))
 {
 	is_grounded=true;	
@@ -615,8 +687,8 @@ global.sharedProperties = {
 	_RK: recoil_kick,
 	_RA: recoil_angle,
 	_MELEE: melee_active,
-	_TEAM: team
-
+	_TEAM: team,
+	_SH: has_shield
 
 };
 	

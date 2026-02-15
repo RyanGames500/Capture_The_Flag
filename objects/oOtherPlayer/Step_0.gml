@@ -54,6 +54,7 @@ your sharedProperties
 		reloading = SP._REL;
 		recoil_kick = real(SP._RK);
 		recoil_angle = real(SP._RA);
+		has_shield = real(SP._SH)
 		team = string(SP._TEAM);
 
 		var net_melee = real(SP._MELEE);
