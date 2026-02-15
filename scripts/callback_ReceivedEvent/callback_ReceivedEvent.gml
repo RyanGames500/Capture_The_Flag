@@ -164,28 +164,29 @@ case "apply_powerup":
 break;
 
 
+case "barrel_dead":
+{
+    var _bx = theMessageStruct.bx;
+    var _by = theMessageStruct.by;
 
-		case "barrel_dead":
-		{
-		    var _bx = theMessageStruct.bx;
-		    var _by = theMessageStruct.by;
-
-		    // Buscamos el barril más cercano a esa posición (con un margen de error pequeño)
-		    var _inst = instance_nearest(_bx, _by, oExplosiveBarrel);
-    
-		    if (_inst != noone) {
-		        // Verificamos que sea el barril correcto por distancia (por si hay varios cerca)
-		        if (point_distance(_inst.x, _inst.y, _bx, _by) < 5) {
-		            // Creamos la explosión visual para este jugador también
-		            instance_create_layer(_inst.x, _inst.y, "Weapons", oExplosionFX);
-		            if (global.sfx) audio_play_sound(sndMissileExplode, 10, false);
-            
-		            // Lo destruimos sin ejecutar su código de daño otra vez (porque ya se procesó)
-		            instance_destroy(_inst);
-		        }
-		    }
-		}
-		break;
+    // Si oBarrilSmall es HIJO de oExplosiveBarrel, 
+    // esta línea encontrará a CUALQUIERA de los dos.
+    var _inst = instance_nearest(_bx, _by, oExplosiveBarrel); 
+    
+    if (_inst != noone) {
+        if (point_distance(_inst.x, _inst.y, _bx, _by) < 15) {
+            
+            instance_create_layer(_inst.x, _inst.y, "Weapons", oExplosionFX);
+            scrCamShake(10);
+            if (global.sfx) audio_play_sound(sndMissileExplode, 10, false);
+            
+            _inst.hp = 0;
+            _inst.exploded = true; 
+            instance_destroy(_inst);
+        }
+    }
+}
+break;
 
 case "request_rocket_explosion":
 {

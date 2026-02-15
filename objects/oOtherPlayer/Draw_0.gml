@@ -1,8 +1,37 @@
 // --- VIDA DINÁMICA (Brawl Stars Style) ---
 // Si el equipo de este oOtherPlayer es el mismo que el mío, es azul (aliado), si no, rojo (enemigo)
+// --- BARRA DE VIDA ÉPICA (OTROS) ---
 var barColor = (team == global.myTeam) ? c_blue : c_red;
+var barColorLight = (team == global.myTeam) ? c_aqua : c_orange; // Para el relieve
 
-draw_healthbar(x - 30, y - 40, x + 30, y - 45, enemyHealth, c_black, barColor, barColor, 0, true, false);
+var _x1 = x - 30;
+var _y1 = y - 45;
+var _x2 = x + 30;
+var _y2 = y - 40;
+
+// 1. Sombra/Borde
+draw_set_color(c_black);
+draw_rectangle(_x1 - 1, _y1 - 1, _x2 + 1, _y2 + 1, false);
+
+// 2. Fondo
+draw_set_color(c_dkgray);
+draw_rectangle(_x1, _y1, _x2, _y2, false);
+
+// 3. Vida (usando enemyHealth)
+var _width = (enemyHealth / 100) * (_x2 - _x1);
+if (enemyHealth > 0) {
+    draw_set_color(barColor);
+    draw_rectangle(_x1, _y1, _x1 + _width, _y2, false);
+    
+    // Brillo superior
+    draw_set_color(barColorLight);
+    draw_line(_x1, _y1, _x1 + _width, _y1);
+}
+
+draw_set_halign(fa_center);
+draw_set_font(fnt_small); // O tu fuente de nombres
+draw_set_color(c_white);
+draw_text(x, y - 60, string(Name)); // Suponiendo que tienes la variable userName
 
 if (invulnerable) {
     // 1. Efecto de Brillo/Color (Mezcla de color aditiva)

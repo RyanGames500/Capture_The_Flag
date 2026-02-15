@@ -1,9 +1,32 @@
-// Tu barra de salud siempre azul (porque eres de tu equipo)
-draw_healthbar(x - 30, y - 40, x + 30, y - 45, health, c_black, c_blue, c_blue, 0, true, false);
+// --- BARRA DE VIDA ÉPICA (LOCAL) ---
+var _x1 = x - 30;
+var _y1 = y - 45;
+var _x2 = x + 30;
+var _y2 = y - 40;
 
-// Tu barra de velocidad (esta la dejas como la tenías, está cool)
-var healthbarLength = speed * 10;
-draw_healthbar(x - healthbarLength, y - 30, x + healthbarLength, y - 35, 100, c_black, c_red, c_lime, 0, true, false);
+// 1. Sombra/Borde exterior
+draw_set_color(c_black);
+draw_rectangle(_x1 - 1, _y1 - 1, _x2 + 1, _y2 + 1, false);
+
+// 2. Fondo de la barra (Gris oscuro para ver cuánto falta)
+draw_set_color(c_dkgray);
+draw_rectangle(_x1, _y1, _x2, _y2, false);
+
+// 3. La vida (Azul con un toque cian para que brille)
+var _width = (health / 100) * (_x2 - _x1);
+if (health > 0) {
+    draw_set_color(c_blue);
+    draw_rectangle(_x1, _y1, _x1 + _width, _y2, false);
+    
+    // Un toque de brillo arriba para darle relieve
+    draw_set_color(c_aqua);
+    draw_line(_x1, _y1, _x1 + _width, _y1);
+}
+
+draw_set_halign(fa_center);
+draw_set_font(fnt_small); // O tu fuente de nombres
+draw_set_color(c_white);
+draw_text(x, y - 60, string(playerName)); // Suponiendo que tienes la variable userName
 
 if (invulnerable) {
     // 1. Efecto de Brillo/Color (Mezcla de color aditiva)
