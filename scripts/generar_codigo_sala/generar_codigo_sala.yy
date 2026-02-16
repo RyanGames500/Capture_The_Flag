@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"generar_codigo_sala",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"generar_codigo_sala",
+  "parent":{
+    "name":"Funciones",
+    "path":"folders/Scripts/Funciones.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

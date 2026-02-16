@@ -34,31 +34,57 @@ if (input_activo) {
 // --- 2. LÓGICA DEL MENÚ (Solo si no estás escribiendo) ---
 if (!input_activo) {
     var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
-    index += move;
 
-    if (index < 0) index = array_length(menu_options) - 1;
-    if (index >= array_length(menu_options)) index = 0;
+    if (menu_state == "main") {
+        index = clamp(index + move, 0, array_length(menu_options) - 1);
 
-    if (keyboard_check_pressed(vk_enter)) 
-    {
-        // Por seguridad, si el jugador nunca hizo clic en el cuadro, 
-        // guardamos lo que haya en texto_input antes de entrar
-        if (global.myName == "") global.myName = (texto_input == "" || texto_input == "Escribe tu nombre...") ? "Jugador" : texto_input;
+        if (keyboard_check_pressed(vk_enter)) {
+            switch(index) {
+                case 0: // PLAY (Random)
+                    menu_state = "connecting";
+                    ChangeRoom("auto_matchmake_2");
+                break;
+                
+                case 1: // PRIVATE (Ir al submenú)
+                    menu_state = "private";
+                    p_index = 0;
+                break;
 
-        switch(index) {
-            case 0: // PLAY
-                menu_state = "connecting";
-                // Aquí es vital: primero nos aseguramos de estar conectados 
-                // y luego cambiamos de room
-                //ChangeRoom("public");
-				ChangeRoom("auto_matchmake_4");
-            break;
-            case 1: // OPTIONS
-                show_message("Opciones...");
-            break;
-            case 2: // EXIT
-                game_end();
-            break;
+                case 2: // OPTIONS
+                    show_message("Opciones...");
+                break;
+                
+                case 3: // EXIT
+                    game_end();
+                break;
+            }
+        }
+    } 
+    else if (menu_state == "private") {
+        p_index = clamp(p_index + move, 0, array_length(private_options) - 1);
+
+        if (keyboard_check_pressed(vk_enter)) {
+            switch(p_index) {
+case 0: // CREATE ROOM
+    if (global.myName == "") global.myName = "Player_" + string(irandom(999)); // Por si acaso
+    global.myRoomCode = "PRV_" + generar_codigo_sala(4); 
+    menu_state = "connecting";
+    ChangeRoom(global.myRoomCode); 
+break;
+
+				case 1: // JOIN WITH CODE
+				    var _c = get_string("Introduce el código de la sala:", "");
+				    if (_c != "") {
+				        global.codigo_a_verificar = string_upper(_c); // Guardamos lo que escribió
+				        menu_state = "verifying"; // Un estado nuevo para que el Draw sepa que estamos cargando
+				        ShowAllRooms(); // Le pedimos la lista al servidor
+				    }
+				break;
+				
+                case 2: // BACK
+                    menu_state = "main";
+                break;
+            }
         }
     }
 }
@@ -66,4 +92,20 @@ if (!input_activo) {
 if (menu_state == "connecting") {
     waiting_timer++;
     if (waiting_timer > room_speed) waiting_timer = 0; // Reinicia cada segundo
+}
+
+if (menu_state == "lobby_espera") {
+    if (oBrain.AmIPseudoHost) {
+        if (keyboard_check_pressed(ord("S"))) {
+            // 1. Avisar a todos usando tu sistema de oOtherPlayer
+            with(oOtherPlayer) {
+                SendEventToClient(clientId, "GO_TO_BATTLE", {});
+            }
+            
+            // 2. Ir a la batalla
+            room_goto(rm_stage1);
+            
+            // Opcional: menu_state = "playing"; o destruir el menú
+        }
+    }
 }

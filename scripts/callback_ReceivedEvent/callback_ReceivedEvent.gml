@@ -1,6 +1,40 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
 
+//Partiva Privada
+// Dentro del switch(eventName) en tu script de callbacks
+case "sync_lobby_name":
+    // 1. Sacamos el nombre de la cajita (_data) usando la etiqueta "nombre"
+    var _n = _data.nombre; 
+    
+    // 2. Buscamos al otro jugador y le ponemos ese nombre
+    with(oOtherPlayer) {
+        if (clientId == _clientId) {
+            Name = _n;
+        }
+    }
+    
+    // 3. Si yo soy el Host, le devuelvo mi nombre para que él también me vea
+    if (oBrain.AmIPseudoHost) {
+        SendEventToClient(_clientId, "sync_lobby_name", { nombre: global.myName });
+    }
+break;
+
+case "sync_names":
+
+    var _cid = theMessageStruct.clientId;
+    var _name = theMessageStruct.name;
+
+    global.playerNames[? _cid] = _name;
+
+break;
+
+
+        case "GO_TO_BATTLE":
+            room_goto(rm_stage1);
+        break;
+
+//Granada crear
 case "spawn_granada":
     var _gx    = theMessageStruct.gx;
     var _gy    = theMessageStruct.gy;

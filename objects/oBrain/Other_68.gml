@@ -127,6 +127,11 @@ case "state_update":
         new_enemy.team = (new_enemy.clientId % 2 == 0) ? "AZUL" : "ROJO";
         new_enemy.sharedProperties = realData.SP;
 		
+		// COMENTA ESTO O BORRALO:
+		    /* if (room == rm_menu) { 
+		         room_goto(rm_stage1); 
+		    }
+		    */
 
         // 🔥 SOLO ACTIVAMOS EL TIMER
         if (oBrain.AmIPseudoHost) {

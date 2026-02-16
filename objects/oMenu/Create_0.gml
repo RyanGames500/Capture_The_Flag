@@ -1,4 +1,5 @@
-menu_options = ["PLAY", "OPTIONS", "EXIT"];
+
+menu_options = ["PLAY", "PRIVATE", "OPTIONS", "EXIT"];
 index = 0;
 
 waiting_timer = 0;
@@ -11,3 +12,9 @@ texto_input = "Escribe tu nombre..."; // Lo que se ve en el cuadro
 cursor_timer = 0;            // Para que la rayita del texto parpadee
 max_caracteres = 12;         // Que no se pasen de largo
 input_activo = false;        // ¿Está el jugador escribiendo?
+
+// --- NUEVAS VARIABLES PARA LOBBY PRIVADO ---
+private_options = ["CREATE ROOM", "JOIN WITH CODE", "BACK"];
+p_index = 0; // El índice para el menú privado
+global.myRoomCode = ""; // Aquí guardaremos el código de 4 letras
+
