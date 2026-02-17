@@ -12,7 +12,6 @@ function callback_ChangeRoom(new_room_id) {
     }
 }
 
-
 /*
 function callback_ChangeRoom(new_room_id){
 

@@ -8,4 +8,4 @@ alpha = 0;
 enum INTRO_STATE { ENTRADA, ESPERA, SALIDA }
 estado = INTRO_STATE.ENTRADA;
 
-timer = 500; // Lo subí a 2 segundos para que de tiempo de leer bien los nombres
+timer = 120; // Lo subí a 2 segundos para que de tiempo de leer bien los nombres

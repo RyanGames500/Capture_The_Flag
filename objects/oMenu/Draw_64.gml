@@ -186,26 +186,41 @@ else if (menu_state == "lobby_espera") {
     var slot_h = 60;
     var padding = 20;
 
-    // LIMPIAR PRIMERO: Ponemos "---" en todos para que no se queden nombres viejos
-    for(var j = 0; j < 8; j++) { global.slot_nombres[j] = "---"; }
 
-    // TÚ siempre eres el primero
+// 1. Limpiar slots para esta frame
+for (var j = 0; j < 8; j++) global.slot_nombres[j] = "---";
+
+var _index_invitados = 1; 
+
+// 2. Lógica de posiciones
+if (oBrain.AmIPseudoHost) {
+    // SI SOY EL HOST: Yo voy al 0
     global.slot_nombres[0] = global.myName;
     
-    // RELLENAR CON LOS DEMÁS
-    var _index = 1;
+    // Los demás van del 1 en adelante
     with(oOtherPlayer) {
-        if (_index < 8) {
-            // Buscamos la variable 'Name' que es la que estamos sincronizando
-            if (Name != "") {
-                global.slot_nombres[_index] = Name;
-            } else {
-                // Si el objeto existe pero no ha llegado el nombre aún
-                global.slot_nombres[_index] = "Conectando..."; 
-            }
-            _index++;
+        if (_index_invitados < 8) {
+            global.slot_nombres[_index_invitados] = (Name != "") ? Name : "Conectando...";
+            _index_invitados++;
         }
     }
+} else {
+    // SI SOY INVITADO:
+    // Buscamos quién de los "OtherPlayer" es el Host para ponerlo en el 0
+    with(oOtherPlayer) {
+        if (isHost) { // Asegúrate de tener una variable 'isHost' en oOtherPlayer
+            global.slot_nombres[0] = Name;
+        } else {
+            // Los demás invitados (incluyéndote a ti mismo si quieres)
+            if (_index_invitados < 8) {
+                global.slot_nombres[_index_invitados] = Name;
+                _index_invitados++;
+            }
+        }
+    }
+    // TÚ te pones en el siguiente espacio libre si no eres el host
+    global.slot_nombres[_index_invitados] = global.myName;
+}
 
     // 3. DIBUJAR LOS SLOTS (4 vs 4)
     for (var i = 0; i < 8; i++) {
@@ -250,4 +265,26 @@ else if (menu_state == "lobby_espera") {
         draw_set_color(c_white);
         draw_text(gui_w / 2, gui_h - 100, "Esperando al lider...");
     }
+}
+else if (menu_state == "setup_room") {
+    draw_set_font(fnt_menu);
+    var cx = gui_w / 2;
+    var cy = gui_h / 2;
+
+    draw_set_color(c_aqua);
+    draw_text(cx, cy - 150, "--- CONFIGURACION DE PARTIDA ---");
+
+    for (var i = 0; i < array_length(setup_options); i++) {
+        if (i == s_index) {
+            draw_set_color(c_yellow);
+            var txt = ">> " + setup_options[i] + " <<";
+        } else {
+            draw_set_color(c_white);
+            var txt = setup_options[i];
+        }
+        draw_text(cx, cy - 50 + (i * 60), txt);
+    }
+    
+    draw_set_color(c_gray);
+    draw_text(cx, cy + 150, "Usa las flechas para cambiar opciones");
 }

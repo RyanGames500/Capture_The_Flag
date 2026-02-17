@@ -1,12 +1,34 @@
-// Script assets have changed for v2.3.0 see
-// https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
-function callback_ShowAllClientsInRoom(array_of_clients){
-	//What do you want to do with the array of all 
-	// client ids in this room?
-	if(array_of_clients == -1){
-		show_message("room does not exist")
-	}
-	if(is_array(array_of_clients)){
-		show_message( string(array_of_clients));
-	}
+function callback_ShowAllClientsInRoom(_array_of_clients) {
+    // 1. Verificamos que el oMenu existe para no tirar error
+    if (!instance_exists(oMenu)) return;
+
+    // --- CASO A: El jugador está intentando UNIRSE (Verificando) ---
+    if (oMenu.menu_state == "verifying") {
+        
+        if (is_array(_array_of_clients)) {
+            var _cantidad = array_length(_array_of_clients);
+            
+            // Usamos global.max_players_allowed que se define al recibir la info de la sala
+            // Si no la tienes definida para el invitado, por ahora dejamos el 8 o el límite que traiga la sala
+            if (_cantidad < global.max_players_allowed) { 
+                oMenu.menu_state = "connecting"; 
+                global.myRoomCode = global.codigo_a_verificar;
+                ChangeRoom(global.myRoomCode);
+            } else {
+                oMenu.menu_state = "private";
+                show_message_async("La sala está llena (" + string(_cantidad) + "/" + string(global.max_players_allowed) + ")");
+            }
+        } else {
+            oMenu.menu_state = "private";
+            show_message_async("La sala ya no está disponible.");
+        }
+    } 
+    
+    // --- CASO B: El jugador ya está DENTRO del lobby ---
+    else if (oMenu.menu_state == "lobby_espera") {
+        if (is_array(_array_of_clients)) {
+            global.jugadores_en_sala = array_length(_array_of_clients);
+            // Aquí podrías actualizar visualmente si alguien más entró
+        }
+    }
 }

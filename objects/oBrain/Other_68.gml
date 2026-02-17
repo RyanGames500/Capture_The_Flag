@@ -110,8 +110,11 @@ if(type == network_type_data){
 		
 case "state_update":
     var found = false;
+    // Guardamos el ID que viene en el paquete para comparar
+    var _incomingId = real(realData.clientId);
+
     with(oOtherPlayer){
-        if(clientId == real(realData.clientId)){
+        if(clientId == _incomingId){
             afk = realData.afk;
             sharedProperties = realData.SP;
             found = true;
@@ -119,29 +122,22 @@ case "state_update":
         }
     }
 
-    if(!found && real(realData.clientId) != global.clientId){
-        var new_enemy = instance_create_layer(0, 0, global.OtherPlayersLayerName, oOtherPlayer);
-        new_enemy.clientId = real(realData.clientId);
+    // 🔥 EL FILTRO DE SEGURIDAD:
+    // Si no lo encontramos Y el ID que viene NO es el mío... entonces lo creamos.
+    if(!found && _incomingId != global.clientId){
         
-        // Asignar equipo por ID (Par = Azul, Impar = Rojo)
+        var new_enemy = instance_create_layer(0, 0, global.OtherPlayersLayerName, oOtherPlayer);
+        new_enemy.clientId = _incomingId;
+        
         new_enemy.team = (new_enemy.clientId % 2 == 0) ? "AZUL" : "ROJO";
         new_enemy.sharedProperties = realData.SP;
-		
-		// COMENTA ESTO O BORRALO:
-		    /* if (room == rm_menu) { 
-		         room_goto(rm_stage1); 
-		    }
-		    */
 
-        // 🔥 SOLO ACTIVAMOS EL TIMER
         if (oBrain.AmIPseudoHost) {
-            // Cada vez que entra alguien nuevo, reiniciamos el timer a 2 segundos (120 frames)
-            // Esto da tiempo a que la red mande los nombres de TODOS antes de empezar
-            oBrain.timer_intro = 60; //120
+            oBrain.timer_intro = 30; 
             oBrain.intro_disparada = false; 
         }
     }
-    break;
+break;
 		
 		
 		case "pO_update":

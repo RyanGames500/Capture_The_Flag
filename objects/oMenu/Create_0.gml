@@ -18,3 +18,10 @@ private_options = ["CREATE ROOM", "JOIN WITH CODE", "BACK"];
 p_index = 0; // El índice para el menú privado
 global.myRoomCode = ""; // Aquí guardaremos el código de 4 letras
 
+// --- CONFIGURACIÓN DE LA SALA ---
+setup_options = ["MODO: 1 VS 1", "MAPA: BOSQUE", "CONFIRMAR Y CREAR"];
+s_index = 0; // Índice para el menú de setup
+
+global.setup_modo = 0; // 0 = 1vs1, 1 = 2vs2, 2 = 4vs4
+global.setup_mapa = 0; // 0 = Bosque, 1 = Arena 2 = Lagos
+global.max_players_allowed = 8; // Por defecto

@@ -4,37 +4,18 @@ function callback_ShowAllRooms(_rooms_array) {
         
         for (var i = 0; i < array_length(_rooms_array); i++) {
             var _data = _rooms_array[i];
-            var _id_actual = "";
-            var _cant_jugadores = 0;
+            var _id_actual = is_struct(_data) ? string(_data.roomId) : string(_data);
 
-            // 1. Detectar si es un objeto (Struct) o solo texto (String)
-            if (is_struct(_data)) {
-                _id_actual = string(_data.roomId);
-                _cant_jugadores = _data.clientCount;
-            } else {
-                _id_actual = string(_data);
-                _cant_jugadores = 0; // En modo simple no sabemos cuántos hay, asumimos que cabe
-            }
-
-            // 2. Comparar con el código que escribió el usuario
             if (_id_actual == global.codigo_a_verificar) {
-                
-                // 3. Verificar límite de jugadores (solo si el servidor nos dio el dato)
-                if (_cant_jugadores >= 8 && is_struct(_data)) {
-                    oMenu.menu_state = "private";
-                    show_message_async("La sala está llena (8/8).");
-                    return;
-                }
-                
                 _existe = true;
                 break;
             }
         }
         
         if (_existe) {
-            oMenu.menu_state = "connecting";
-            global.myRoomCode = global.codigo_a_verificar;
-            ChangeRoom(global.myRoomCode);
+            // CAMBIO CLAVE: Antes de entrar, pedimos los clientes exactos
+            // No hacemos ChangeRoom todavía.
+            ShowAllClientsInRoom(global.codigo_a_verificar);
         } else {
             oMenu.menu_state = "private"; 
             show_message_async("Error: La sala no existe.");
