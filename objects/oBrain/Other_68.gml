@@ -125,7 +125,17 @@ case "state_update":
     // 🔥 EL FILTRO DE SEGURIDAD:
     // Si no lo encontramos Y el ID que viene NO es el mío... entonces lo creamos.
     if(!found && _incomingId != global.clientId){
-        
+       if (oBrain.AmIPseudoHost) {
+            var _total_en_sala = instance_number(oOtherPlayer) + 1;
+            
+            // Si alguien entra, el Host le "Grita" cuál es el límite real
+            SendEventToClient(_incomingId, "SYNC_LIMIT", { max: global.max_players_allowed });
+
+            if (_total_en_sala >= global.max_players_allowed) {
+                SendEventToClient(_incomingId, "SALA_LLENA", {});
+                exit; 
+            }
+        }
         var new_enemy = instance_create_layer(0, 0, global.OtherPlayersLayerName, oOtherPlayer);
         new_enemy.clientId = _incomingId;
         

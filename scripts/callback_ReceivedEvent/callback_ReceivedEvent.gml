@@ -2,6 +2,21 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
 
 //Partiva Privada
+// Dentro de tu switch(eventName) en callback_ReceivedEvent
+case "SYNC_LIMIT":
+    global.max_players_allowed = theMessageStruct.max;
+break;
+case "SALA_LLENA":
+            // 1. El Host me dijo que me fuera, así que me salgo a mi propia sala sola
+            ChangeRoom(string(global.clientId)); 
+            
+            // 2. Regresamos el menú al estado privado para que pueda intentar otro código
+            if (instance_exists(oMenu)) {
+                oMenu.menu_state = "private";
+                show_message_async("¡SALA LLENA! El límite para este modo es " + string(global.max_players_allowed));
+            }
+        break;
+
 case "sync_lobby_name":
     var _n = theMessageStruct.nombre;
     var _soyHost = variable_struct_exists(theMessageStruct, "soyHost") ? theMessageStruct.soyHost : false;

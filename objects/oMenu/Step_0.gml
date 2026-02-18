@@ -66,17 +66,17 @@ if (!input_activo) {
         if (keyboard_check_pressed(vk_enter)) {
             switch(p_index) {
 				
-case 0: // CREATE ROOM
-    if (global.myName == "") global.myName = "Player_" + string(irandom(999));
-    menu_state = "setup_room"; // En lugar de connecting, vamos a configurar
-    s_index = 0;
-break;
-//case 0: // CREATE ROOM
-//    if (global.myName == "") global.myName = "Player_" + string(irandom(999)); // Por si acaso
-//    global.myRoomCode = "PRV_" + generar_codigo_sala(4); 
-//    menu_state = "connecting";
-//    ChangeRoom(global.myRoomCode); 
-//break;
+				case 0: // CREATE ROOM
+				    if (global.myName == "") global.myName = "Player_" + string(irandom(999));
+				    menu_state = "setup_room"; // En lugar de connecting, vamos a configurar
+				    s_index = 0;
+				break;
+				//case 0: // CREATE ROOM
+				//    if (global.myName == "") global.myName = "Player_" + string(irandom(999)); // Por si acaso
+				//    global.myRoomCode = "PRV_" + generar_codigo_sala(4); 
+				//    menu_state = "connecting";
+				//    ChangeRoom(global.myRoomCode); 
+				//break;
 
 				case 1: // JOIN WITH CODE
 				    var _c = get_string("Introduce el código de la sala:", "");
@@ -93,26 +93,26 @@ break;
             }
         }
     }
-	else if (menu_state == "setup_room") {
-var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+else if (menu_state == "setup_room") {
+    var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
     s_index = clamp(s_index + move, 0, array_length(setup_options) - 1);
 
     var side_move = keyboard_check_pressed(vk_right) - keyboard_check_pressed(vk_left);
     
-    if (s_index == 0 && side_move != 0) { // --- CAMBIAR MODO ---
-        // Ahora es % 4 porque tenemos 4 opciones
+    // --- CAMBIAR MODO ---
+    if (s_index == 0 && side_move != 0) { 
         global.setup_modo = (global.setup_modo + side_move + 4) % 4; 
         
         var mod_text = ["1 VS 1", "2 VS 2", "3 VS 3", "4 VS 4"];
         setup_options[0] = "MODO: " + mod_text[global.setup_modo];
-        
-        // Ajustamos el límite real de jugadores
-        if (global.setup_modo == 0) global.max_players_allowed = 2;
-        if (global.setup_modo == 1) global.max_players_allowed = 4;
-        if (global.setup_modo == 2) global.max_players_allowed = 6; // 3 vs 3 = 6 Jugadores
-        if (global.setup_modo == 3) global.max_players_allowed = 8;
     }
     
+    // --- AQUÍ EL FIX: Forzamos el límite según el modo seleccionado ANTES de crear ---
+    if (global.setup_modo == 0) global.max_players_allowed = 2; // 1vs1
+    if (global.setup_modo == 1) global.max_players_allowed = 4; // 2vs2
+    if (global.setup_modo == 2) global.max_players_allowed = 6; // 3vs3
+    if (global.setup_modo == 3) global.max_players_allowed = 8; // 4vs4
+
     if (s_index == 1 && side_move != 0) { // Cambiar MAPA
         global.setup_mapa = (global.setup_mapa + side_move + 2) % 2;
         var map_text = ["BOSQUE", "ARENA"];
@@ -120,12 +120,12 @@ var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
     }
 
     if (keyboard_check_pressed(vk_enter) && s_index == 2) { // CONFIRMAR
-        global.myRoomCode = "PRV_" + generar_codigo_sala(4); 
+        // Ahora sí, global.max_players_allowed valdrá 2 si estás en 1vs1
+        var _prefijo = "MAX" + string(global.max_players_allowed) + "_";
+        global.myRoomCode = _prefijo + generar_codigo_sala(4); 
+        
         menu_state = "connecting";
         ChangeRoom(global.myRoomCode);
-        
-        // Avisamos al servidor (opcional para que otros lo vean luego)
-        // SendEventToAll("ROOM_CONFIG", { modo: global.setup_modo, mapa: global.setup_mapa });
     }
 
     if (keyboard_check_pressed(vk_escape)) menu_state = "private";

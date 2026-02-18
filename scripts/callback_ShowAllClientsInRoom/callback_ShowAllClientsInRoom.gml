@@ -1,34 +1,32 @@
 function callback_ShowAllClientsInRoom(_array_of_clients) {
-    // 1. Verificamos que el oMenu existe para no tirar error
-    if (!instance_exists(oMenu)) return;
-
-    // --- CASO A: El jugador está intentando UNIRSE (Verificando) ---
-    if (oMenu.menu_state == "verifying") {
+    if (instance_exists(oMenu) && oMenu.menu_state == "verifying") {
         
+        var _codigo = global.codigo_a_verificar;
+        var _limite_detectado = 8; // Por defecto si no encuentra el prefijo
+
+        // --- DETECTAR LÍMITE DESDE EL NOMBRE DEL CÓDIGO ---
+        if (string_pos("MAX2_", _codigo) != 0) _limite_detectado = 2;
+        else if (string_pos("MAX4_", _codigo) != 0) _limite_detectado = 4;
+        else if (string_pos("MAX6_", _codigo) != 0) _limite_detectado = 6;
+        else if (string_pos("MAX8_", _codigo) != 0) _limite_detectado = 8;
+
         if (is_array(_array_of_clients)) {
             var _cantidad = array_length(_array_of_clients);
             
-            // Usamos global.max_players_allowed que se define al recibir la info de la sala
-            // Si no la tienes definida para el invitado, por ahora dejamos el 8 o el límite que traiga la sala
-            if (_cantidad < global.max_players_allowed) { 
+            // Comparamos contra el límite que venía en el nombre de la sala
+            if (_cantidad < _limite_detectado) {
                 oMenu.menu_state = "connecting"; 
-                global.myRoomCode = global.codigo_a_verificar;
-                ChangeRoom(global.myRoomCode);
+                global.myRoomCode = _codigo;
+                global.max_players_allowed = _limite_detectado; // Sincronizamos la variable local
+                ChangeRoom(_codigo);
             } else {
                 oMenu.menu_state = "private";
-                show_message_async("La sala está llena (" + string(_cantidad) + "/" + string(global.max_players_allowed) + ")");
+                show_message_async("SALA LLENA: El límite de esta sala es de " + string(_limite_detectado) + " jugadores.");
             }
-        } else {
-            oMenu.menu_state = "private";
-            show_message_async("La sala ya no está disponible.");
         }
-    } 
-    
-    // --- CASO B: El jugador ya está DENTRO del lobby ---
-    else if (oMenu.menu_state == "lobby_espera") {
+    } else if (instance_exists(oMenu) && oMenu.menu_state == "lobby_espera") {
         if (is_array(_array_of_clients)) {
             global.jugadores_en_sala = array_length(_array_of_clients);
-            // Aquí podrías actualizar visualmente si alguien más entró
         }
     }
 }
