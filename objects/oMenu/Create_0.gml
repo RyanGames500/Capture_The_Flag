@@ -25,3 +25,9 @@ s_index = 0; // Índice para el menú de setup
 global.setup_modo = 0; // 0 = 1vs1, 1 = 2vs2, 2 = 4vs4
 global.setup_mapa = 0; // 0 = Bosque, 1 = Arena 2 = Lagos
 global.max_players_allowed = 8; // Por defecto
+
+// Para el menú de Kick
+show_kick_menu = false;
+kick_menu_x = 0;
+kick_menu_y = 0;
+kick_target_id = -1; // El ID del que vamos a echar

@@ -120,6 +120,12 @@ else if (menu_state == "setup_room") {
     }
 
     if (keyboard_check_pressed(vk_enter) && s_index == 2) { // CONFIRMAR
+		
+		// si el input estaba activo o el texto cambió, actualizamos YA
+    if (texto_input != "Escribe tu nombre..." && texto_input != "") {
+        global.myName = texto_input;
+    }
+		
         // Ahora sí, global.max_players_allowed valdrá 2 si estás en 1vs1
         var _prefijo = "MAX" + string(global.max_players_allowed) + "_";
         global.myRoomCode = _prefijo + generar_codigo_sala(4); 
@@ -138,17 +144,77 @@ if (menu_state == "connecting") {
 }
 
 if (menu_state == "lobby_espera") {
-    if (oBrain.AmIPseudoHost) {
-        if (keyboard_check_pressed(ord("S"))) {
-            // 1. Avisar a todos usando tu sistema de oOtherPlayer
-            with(oOtherPlayer) {
-                SendEventToClient(clientId, "GO_TO_BATTLE", {});
+if (oBrain.AmIPseudoHost) {
+    var mx = device_mouse_x_to_gui(0);
+    var my = device_mouse_y_to_gui(0);
+
+    // 1. Detectar Click Derecho sobre un slot
+    if (mouse_check_button_pressed(mb_right)) {
+        var slot_w = 400;
+        var slot_h = 60;
+        var padding = 20;
+        var _found = false;
+
+        for (var i = 1; i < 8; i++) { // Empezamos en 1 (no nos auto-kickeamos)
+            var es_derecha = (i >= 4);
+            var _x1 = es_derecha ? (display_get_gui_width() / 2) + 50 : (display_get_gui_width() / 2) - 450;
+            var _y1 = 150 + ((i % 4) * (slot_h + padding));
+            
+            // ¿El mouse está sobre este slot?
+            if (mx > _x1 && mx < _x1 + slot_w && my > _y1 && my < _y1 + slot_h) {
+                // Buscamos el ID del jugador en este slot
+                var _current_idx = 1;
+                with(oOtherPlayer) {
+                    if (_current_idx == i) {
+                        other.kick_target_id = clientId;
+                        other.kick_menu_x = mx;
+                        other.kick_menu_y = my;
+                        other.show_kick_menu = true;
+                        _found = true;
+                    }
+                    _current_idx++;
+                }
             }
+        }
+        if (!_found) show_kick_menu = false;
+    }
+
+    // 2. Lógica de Click Izquierdo en el botón "EXPULSAR"
+    if (show_kick_menu && mouse_check_button_pressed(mb_left)) {
+        if (mx > kick_menu_x && mx < kick_menu_x + 120 && my > kick_menu_y && my < kick_menu_y + 40) {
+		if (kick_target_id != -1) {
             
-            // 2. Ir a la batalla
-            room_goto(rm_stage1);
+		            // 1. Le pedimos amablemente que se retire de la sala xdd jajja
+		            SendEventToClient(kick_target_id, "KICK_FROM_ROOM", {});
             
-            // Opcional: menu_state = "playing"; o destruir el menú
+		            // 2. Lo borramos de nuestra vista (Host)
+		            var _tid = kick_target_id;
+		            with(oOtherPlayer) {
+		                if (clientId == _tid) instance_destroy();
+		            }
+            
+		            show_kick_menu = false;
+		            kick_target_id = -1;
+		        }
+        } else {
+            show_kick_menu = false; // Cerrar si hace click fuera
+        }
+    }
+}
+
+if (oBrain.AmIPseudoHost) {
+        if (keyboard_check_pressed(ord("S"))) {
+            
+            // --- CONTAR SI ESTÁN TODOS ---
+            var _total = 1; 
+            with(oOtherPlayer) _total++; // Contamos a los invitados
+            
+            if (_total == global.max_players_allowed) {
+                with(oOtherPlayer) {
+                    SendEventToClient(clientId, "GO_TO_BATTLE", {});
+                }
+                room_goto(rm_stage1);
+            }
         }
     }
 }

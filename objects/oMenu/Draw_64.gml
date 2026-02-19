@@ -1,3 +1,5 @@
+if (input_activo) global.myName = texto_input;
+
 draw_set_halign(fa_center);
 draw_set_valign(fa_middle);
 
@@ -170,7 +172,17 @@ else if (menu_state == "verifying") {
 else if (menu_state == "lobby_espera") {
     var gui_w = display_get_gui_width();
     var gui_h = display_get_gui_height();
-    
+  
+  // --- NUEVO: Detectar el límite de la sala ---
+    if (!oBrain.AmIPseudoHost) {
+        // Si soy invitado, leo el prefijo del código (Ej: "MAX2_ABCD")
+        if (string_copy(global.myRoomCode, 1, 3) == "MAX") {
+            global.max_players_allowed = real(string_digits(string_copy(global.myRoomCode, 4, 1)));
+        } else {
+            global.max_players_allowed = 8; // Por defecto si no hay prefijo
+        }
+    }
+  
     // 1. Fondo negro/azul
     draw_set_alpha(1);
     draw_set_color(make_color_rgb(12, 14, 18));
@@ -187,46 +199,67 @@ else if (menu_state == "lobby_espera") {
     var padding = 20;
 
 
-// 1. Limpiar slots para esta frame
+// --- LÓGICA DE SLOTS REPARADA ---
 for (var j = 0; j < 8; j++) global.slot_nombres[j] = "---";
 
-var _index_invitados = 1; 
-
-// 2. Lógica de posiciones
 if (oBrain.AmIPseudoHost) {
-    // SI SOY EL HOST: Yo voy al 0
+    // 1. Yo soy el Host, siempre al inicio
     global.slot_nombres[0] = global.myName;
     
-    // Los demás van del 1 en adelante
+    var _index = 1;
+    // 2. En lugar de solo Name, vamos a buscar en el mapa de nombres
     with(oOtherPlayer) {
-        if (_index_invitados < 8) {
-            global.slot_nombres[_index_invitados] = (Name != "") ? Name : "Conectando...";
-            _index_invitados++;
+        if (_index < 8) {
+            // Buscamos primero en el mapa global que actualizamos en el ReceivedEvent
+            var _nombre_real = ds_map_find_value(global.playerNames, string(clientId));
+            
+            if (!is_undefined(_nombre_real) && _nombre_real != "") {
+                global.slot_nombres[_index] = _nombre_real;
+            } else {
+                // Si no está en el mapa, intentamos la variable Name o "Conectando"
+                global.slot_nombres[_index] = (Name != "" && Name != "Cargando...") ? Name : "Conectando...";
+            }
+            _index++;
         }
     }
 } else {
-    // SI SOY INVITADO:
-    // Buscamos quién de los "OtherPlayer" es el Host para ponerlo en el 0
+    // Lógica para el invitado (está bien como la tenías, pero asegúrate de limpiar)
+    var _host_encontrado = false;
+    var _inv_idx = 1;
+    
     with(oOtherPlayer) {
-        if (isHost) { // Asegúrate de tener una variable 'isHost' en oOtherPlayer
+        if (isHost) {
             global.slot_nombres[0] = Name;
+            _host_encontrado = true;
         } else {
-            // Los demás invitados (incluyéndote a ti mismo si quieres)
-            if (_index_invitados < 8) {
-                global.slot_nombres[_index_invitados] = Name;
-                _index_invitados++;
+            if (_inv_idx < 8) {
+                global.slot_nombres[_inv_idx] = Name;
+                _inv_idx++;
             }
         }
     }
-    // TÚ te pones en el siguiente espacio libre si no eres el host
-    global.slot_nombres[_index_invitados] = global.myName;
+    // Si no encontramos al host aún, ponemos "Líder..."
+    if (!_host_encontrado) global.slot_nombres[0] = "Buscando lider...";
+    
+    // TÚ te pones en tu lugar
+    global.slot_nombres[_inv_idx] = global.myName;
 }
 
     // 3. DIBUJAR LOS SLOTS (4 vs 4)
-    for (var i = 0; i < 8; i++) {
-        var es_derecha = (i >= 4);
+// 3. DIBUJAR LOS SLOTS (Limitado por el modo de juego)
+    for (var i = 0; i < global.max_players_allowed; i++) {
+        
+        // Lógica de posición: 
+        // Si el límite es 2: i=0 (izq), i=1 (der)
+        // Si el límite es 4: i=0,1 (izq), i=2,3 (der)
+        var mitad = global.max_players_allowed / 2;
+        var es_derecha = (i >= mitad);
+        
         var _x = es_derecha ? (gui_w / 2) + 50 : (gui_w / 2) - 450;
-        var _y = 150 + ((i % 4) * (slot_h + padding));
+        
+        // Ajustamos la Y para que si hay pocos slots, no queden volando muy arriba
+        var offset_y = (i % mitad) * (slot_h + padding);
+        var _y = 200 + offset_y;
         
         var color_equipo = es_derecha ? c_red : c_blue;
         
@@ -243,24 +276,31 @@ if (oBrain.AmIPseudoHost) {
         // Texto del nombre
         draw_set_color(c_white);
         draw_set_halign(fa_left);
-        draw_set_valign(fa_middle); // Para que el texto quede centrado verticalmente
-        draw_text(_x + 25, _y + (slot_h/2), global.slot_nombres[i]);
+        draw_set_valign(fa_middle);
+        
+        // Dibujamos el nombre solo si existe en el array
+        var nombre_a_dibujar = (i < array_length(global.slot_nombres)) ? global.slot_nombres[i] : "---";
+        draw_text(_x + 25, _y + (slot_h/2), nombre_a_dibujar);
     }
 
-    // 4. BOTÓN DE INICIO (Lógica del Host)
-    draw_set_valign(fa_top); // Reset valign
+	// 4. BOTÓN DE INICIO (Lógica del Host)
+    draw_set_valign(fa_top); 
     if (oBrain.AmIPseudoHost) {
         draw_set_halign(fa_center);
-        draw_set_color(c_yellow);
-        draw_text(gui_w / 2, gui_h - 100, "PRESIONA 'S' PARA INICIAR BATALLA");
-        
-        if (keyboard_check_pressed(ord("S"))) {
-            with(oOtherPlayer) {
-                SendEventToClient(clientId, "GO_TO_BATTLE", {});
-            }
-            room_goto(rm_stage1);
+
+        // Contamos rápido cuántos hay
+        var cant = 1;
+        with(oOtherPlayer) cant++;
+
+        if (cant == global.max_players_allowed) {
+            draw_set_color(c_yellow);
+            draw_text(gui_w / 2, gui_h - 100, "¡SALA LLENA! PRESIONA 'S' PARA INICIAR");
+        } else {
+            draw_set_color(c_gray);
+            draw_text(gui_w / 2, gui_h - 100, "ESPERANDO JUGADORES (" + string(cant) + "/" + string(global.max_players_allowed) + ")");
         }
     } else {
+        // ... esto se queda igual (lo del invitado)
         draw_set_halign(fa_center);
         draw_set_color(c_white);
         draw_text(gui_w / 2, gui_h - 100, "Esperando al lider...");
@@ -287,4 +327,16 @@ else if (menu_state == "setup_room") {
     
     draw_set_color(c_gray);
     draw_text(cx, cy + 150, "Usa las flechas para cambiar opciones");
+}
+
+// --- DIBUJAR MENÚ DE KICK ---
+if (show_kick_menu) {
+    draw_set_color(c_red);
+    draw_rectangle(kick_menu_x, kick_menu_y, kick_menu_x + 120, kick_menu_y + 40, false);
+    draw_set_color(c_white);
+    draw_rectangle(kick_menu_x, kick_menu_y, kick_menu_x + 120, kick_menu_y + 40, true);
+    
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    draw_text(kick_menu_x + 60, kick_menu_y + 20, "EXPULSAR");
 }

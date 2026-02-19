@@ -34,7 +34,6 @@ has_flag = false;
 invulnerable=0;
 Name = "Cargando..."; 
 
-alarm[1] = 2;
 WSI = 0;
 ammo=0;
 reloading=0;
@@ -47,8 +46,9 @@ thisPlayerTeam="";
 has_shield = false;
 // Cuando aparece un jugador nuevo en mi pantalla...
 if (global.ONLINE) {
-    // Le mando MI nombre a ESE jugador específico que acaba de aparecer
     SendEventToClient(clientId, "sync_lobby_name", { 
-        name: global.myName 
+        nombre: global.myName // Cambiado de 'name' a 'nombre'
     });
 }
+
+alarm[1] = 2;

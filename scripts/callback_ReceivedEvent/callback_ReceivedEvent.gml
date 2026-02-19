@@ -19,17 +19,24 @@ case "SALA_LLENA":
 
 case "sync_lobby_name":
     var _n = theMessageStruct.nombre;
+    // Usamos el nombre que viene, si no viene nada ponemos "Jugador"
+    if (is_undefined(_n)) _n = "Jugador..."; 
+
     var _soyHost = variable_struct_exists(theMessageStruct, "soyHost") ? theMessageStruct.soyHost : false;
 
+    // Actualizar el objeto visual
     with(oOtherPlayer) {
         if (clientId == senderClientId) {
             Name = _n;
-            isHost = _soyHost; // Guardamos quién es el host
+            isHost = _soyHost;
         }
     }
     
-    // Cuando el Host responde, avisa que él es Host
-    if (oBrain.AmIPseudoHost) {
+    // ACTUALIZAR EL MAPA (Para que no salga el nombre viejo de la partida pasada)
+    global.playerNames[? string(senderClientId)] = _n;
+
+    // Si yo soy el Host, le respondo al nuevo para que me vea bien
+    if (oBrain.AmIPseudoHost && senderClientId != global.clientId) {
         SendEventToClient(senderClientId, "sync_lobby_name", { 
             nombre: global.myName, 
             soyHost: true 
@@ -46,6 +53,24 @@ case "sync_names":
 
 break;
 
+case "KICK_FROM_ROOM":
+    // 1. Salir de la sala actual (pero NO del servidor)
+    LeaveRoom(); 
+    
+    // 2. Resetear variables de sala para que pueda entrar a otra
+    global.roomId = -1;
+    global.myRoomCode = "";
+    
+    // 3. Cambiar el estado del menú para que vuelva a la pantalla de "PRIVATE"
+    if (instance_exists(oMenu)) {
+        oMenu.menu_state = "private"; 
+    }
+    
+    // 4. Limpiar los otros jugadores que veía en ese lobby
+    with(oOtherPlayer) instance_destroy();
+    
+    show_message_async("El líder te ha sacado de la sala.");
+break;
 
         case "GO_TO_BATTLE":
             room_goto(rm_stage1);
