@@ -698,6 +698,13 @@ break;
 	        if (flagToReset == "ROJA") with (oFlag) { x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
 	        else with (oFlag2){ x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
 
+			// ¡AÑADE ESTO!: El Host también debe soltarla localmente si él era el portador
+			var miObjetivoHost = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
+			if (flagToReset == miObjetivoHost) {
+			    oPlayer.has_flag = false;
+			    oPlayer.score_pending = false;
+			}
+
 	        // El Host crea su propia notificación aquí si él es el que recibe el pedido
 	        var notif = instance_create_layer(0, 0, "Instances", oNotification);
 	        if (isSystem) {
@@ -736,61 +743,42 @@ break;
 
 case "sync_score":
 {
-    global.puntos_azul = theMessageStruct.azul;
-    global.puntos_rojo = theMessageStruct.rojo;
-    //DESBLOQUEO DEL JUGADOR LOCAL
-    oPlayer.score_pending = false;
-    oPlayer.has_flag = false; 
-    
-    var flag_scored = theMessageStruct.resetFlag; // "ROJA" o "AZUL"
-    var reason = variable_struct_exists(theMessageStruct, "reason") ? theMessageStruct.reason : "PUNTO";
+    var flag_scored = theMessageStruct.resetFlag; 
+    var reason = variable_struct_exists(theMessageStruct, "reason") ? theMessageStruct.reason : "PUNTO";
+    var miObjetivo = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
+    var miColor = (global.myTeam == "AZUL") ? "AZUL" : "ROJA";
 
-    // --- 1. RESET FÍSICO (Para todos) ---
-    if (flag_scored == "ROJA") {
-        with (oFlag) { has_flag = false; portador_instancia = noone; x = spawnX; y = spawnY; velocidad_caida = 0; }
-    } else {
-        with (oFlag2) { has_flag = false; portador_instancia = noone; x = spawnX; y = spawnY; velocidad_caida = 0; }
-    }
+    global.puntos_azul = theMessageStruct.azul;
+    global.puntos_rojo = theMessageStruct.rojo;
 
-    // --- 2. LÓGICA DE PORTADORES ---
-    var miObjetivo = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
-    if (flag_scored == miObjetivo) oPlayer.has_flag = false;
-    var objetivoRival = (global.myTeam == "AZUL") ? "AZUL" : "ROJA"; 
-    if (flag_scored == objetivoRival && instance_exists(oOtherPlayer)) with(oOtherPlayer) {has_flag = false;}
+    // --- SOLO resetear si la bandera que volvió es la que YO llevaba ---
+    if (flag_scored == miObjetivo) {
+        oPlayer.has_flag = false;
+        oPlayer.score_pending = false;
+    }
+    
+    // Si recuperaron mi bandera, solo desbloqueo el score por si acaso
+    if (flag_scored == miColor) {
+        oPlayer.score_pending = false;
+    }
 
-    // --- 3. NOTIFICACIONES DIFERENCIADAS ---
-    var notif = instance_create_layer(0, 0, "Instances", oNotification);
+    // --- RESET FÍSICO ---
+    if (flag_scored == "ROJA") {
+        with (oFlag) { has_flag = false; portador_instancia = noone; x = spawnX; y = spawnY; velocidad_caida = 0; sprite_index = spr_suela; }
+    } else {
+        with (oFlag2) { has_flag = false; portador_instancia = noone; x = spawnX; y = spawnY; velocidad_caida = 0; sprite_index = spr_suela; }
+    }
 
-    if (reason == "RETORNO") 
-    {
-        // ¿La bandera que volvió es la de MI equipo?
-        var miColor = (global.myTeam == "AZUL") ? "AZUL" : "ROJA";
-        
-        if (flag_scored == miColor) {
-            // FUE MI EQUIPO
-            notif.text = "SALVASTE TU BANDERA!";
-            notif.color = c_aqua; // Un color que represente éxito aliado
-            notif.target_scale = 1.2;
-        } else {
-            // FUE EL ENEMIGO (Mensaje informativo discreto)
-            notif.text = "EL ENEMIGO RECUPERO SU BANDERA";
-            notif.color = c_gray;
-            notif.target_scale = 0.8;
-        }
-    } 
-    else // CASO: ANOTACIÓN (PUNTO)
-    {
-        notif.target_scale = 1.5;
-        var miBanderaEnemiga = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
-        
-        if (flag_scored == miBanderaEnemiga) {
-            notif.text = "TU EQUIPO ANOTO!";
-            notif.color = c_blue;
-        } else {
-            notif.text = "EL ENEMIGO ANOTO!";
-            notif.color = c_red;
-        }
-    }
+    // --- NOTIFICACIONES ---
+    var notif = instance_create_layer(0, 0, "Instances", oNotification);
+    if (reason == "RETORNO") {
+        if (flag_scored == miColor) { notif.text = "SALVASTE TU BANDERA!"; notif.color = c_aqua; }
+        else { notif.text = "EL ENEMIGO RECUPERO SU BANDERA"; notif.color = c_gray; }
+    } else {
+        notif.target_scale = 1.5;
+        if (flag_scored == miObjetivo) { notif.text = "¡TU EQUIPO ANOTO!"; notif.color = c_lime; }
+        else { notif.text = "¡EL ENEMIGO ANOTO!"; notif.color = c_red; }
+    }
 }
 break;
 

@@ -21,7 +21,7 @@ else {
     // --- MODO ONLINE ---
     if (has_flag) {
         // SEGUIMIENTO: Seguir al portador (Aliado o Enemigo)
-        if (portador_instancia != noone && instance_exists(portador_instancia)) {
+        if (portador_instancia != noone && instance_exists(portador_instancia) && portador_instancia.state != PLAYERSTATE.DEAD) {
             x = portador_instancia.x;
             y = portador_instancia.y - 16;
             image_xscale = portador_instancia.image_xscale;

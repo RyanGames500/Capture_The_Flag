@@ -528,8 +528,6 @@ if (state == PLAYERSTATE.DEAD && has_flag == true)
     }
 }
 
-
-
 // --- CÓDIGO DE CAPTURA MEJORADO ---
 var objetivo = (global.myTeam == "AZUL") ? oFlag : oFlag2; // Bandera enemiga
 
@@ -570,6 +568,8 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending)
     if (oBrain.AmIPseudoHost) {
         if (global.myTeam == "AZUL") global.puntos_azul++; else global.puntos_rojo++;
 
+		has_flag = false; score_pending = false;
+
         if (flag_scored == "ROJA") {
             with (oFlag) { x=spawnX; y=spawnY; velocidad_caida=0; has_flag=false; portador_instancia=noone; }
         } else {
@@ -581,7 +581,8 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending)
             SendEventToClient(clientId, "sync_score", {
                 azul: global.puntos_azul,
                 rojo: global.puntos_rojo,
-                resetFlag: flag_scored
+                resetFlag: flag_scored,
+				
             });
         }
         

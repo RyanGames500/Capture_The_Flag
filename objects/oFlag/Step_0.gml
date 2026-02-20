@@ -22,7 +22,7 @@ else {
     // --- MODO ONLINE ---
     if (has_flag) {
         // SEGUIMIENTO: Si alguien la lleva, seguir al portador asignado por el ID
-        if (portador_instancia != noone && instance_exists(portador_instancia)) {
+        if (portador_instancia != noone && instance_exists(portador_instancia) && portador_instancia.state != PLAYERSTATE.DEAD) {
             x = portador_instancia.x;
             y = portador_instancia.y - 16;
             image_xscale = portador_instancia.image_xscale;
