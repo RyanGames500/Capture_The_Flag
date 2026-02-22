@@ -350,6 +350,22 @@ else if (menu_state == "offline_setup") {
     draw_set_font(-1); // Fuente pequeña para info
     draw_text(cx, cy + 230, "Usa las flechas para ajustar tu práctica");
 }
+if (menu_state == "play_selection") {
+    draw_set_font(fnt_menu);
+    draw_set_color(c_aqua);
+    draw_text(gui_w / 2, gui_h / 2 - 120, "--- SELECT MODE ---");
+
+    for (var i = 0; i < array_length(play_modes); i++) {
+        if (i == play_index) {
+            draw_set_color(c_yellow);
+            var txt = ">> " + play_modes[i] + " <<";
+        } else {
+            draw_set_color(c_white);
+            var txt = play_modes[i];
+        }
+        draw_text(gui_w / 2, (gui_h / 2 - 50) + (i * spacing), txt);
+    }
+}
 // --- DIBUJAR MENÚ DE KICK ---
 if (show_kick_menu) {
     draw_set_color(c_red);

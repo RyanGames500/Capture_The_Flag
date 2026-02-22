@@ -84,6 +84,8 @@ case "player_left_msg":
     scrAddKillFeed(_txt_abandono);
 break;
 
+
+
 //Granada crear
 case "spawn_granada":
     var _gx    = theMessageStruct.gx;

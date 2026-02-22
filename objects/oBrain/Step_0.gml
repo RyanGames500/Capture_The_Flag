@@ -42,7 +42,8 @@ if (global.pausa) {
                 case 0: global.pausa = false; break;
                 case 1: // REINICIAR
                     global.pausa = false;
-                    global.puntos_azul = 0; global.puntos_rojo = 0;
+                    global.puntos_azul = 0; 
+					global.puntos_rojo = 0;
                     room_restart();
                 break;
                 case 2: // SALIR
@@ -57,31 +58,20 @@ if (global.pausa) {
     if (!global.ONLINE) exit; 
 }
 
-// --- 3. DETECCIÓN DE GANADOR ---
-if (global.game_over == false) {
-    var _ganador = 0;
+// --- 3. DETECCIÓN DE GANADOR (SOLO OFFLINE) ---
+if (global.ONLINE == false && global.game_over == false) {
+    // Usamos el valor del menú (6, o el que elijas)
+    var limite_off = variable_global_exists("off_flags") ? global.off_flags : 3;
     
-    if (global.ONLINE == false) {
-        // Lógica Offline
-        var limite = variable_global_exists("off_flags") ? global.off_flags : 3;
-        if (global.puntos_rojo >= limite) _ganador = 1; 
-        if (global.puntos_azul >= limite) _ganador = 2; 
-    } 
-    else if (oBrain.AmIPseudoHost) {
-        // Lógica Online (Solo Host decide)
-        if (global.puntos_rojo >= 3) _ganador = 1;
-        if (global.puntos_azul >= 3) _ganador = 2;
+    var _ganador_local = 0;
+    if (global.puntos_rojo >= limite_off) _ganador_local = 1; 
+    if (global.puntos_azul >= limite_off) _ganador_local = 2; 
 
-        if (_ganador != 0) {
-            var _data = { winner: _ganador };
-            with(oOtherPlayer) { SendEventToClient(clientId, "finalizar_partida", _data); }
-        }
-    }
-
-    if (_ganador != 0) {
+    if (_ganador_local != 0) {
         global.game_over = true;
-        global.winner_team = _ganador;
+        global.winner_team = _ganador_local;
         window_set_cursor(cr_arrow);
+        with(oMouseIcon_falso) { window_set_cursor(cr_arrow); }
     }
 }
 
@@ -102,10 +92,20 @@ if (global.game_over == true) {
 
             if (keyboard_check_pressed(vk_enter)) {
                 if (victory_index == 0) {
-                    global.puntos_azul = 0; global.puntos_rojo = 0;
-                    global.game_over = false; room_restart();
+					// REINTENTAR
+                    global.puntos_azul = 0; 
+                    global.puntos_rojo = 0;
+                    global.game_over = false; 
+                    room_restart();
                 } else {
-                    global.regresar_a_offline = true; room_goto(rm_menu);
+					global.game_over = false; 
+                    global.puntos_azul = 0;
+                    global.puntos_rojo = 0;
+                    global.winner_team = 0;
+                    victory_alpha = 0; 
+                    
+                    global.regresar_a_offline = true; 
+                    room_goto(rm_menu);
                 }
             }
         }
@@ -192,7 +192,8 @@ for (var i = array_length(kill_feed)-1; i >= 0; i--)
 // ======================================================
 if (global.game_over == false) 
 {
-    if (oBrain.AmIPseudoHost) 
+
+	if (oBrain.AmIPseudoHost) 
     {
         var _ganador = 0;
         if (global.puntos_rojo >= 3) _ganador = 1;

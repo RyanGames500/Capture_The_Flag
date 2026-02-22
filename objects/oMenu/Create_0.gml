@@ -1,6 +1,11 @@
 
-menu_options = ["PLAY", "PRIVATE", "OPTIONS", "OFFLINE", "EXIT"];
+// Menú principal más limpio
+menu_options = ["PLAY", "OPTIONS", "OFFLINE", "EXIT"]; 
 index = 0;
+
+// Nueva lista para cuando elijas PLAY
+play_modes = ["QUICK MATCH", "PRIVATE ROOM", "BACK"];
+play_index = 0;
 
 waiting_timer = 0;
 waiting_message = "Buscando Rival";
@@ -25,12 +30,15 @@ s_index = 0; // Índice para el menú de setup
 global.setup_modo = 0; // 0 = 1vs1, 1 = 2vs2, 2 = 4vs4
 global.setup_mapa = 0; // 0 = Bosque, 1 = Arena 2 = Lagos
 global.max_players_allowed = 8; // Por defecto
-
+global.max_players = 2; 
+global.current_players = 1;
 // Para el menú de Kick
 show_kick_menu = false;
 kick_menu_x = 0;
 kick_menu_y = 0;
 kick_target_id = -1; // El ID del que vamos a echar
+
+
 
 // En el Create de oMenu
 if (!variable_global_exists("regresar_a_offline")) {
@@ -52,3 +60,6 @@ if (global.regresar_a_offline) {
         "VOLVER"
     ];
 }
+
+random_tips = ["Usa las paredes como cobertura", "Captura la bandera enemiga rapido", "El trabajo en equipo es la clave"];
+tip_index = 0;

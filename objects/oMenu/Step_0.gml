@@ -35,26 +35,22 @@ if (input_activo) {
 if (!input_activo) {
     var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
 
-if (menu_state == "main") {
+// --- ESTADO PRINCIPAL ---
+    if (menu_state == "main") {
         index = clamp(index + move, 0, array_length(menu_options) - 1);
 
         if (keyboard_check_pressed(vk_enter)) {
             switch(index) {
-                case 0: // PLAY (Random)
-                    menu_state = "connecting";
-                    ChangeRoom("auto_matchmake_2");
+                case 0: // Ahora PLAY abre el submenú de modos
+                    menu_state = "play_selection";
+                    play_index = 0;
                 break;
                 
-                case 1: // PRIVATE
-                    menu_state = "private";
-                    p_index = 0;
-                break;
-
-                case 2: // OPTIONS
+                case 1: // OPTIONS
                     show_message("Opciones...");
                 break;
 
-				case 3: // --- NUEVO: CONFIGURACIÓN MODO OFFLINE ---
+				case 2: // --- NUEVO: CONFIGURACIÓN MODO OFFLINE ---
 					global.ONLINE = false;
 					if(global.ONLINE){
 					DisconnectFromServer();}
@@ -75,13 +71,13 @@ if (menu_state == "main") {
 				        "BACK"
 				    ];
 				break;
-				
-                case 4: // EXIT
+                
+                case 3: // EXIT
                     game_end();
                 break;
             }
         }
-}
+    }
     else if (menu_state == "private") {
         p_index = clamp(p_index + move, 0, array_length(private_options) - 1);
 
@@ -202,6 +198,30 @@ else if (menu_state == "offline_setup") {
         }
     }
 }
+else if (menu_state == "play_selection") {
+        play_index = clamp(play_index + move, 0, array_length(play_modes) - 1);
+
+        if (keyboard_check_pressed(vk_enter)) {
+            switch(play_index) {
+                case 0: // PARTIDA RÁPIDA (Lo que antes era el caso 0 del main)
+                    if (global.myName == "") global.myName = "Player_" + string(irandom(999));
+                    menu_state = "connecting";
+                    ChangeRoom("auto_matchmake_2");
+                break;
+
+                case 1: // PARTIDA PRIVADA (Lo que antes era el caso 1 del main)
+                    menu_state = "private";
+                    p_index = 0;
+                break;
+
+                case 2: // BACK
+                    menu_state = "main";
+                break;
+            }
+        }
+        if (keyboard_check_pressed(vk_escape)) menu_state = "main";
+    }
+
 }
 
 if (menu_state == "connecting") {

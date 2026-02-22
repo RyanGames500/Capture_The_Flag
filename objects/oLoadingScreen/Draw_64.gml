@@ -25,3 +25,35 @@ if (global.ONLINE) {
     draw_set_color(c_lime);
     draw_circle(gw/2 - 100, gh/2 + 80, 4, false);
 }
+
+// ... (Tu código de fondo y título se mantiene igual) ...
+
+// Mensaje de estado
+draw_set_font(fnt_menu);
+draw_set_alpha(alpha);
+
+if (timer_timeout <= 0) {
+    // Dibujamos un cuadro estilo menú de pausa
+    var mx = gw/2;
+    var my = gh/2 + 100;
+    
+    draw_set_color(c_red);
+    draw_text(mx, my - 40, mensaje);
+
+    // Opciones
+    var ops = ["RECONECTAR", "JUGAR SIN CONEXION"];
+    for (var i = 0; i < 2; i++) {
+        if (i == error_sel) {
+            draw_set_color(c_yellow);
+            var txt = "> " + ops[i] + " <";
+        } else {
+            draw_set_color(c_gray);
+            var txt = ops[i];
+        }
+        draw_text(mx, my + 20 + (i * 45), txt);
+    }
+} else {
+    // Mientras carga, solo el mensaje normal
+    draw_set_color(c_white);
+    draw_text(gw/2, gh/2 + 80, mensaje);
+}
