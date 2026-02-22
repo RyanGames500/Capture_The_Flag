@@ -1,3 +1,41 @@
+// ======================================================
+// 🏆 LÓGICA DE VICTORIA (MODO OFFLINE)
+// ======================================================
+
+if (global.game_over == false) 
+{
+    // 1. Chequear si alguien llegó al límite de puntos (ej: 3 puntos)
+    var _ganador = 0;
+    if (global.puntos_rojo >= 3) _ganador = 1; // Gana Rojo
+    if (global.puntos_azul >= 3) _ganador = 2; // Gana Azul
+
+    // 2. Si hay un ganador, congelar la partida
+    if (_ganador != 0) 
+    {
+        global.game_over = true;
+        global.winner_team = _ganador;
+        
+        // Mostrar el cursor del mouse para poder salir
+        with(oMouseIcon_falso) { window_set_cursor(cr_arrow); }
+    }
+}
+else 
+{
+    // 3. Efecto de aparición de la pantalla de victoria (Fade In)
+    if (victory_alpha < 1) {
+        victory_alpha += 0.05; 
+    }
+
+    // 4. Opción para salir al menú una vez que la pantalla es visible
+    if (victory_alpha >= 0.9) 
+    {
+        if (keyboard_check_pressed(vk_escape) || keyboard_check_pressed(vk_enter)) 
+        {
+            // Aquí pones tu comando para volver al menú
+            room_goto(rm_menu); 
+        }
+    }
+}
 // --- LÓGICA DE INTRO ESTILO BRAWL STARS (Solo Host) ---
 if (oBrain.AmIPseudoHost && !intro_disparada) {
     if (timer_intro > 0) {
@@ -281,3 +319,4 @@ if (oBrain.AmIPseudoHost)
         }
     }
 }
+

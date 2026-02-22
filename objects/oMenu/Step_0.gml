@@ -35,7 +35,7 @@ if (input_activo) {
 if (!input_activo) {
     var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
 
-    if (menu_state == "main") {
+if (menu_state == "main") {
         index = clamp(index + move, 0, array_length(menu_options) - 1);
 
         if (keyboard_check_pressed(vk_enter)) {
@@ -45,7 +45,7 @@ if (!input_activo) {
                     ChangeRoom("auto_matchmake_2");
                 break;
                 
-                case 1: // PRIVATE (Ir al submenú)
+                case 1: // PRIVATE
                     menu_state = "private";
                     p_index = 0;
                 break;
@@ -54,12 +54,25 @@ if (!input_activo) {
                     show_message("Opciones...");
                 break;
                 
-                case 3: // EXIT
+                case 3: // --- NUEVO: MODO OFFLINE ---
+                    global.ONLINE = false;
+                    global.myTeam = "AZUL"; // Equipo por defecto
+                    global.myName = (texto_input == "" || texto_input == "Escribe tu nombre...") ? "Jugador" : texto_input;
+                    
+                    // Aseguramos que las puntuaciones empiecen en 0
+                    global.scoreAzul = 0;
+                    global.scoreRojo = 0;
+                    
+                    // Vamos directo a la room de juego (cambia rm_stage1 por el nombre de tu sala)
+                    room_goto(rm_stage1_offline); 
+                break;
+                
+                case 4: // EXIT
                     game_end();
                 break;
             }
         }
-    } 
+}
     else if (menu_state == "private") {
         p_index = clamp(p_index + move, 0, array_length(private_options) - 1);
 

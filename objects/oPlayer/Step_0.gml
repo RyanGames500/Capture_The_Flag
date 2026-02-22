@@ -485,10 +485,6 @@ if (health <= 0 && !isDead)
     }
 }
 
-
-
-
-
 // --- LÓGICA DE SOLTAR AL MORIR (ÚNICA Y DEFINITIVA) ---
 // Solo entramos si el jugador muere Y REALMENTE tiene una bandera capturada
 if (state == PLAYERSTATE.DEAD && has_flag == true) 

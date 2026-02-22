@@ -1,5 +1,5 @@
 
-menu_options = ["PLAY", "PRIVATE", "OPTIONS", "EXIT"];
+menu_options = ["PLAY", "PRIVATE", "OPTIONS", "OFFLINE", "EXIT"];
 index = 0;
 
 waiting_timer = 0;

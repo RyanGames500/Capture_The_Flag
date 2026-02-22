@@ -41,7 +41,7 @@ if (menu_state == "main") {
             draw_set_color(c_white);
             var txt = menu_options[i];
         }
-        draw_text(gui_w / 2, (gui_h / 2 - 50) + (i * spacing), txt);
+        draw_text(gui_w / 2, (gui_h / 2 - 100) + (i * spacing), txt);
     }
 } 
 else if (menu_state == "private") {

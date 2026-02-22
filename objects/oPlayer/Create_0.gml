@@ -15,7 +15,7 @@ enum PLAYERSTATE {
     DEAD,
 	INTRO
 }
-
+// IE2ZCP
 state = PLAYERSTATE.INTRO;
 
 //ARMAS - 1 a la ves

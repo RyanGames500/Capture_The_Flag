@@ -30,7 +30,8 @@ weapon_struct_pistola = {
 	
 	ammoType:"gun",
 	clipSize:30,
-	reloadTime: room_speed * 1.2
+	reloadTime: room_speed * 1.2,
+	index: 0
 };
 
 weapon_struct_escopeta = {
@@ -47,7 +48,8 @@ weapon_struct_escopeta = {
 	
     ammoType:"escop",
     clipSize:30,
-    reloadTime: room_speed * 1.2
+    reloadTime: room_speed * 1.2,
+	index: 0
 };
 
 weapon_struct_smg = {
@@ -64,6 +66,7 @@ weapon_struct_smg = {
     ammoType:"smg",
     clipSize:30,
     reloadTime: room_speed * 1.2,
+	index: 0
 };
 
 weapon_struct_bazooka = {
@@ -79,7 +82,8 @@ weapon_struct_bazooka = {
     
     ammoType: "heavy",
     clipSize: 5,                   // Reserva total pequeña
-    reloadTime: room_speed * 2.5   // Recarga lenta
+    reloadTime: room_speed * 2.5,   // Recarga lenta
+	index: 0
 };
 
 weapon_struct_m4 = {
@@ -95,7 +99,8 @@ weapon_struct_m4 = {
     
     ammoType: "rifle",
     clipSize: 30,
-    reloadTime: room_speed * 1.5 // Recarga un poquito más lenta que la pistola
+    reloadTime: room_speed * 1.5, // Recarga un poquito más lenta que la pistola
+	index: 0
 };
 #endregion
 

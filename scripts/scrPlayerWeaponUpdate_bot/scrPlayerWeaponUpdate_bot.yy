@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"scrPlayerWeaponUpdate_bot",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scrPlayerWeaponUpdate_bot",
+  "parent":{
+    "name":"Funciones",
+    "path":"folders/Scripts/Funciones.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

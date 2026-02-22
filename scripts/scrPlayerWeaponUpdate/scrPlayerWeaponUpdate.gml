@@ -1,5 +1,6 @@
 function scrPlayerWeaponUpdate()
 {
+
     if (guns[weapon.index] == noone) exit;
 
     // siempre actualizar el ángulo
@@ -424,3 +425,4 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
         }
     }
 }
+
