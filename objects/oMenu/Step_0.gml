@@ -53,20 +53,29 @@ if (menu_state == "main") {
                 case 2: // OPTIONS
                     show_message("Opciones...");
                 break;
-                
-                case 3: // --- NUEVO: MODO OFFLINE ---
-                    global.ONLINE = false;
-                    global.myTeam = "AZUL"; // Equipo por defecto
-                    global.myName = (texto_input == "" || texto_input == "Escribe tu nombre...") ? "Jugador" : texto_input;
-                    
-                    // Aseguramos que las puntuaciones empiecen en 0
-                    global.scoreAzul = 0;
-                    global.scoreRojo = 0;
-                    
-                    // Vamos directo a la room de juego (cambia rm_stage1 por el nombre de tu sala)
-                    room_goto(rm_stage1_offline); 
-                break;
-                
+
+				case 3: // --- NUEVO: CONFIGURACIÓN MODO OFFLINE ---
+					global.ONLINE = false;
+					if(global.ONLINE){
+					DisconnectFromServer();}
+					menu_state = "offline_setup";
+				    off_index = 0; // Índice para este submenú
+    
+				    // Inicializar opciones offline si no existen
+				    global.off_mapa = 0;
+				    global.off_flags = 3;
+				    global.off_bots = 0; // 0 = Solo, 1 = Con Bots
+    
+				    // Textos iniciales para el array de opciones offline
+				    offline_options = [
+				        "MAPA: BOSQUE",
+				        "OBJETIVO: 3 BANDERAS",
+				        "ENEMIGOS: SOLO (PRACTICA)",
+				        "INICIAR BATALLA",
+				        "BACK"
+				    ];
+				break;
+				
                 case 4: // EXIT
                     game_end();
                 break;
@@ -148,6 +157,50 @@ else if (menu_state == "setup_room") {
     }
 
     if (keyboard_check_pressed(vk_escape)) menu_state = "private";
+}
+else if (menu_state == "offline_setup") {
+    var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+    off_index = clamp(off_index + move, 0, array_length(offline_options) - 1);
+
+    var side_move = keyboard_check_pressed(vk_right) - keyboard_check_pressed(vk_left);
+
+    // --- Lógica de cambio con flechas laterales ---
+    if (side_move != 0) {
+        switch(off_index) {
+            case 0: // CAMBIAR MAPA
+                global.off_mapa = (global.off_mapa + side_move + 2) % 2;
+                var map_text = ["BOSQUE", "ARENA"];
+                offline_options[0] = "MAPA: " + map_text[global.off_mapa];
+            break;
+
+            case 1: // CAMBIAR BANDERAS
+                global.off_flags = clamp(global.off_flags + side_move, 1, 10);
+                offline_options[1] = "OBJETIVO: " + string(global.off_flags) + " BANDERAS";
+            break;
+
+            case 2: // CAMBIAR ENEMIGOS
+                global.off_bots = (global.off_bots + side_move + 2) % 2;
+                var bot_text = ["SOLO (PRACTICA)", "CON BOTS (CPU)"];
+                offline_options[2] = "ENEMIGOS: " + bot_text[global.off_bots];
+            break;
+        }
+    }
+
+    // --- Confirmar con ENTER ---
+    if (keyboard_check_pressed(vk_enter)) {
+        if (off_index == 3) { // INICIAR
+            //global.ONLINE = false;
+            global.puntos_azul = 0;
+            global.puntos_rojo = 0;
+            global.game_over = false;
+            // Elegir room según el mapa
+            var target_room = (global.off_mapa == 0) ? rm_stage1_offline : rm_stage1_offline;
+            room_goto(target_room);
+        }
+        else if (off_index == 4) { // VOLVER
+            menu_state = "main";
+        }
+    }
 }
 }
 

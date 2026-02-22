@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"AbandonarSala",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"AbandonarSala",
+  "parent":{
+    "name":"Funciones",
+    "path":"folders/Scripts/Funciones.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

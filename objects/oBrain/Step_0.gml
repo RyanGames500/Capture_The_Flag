@@ -1,38 +1,113 @@
 // ======================================================
-// 🏆 LÓGICA DE VICTORIA (MODO OFFLINE)
+// 🏆 LÓGICA DE VICTORIA Y PAUSA (MODO OFFLINE Y ONLINE)
 // ======================================================
 
-if (global.game_over == false) 
-{
-    // 1. Chequear si alguien llegó al límite de puntos (ej: 3 puntos)
-    var _ganador = 0;
-    if (global.puntos_rojo >= 3) _ganador = 1; // Gana Rojo
-    if (global.puntos_azul >= 3) _ganador = 2; // Gana Azul
-
-    // 2. Si hay un ganador, congelar la partida
-    if (_ganador != 0) 
-    {
-        global.game_over = true;
-        global.winner_team = _ganador;
-        
-        // Mostrar el cursor del mouse para poder salir
-        with(oMouseIcon_falso) { window_set_cursor(cr_arrow); }
+// --- 1. ACTIVACIÓN DE PAUSA (ESC) ---
+if (keyboard_check_pressed(vk_escape) && !global.game_over) {
+    global.pausa = !global.pausa;
+    if (global.pausa) {
+        window_set_cursor(cr_arrow);
+        pause_index = 0; 
     }
 }
-else 
-{
-    // 3. Efecto de aparición de la pantalla de victoria (Fade In)
-    if (victory_alpha < 1) {
-        victory_alpha += 0.05; 
+
+// --- 2. LÓGICA DEL MENÚ DE PAUSA ---
+if (global.pausa) {
+    var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+    
+    // En ONLINE solo tenemos 2 opciones (Continuar y Salir), en OFFLINE 3 (Reiniciar)
+    var max_index = (global.ONLINE) ? 1 : 2;
+    pause_index = clamp(pause_index + move, 0, max_index);
+
+    if (keyboard_check_pressed(vk_enter)) {
+        if (global.ONLINE) {
+            // LÓGICA PAUSA ONLINE
+            if (pause_index == 0) global.pausa = false;
+            if (pause_index == 1) 
+			{ 
+			// 1. Mandar el evento a los demás antes de desconectarnos
+			    var _msg = string(global.myName) + " abandono la partida!";
+    
+			    // Enviamos un paquete de tipo "player_left_msg" a todos los demás
+			    with(oOtherPlayer) {
+			        SendEventToClient(clientId, "player_left_msg", { texto: _msg });
+			    }
+				
+				LeaveRoom();
+				
+			}
+        } else {
+            // LÓGICA PAUSA OFFLINE
+            switch(pause_index) {
+                case 0: global.pausa = false; break;
+                case 1: // REINICIAR
+                    global.pausa = false;
+                    global.puntos_azul = 0; global.puntos_rojo = 0;
+                    room_restart();
+                break;
+                case 2: // SALIR
+                    global.pausa = false;
+                    global.regresar_a_offline = true;
+                    room_goto(rm_menu);
+                break;
+            }
+        }
+    }
+    // Solo bloqueamos el resto del código (exit) si estamos en OFFLINE
+    if (!global.ONLINE) exit; 
+}
+
+// --- 3. DETECCIÓN DE GANADOR ---
+if (global.game_over == false) {
+    var _ganador = 0;
+    
+    if (global.ONLINE == false) {
+        // Lógica Offline
+        var limite = variable_global_exists("off_flags") ? global.off_flags : 3;
+        if (global.puntos_rojo >= limite) _ganador = 1; 
+        if (global.puntos_azul >= limite) _ganador = 2; 
+    } 
+    else if (oBrain.AmIPseudoHost) {
+        // Lógica Online (Solo Host decide)
+        if (global.puntos_rojo >= 3) _ganador = 1;
+        if (global.puntos_azul >= 3) _ganador = 2;
+
+        if (_ganador != 0) {
+            var _data = { winner: _ganador };
+            with(oOtherPlayer) { SendEventToClient(clientId, "finalizar_partida", _data); }
+        }
     }
 
-    // 4. Opción para salir al menú una vez que la pantalla es visible
-    if (victory_alpha >= 0.9) 
-    {
-        if (keyboard_check_pressed(vk_escape) || keyboard_check_pressed(vk_enter)) 
-        {
-            // Aquí pones tu comando para volver al menú
-            room_goto(rm_menu); 
+    if (_ganador != 0) {
+        global.game_over = true;
+        global.winner_team = _ganador;
+        window_set_cursor(cr_arrow);
+    }
+}
+
+// --- 4. LÓGICA PANTALLA DE VICTORIA (GAME OVER ACTIVO) ---
+if (global.game_over == true) {
+    if (victory_alpha < 1) victory_alpha += 0.05; 
+
+    if (victory_alpha >= 0.9) {
+        if (global.ONLINE) {
+            // En Online solo esperamos Enter para salir
+            if (keyboard_check_pressed(vk_enter) || keyboard_check_pressed(vk_escape)) {
+                LeaveRoom(); // O room_goto(rm_menu)
+            }
+        } else {
+            // En Offline usamos el índice de Reintentar/Salir
+            var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+            victory_index = clamp(victory_index + move, 0, 1);
+
+            if (keyboard_check_pressed(vk_enter)) {
+                if (victory_index == 0) {
+                    global.puntos_azul = 0; global.puntos_rojo = 0;
+                    global.game_over = false; room_restart();
+                } else {
+                    global.regresar_a_offline = true; room_goto(rm_menu);
+                }
+            }
         }
     }
 }

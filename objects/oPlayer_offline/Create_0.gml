@@ -69,9 +69,7 @@ empty_cd = 0;
 damage_alpha = 0;
 
 // --- LÓGICA DE EQUIPO (Modo Local) ---
-// En offline, tú eliges tu equipo. Por defecto te pongo AZUL.
-// Puedes cambiar esto desde el menú de "Modo Práctica"
-if (!variable_global_exists("myTeam")) global.myTeam = "AZUL"; 
+global.myTeam = "AZUL"; 
 
 team = global.myTeam; 
 global.enemyTeam = (team == "AZUL") ? "ROJO" : "AZUL";

@@ -31,3 +31,24 @@ show_kick_menu = false;
 kick_menu_x = 0;
 kick_menu_y = 0;
 kick_target_id = -1; // El ID del que vamos a echar
+
+// En el Create de oMenu
+if (!variable_global_exists("regresar_a_offline")) {
+    global.regresar_a_offline = false;
+}
+
+// Si venimos de una partida offline, saltamos el menú principal
+if (global.regresar_a_offline) {
+    menu_state = "offline_setup";
+    global.regresar_a_offline = false; // La reseteamos para la próxima
+    
+    // Opcional: define aquí las opciones de nuevo para que no aparezcan vacías
+    off_index = 0; 
+    offline_options = [
+        "MAPA: " + (global.off_mapa == 0 ? "BOSQUE" : "ARENA"),
+        "OBJETIVO: " + string(global.off_flags) + " BANDERAS",
+        "ENEMIGOS: " + (global.off_bots == 0 ? "SOLO (PRÁCTICA)" : "CON BOTS (CPU)"),
+        "INICIAR BATALLA",
+        "VOLVER"
+    ];
+}

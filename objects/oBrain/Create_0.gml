@@ -144,6 +144,9 @@ global.game_over = false;
 global.sfx=true;
 global.music=true;
 global.playerNames = ds_map_create();
+global.pausa = false;    // Estado de la pausa
+pause_index = 0;         // Opción seleccionada en pausa
+victory_index = 0;       // Opción seleccionada en victoria
 
 ammo_min_on_map   = 6;   // mínimo de packs que quieres siempre en el mapa
 ammo_check_cd     = 0;   // cooldown de chequeo

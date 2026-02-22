@@ -95,6 +95,7 @@
     {"id":{"name":"oNotification","path":"objects/oNotification/oNotification.yy",},},
     {"id":{"name":"oOtherPlayer","path":"objects/oOtherPlayer/oOtherPlayer.yy",},},
     {"id":{"name":"oOtherPlayersEntity","path":"objects/oOtherPlayersEntity/oOtherPlayersEntity.yy",},},
+    {"id":{"name":"oPauseMenu","path":"objects/oPauseMenu/oPauseMenu.yy",},},
     {"id":{"name":"oPersistentObject","path":"objects/oPersistentObject/oPersistentObject.yy",},},
     {"id":{"name":"oPlataformaPasable","path":"objects/oPlataformaPasable/oPlataformaPasable.yy",},},
     {"id":{"name":"oPlayer_bullet","path":"objects/oPlayer_bullet/oPlayer_bullet.yy",},},

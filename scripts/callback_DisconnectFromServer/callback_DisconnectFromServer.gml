@@ -15,5 +15,6 @@ function callback_DisconnectFromServer(){
 
 	//edit ths code to do whatever you want
 	//show_message("You have successfully disconnected. (Most likely because you were killed)");
+	global.ONLINE=false;
 
 }

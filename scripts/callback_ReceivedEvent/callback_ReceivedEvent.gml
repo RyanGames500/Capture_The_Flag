@@ -72,9 +72,17 @@ case "KICK_FROM_ROOM":
     show_message_async("El líder te ha sacado de la sala.");
 break;
 
-        case "GO_TO_BATTLE":
-            room_goto(rm_stage1);
-        break;
+case "GO_TO_BATTLE":
+    room_goto(rm_stage1);
+break;
+
+case "player_left_msg":
+    // Extraemos el texto desde theMessageStruct
+    var _txt_abandono = variable_struct_exists(theMessageStruct, "texto") ? theMessageStruct.texto : "Alguien abandono";
+    
+    // Lo mandamos al feed de muertes
+    scrAddKillFeed(_txt_abandono);
+break;
 
 //Granada crear
 case "spawn_granada":

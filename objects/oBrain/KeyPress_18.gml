@@ -1,0 +1,1 @@
+global.puntos_azul=3;

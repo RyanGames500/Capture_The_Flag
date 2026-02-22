@@ -328,7 +328,28 @@ else if (menu_state == "setup_room") {
     draw_set_color(c_gray);
     draw_text(cx, cy + 150, "Usa las flechas para cambiar opciones");
 }
+else if (menu_state == "offline_setup") {
+    var cx = gui_w / 2;
+    var cy = gui_h / 2;
 
+    draw_set_color(c_orange);
+    draw_text(cx, cy - 150, "--- ENTRENAMIENTO OFFLINE ---");
+
+    for (var i = 0; i < array_length(offline_options); i++) {
+        if (i == off_index) {
+            draw_set_color(c_yellow);
+            var txt = ">> " + offline_options[i] + " <<";
+        } else {
+            draw_set_color(c_white);
+            var txt = offline_options[i];
+        }
+        draw_text(cx, cy - 50 + (i * 60), txt);
+    }
+    
+    draw_set_color(c_gray);
+    draw_set_font(-1); // Fuente pequeña para info
+    draw_text(cx, cy + 230, "Usa las flechas para ajustar tu práctica");
+}
 // --- DIBUJAR MENÚ DE KICK ---
 if (show_kick_menu) {
     draw_set_color(c_red);

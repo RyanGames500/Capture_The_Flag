@@ -116,11 +116,13 @@
     {"name":"inst_6EDF6803","path":"rooms/rm_stage1_offline/rm_stage1_offline.yy",},
     {"name":"inst_41DF6C3B","path":"rooms/rm_stage1_offline/rm_stage1_offline.yy",},
     {"name":"inst_22B50FF5","path":"rooms/rm_stage1_offline/rm_stage1_offline.yy",},
+    {"name":"inst_122177B0","path":"rooms/rm_stage1_offline/rm_stage1_offline.yy",},
   ],
   "isDnd":false,
   "layers":[
     {"$GMRInstanceLayer":"","%Name":"HUD","depth":0,"effectEnabled":true,"effectType":null,"gridX":32,"gridY":32,"hierarchyFrozen":false,"inheritLayerDepth":false,"inheritLayerSettings":false,"inheritSubLayers":true,"inheritVisibility":true,"instances":[
         {"$GMRInstance":"v4","%Name":"inst_586E171F","colour":4294967295,"frozen":false,"hasCreationCode":false,"ignore":false,"imageIndex":0,"imageSpeed":1.0,"inheritCode":false,"inheritedItemId":null,"inheritItemSettings":false,"isDnd":false,"name":"inst_586E171F","objectId":{"name":"oCameraController_offline","path":"objects/oCameraController_offline/oCameraController_offline.yy",},"properties":[],"resourceType":"GMRInstance","resourceVersion":"2.0","rotation":0.0,"scaleX":1.0,"scaleY":1.0,"x":96.0,"y":384.0,},
+        {"$GMRInstance":"v4","%Name":"inst_122177B0","colour":4294967295,"frozen":false,"hasCreationCode":false,"ignore":true,"imageIndex":0,"imageSpeed":1.0,"inheritCode":false,"inheritedItemId":null,"inheritItemSettings":false,"isDnd":false,"name":"inst_122177B0","objectId":{"name":"oPauseMenu","path":"objects/oPauseMenu/oPauseMenu.yy",},"properties":[],"resourceType":"GMRInstance","resourceVersion":"2.0","rotation":0.0,"scaleX":1.0,"scaleY":1.0,"x":258.0,"y":181.0,},
       ],"layers":[],"name":"HUD","properties":[],"resourceType":"GMRInstanceLayer","resourceVersion":"2.0","userdefinedDepth":false,"visible":true,},
     {"$GMRInstanceLayer":"","%Name":"Weapons","depth":100,"effectEnabled":true,"effectType":null,"gridX":32,"gridY":32,"hierarchyFrozen":false,"inheritLayerDepth":false,"inheritLayerSettings":false,"inheritSubLayers":true,"inheritVisibility":true,"instances":[
         {"$GMRInstance":"v4","%Name":"inst_3359CDC1_1","colour":4294967295,"frozen":false,"hasCreationCode":false,"ignore":false,"imageIndex":0,"imageSpeed":1.0,"inheritCode":false,"inheritedItemId":null,"inheritItemSettings":false,"isDnd":false,"name":"inst_3359CDC1_1","objectId":{"name":"oMouseIcon_falso","path":"objects/oMouseIcon_falso/oMouseIcon_falso.yy",},"properties":[],"resourceType":"GMRInstance","resourceVersion":"2.0","rotation":0.0,"scaleX":2.6842105,"scaleY":2.6,"x":239.1579,"y":432.0,},
