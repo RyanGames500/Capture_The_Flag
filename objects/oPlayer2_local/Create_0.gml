@@ -1,7 +1,7 @@
 // --- DATOS BÁSICOS ---
 speed = 0;
 direction = 0;
-playerName = global.myName; 
+playerName = "BOT1"; 
 
 // --- ESTADOS ---
 enum PLAYER2 {

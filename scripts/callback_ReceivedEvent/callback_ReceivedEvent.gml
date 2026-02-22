@@ -2,7 +2,7 @@ function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
 
 //Partiva Privada
-// Dentro de tu switch(eventName) en callback_ReceivedEvent
+
 case "SYNC_LIMIT":
     global.max_players_allowed = theMessageStruct.max;
 break;
@@ -150,7 +150,7 @@ case "request_powerup":
     if (!oBrain.AmIPseudoHost) break;
 
     var _uid = theMessageStruct.uid;
-    var _sender = senderClientId; 
+    var _sender = senderClientId; // El ID del que hizo la petición
     
     var _inst = noone;
     with (oPowerupPickup) { if (net_uid == _uid) { _inst = id; break; } }
@@ -160,7 +160,7 @@ case "request_powerup":
         var _amt  = _inst.amount;
         var _dur  = _inst.duration;
 
-        // A) Confirmar efecto al que lo pidió
+        // A) Confirmar efecto al cliente que lo pidió
         SendEventToClient(_sender, "apply_powerup", {
             tipo: _tipo,
             amount: _amt,   
@@ -168,18 +168,32 @@ case "request_powerup":
             is_prediction: true
         });
 
-        // B) 🔥 EL FIX: Mandar el borrado a ABSOLUTAMENTE TODOS los clientes
-        // Usamos un loop que incluya a todos sin filtros
+        // B) Avisar a TODOS los demás
         with(oOtherPlayer) {
+            // Todos borran el objeto físicamente
             SendEventToClient(clientId, "powerup_taken", { uid: _uid });
             
-            // Mandar efectos visuales a todos menos al que ya los hizo localmente
-            if (clientId != _sender) {
-                SendEventToClient(clientId, "powerup_fx", { tipo: _tipo, targetId: _sender });
-            }
+            // 🔥 El efecto visual debe salir de quien lo agarró (_sender)
+            // Se le manda a todos, incluso al que lo agarró (aunque él ya lo hizo local, 
+            // su código de apply_powerup o colisión lo maneja)
+            SendEventToClient(clientId, "powerup_fx", { tipo: _tipo, targetId: _sender });
         }
 
-        // C) El Host lo borra y libera spawn
+        // C) El Host también debe ver el efecto visual del cliente en su pantalla
+        // Ejecutamos la lógica de FX manualmente para el Host
+        var _host_target = noone;
+        with(oOtherPlayer) { if (clientId == _sender) _host_target = id; }
+        if (instance_exists(_host_target)) {
+             var _obj_fx = oHealFX;
+             if (_tipo == "speed")  _obj_fx = oSpeedFX;
+             if (_tipo == "shield") _obj_fx = oSpeedFX;
+             if (_tipo == "damage") _obj_fx = oSpeedFX;
+             if (_tipo == "ammo")   _obj_fx = oSpeedFX;
+             repeat(8) {
+                 instance_create_layer(_host_target.x + random_range(-20, 20), _host_target.y + random_range(-10, 10), "Instances", _obj_fx);
+             }
+        }
+
         scr_release_spawn_point(_inst.x, _inst.y);
         instance_destroy(_inst);
     }
@@ -192,12 +206,11 @@ case "powerup_fx":
     var _targetId = theMessageStruct.targetId;
     var _targetInst = noone;
 
-    // 1. ¿El efecto es para MÍ?
+    // 1. ¿El efecto es para MÍ (el cliente que recibe este mensaje)?
     if (global.clientId == _targetId) { 
         _targetInst = oPlayer.id;
     } else {
-        // 2. ¿El efecto es para alguno de los otros 3 jugadores?
-        // Buscamos entre todos los oOtherPlayer cuál coincide con el ID
+        // 2. ¿Es para otro jugador?
         with(oOtherPlayer) {
             if (clientId == _targetId) {
                 _targetInst = id;
@@ -205,14 +218,14 @@ case "powerup_fx":
         }
     }
 
-    // 3. Crear partículas si encontramos al dueño
+    // 3. Crear partículas
     if (instance_exists(_targetInst)) {
-        // Mapeo de efectos según el tipo
         var _obj = oHealFX;
         if (_tipo == "speed")  _obj = oSpeedFX;
         if (_tipo == "shield") _obj = oSpeedFX;
         if (_tipo == "damage") _obj = oSpeedFX;
         if (_tipo == "ammo")   _obj = oSpeedFX;
+        
         repeat(8) {
             instance_create_layer(_targetInst.x + random_range(-20, 20), _targetInst.y + random_range(-10, 10), "Instances", _obj);
         }
