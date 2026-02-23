@@ -26,8 +26,6 @@ if (global.ONLINE) {
     draw_circle(gw/2 - 100, gh/2 + 80, 4, false);
 }
 
-// ... (Tu código de fondo y título se mantiene igual) ...
-
 // Mensaje de estado
 draw_set_font(fnt_menu);
 draw_set_alpha(alpha);

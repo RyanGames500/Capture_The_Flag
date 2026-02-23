@@ -8,7 +8,7 @@ function callback_ChangeRoom(new_room_id) {
     
     // Tu lógica de matchmaking de antes...
     if(string_count("auto_match_", new_room_id)){
-        room_goto(rm_stage1);
+        room_goto(rm_stage2);
     }
 }
 

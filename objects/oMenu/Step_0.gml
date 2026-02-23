@@ -190,7 +190,7 @@ else if (menu_state == "offline_setup") {
             global.puntos_rojo = 0;
             global.game_over = false;
             // Elegir room según el mapa
-            var target_room = (global.off_mapa == 0) ? rm_stage1_offline : rm_stage1_offline;
+            var target_room = (global.off_mapa == 0) ? rm_stage1_offline : rm_stage2_offline;
             room_goto(target_room);
         }
         else if (off_index == 4) { // VOLVER

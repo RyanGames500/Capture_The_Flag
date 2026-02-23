@@ -78,16 +78,32 @@ else {
         depth = -y;
 
         if (oBrain.AmIPseudoHost) {
-            // Físicas del Host
-            if (!place_meeting(x, y + 1, obj_wall)) {
-                velocidad_caida += gravedad;
-                if (place_meeting(x, y + velocidad_caida, obj_wall)) {
-                    while (!place_meeting(x, y + sign(velocidad_caida), obj_wall)) y += sign(velocidad_caida);
+        // 1. Aplicar gravedad si no hay suelo (Pared o Plataforma)
+        var on_wall = place_meeting(x, y + 1, obj_wall);
+        var plat = instance_place(x, y + 1, oPlataformaPasable);
+        var on_platform = (plat != noone && bbox_bottom <= plat.bbox_top + 1);
+
+        if (!on_wall && !on_platform) {
+            velocidad_caida += gravedad;
+        }
+
+        // 2. Colisión con Paredes Sólidas (obj_wall)
+        if (place_meeting(x, y + velocidad_caida, obj_wall)) {
+            while (!place_meeting(x, y + sign(velocidad_caida), obj_wall)) y += sign(velocidad_caida);
+            velocidad_caida = 0;
+        }
+        
+        // 3. Colisión con Plataformas Traspasables (oPlataformaPasable)
+        if (velocidad_caida > 0) {
+            var plat_below = instance_place(x, y + velocidad_caida, oPlataformaPasable);
+            if (plat_below != noone) {
+                // Solo colisionar si la bandera viene desde arriba
+                if (bbox_bottom <= plat_below.bbox_top) {
+                    y = plat_below.bbox_top - (bbox_bottom - y);
                     velocidad_caida = 0;
                 }
-            } else {
-                velocidad_caida = 0;
             }
+        }
             y += velocidad_caida;
 
             // Publicar posición para los clientes (Usando variable distinta a la roja)

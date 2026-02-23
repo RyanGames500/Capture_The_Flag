@@ -30,6 +30,9 @@ reserve = {
     shell: 0
 };
 
+current_node = noone;
+target_node  = noone;
+path_node    = noone;
 granadas = 0;
 reloading = false;
 reload_timer = 0;

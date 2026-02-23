@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"get_nearest_node",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"get_nearest_node",
+  "parent":{
+    "name":"Alertas",
+    "path":"folders/Scripts/Alertas.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}
