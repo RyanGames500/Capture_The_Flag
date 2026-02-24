@@ -11,6 +11,7 @@
     {"$GMEvent":"v1","%Name":"","collisionObjectId":{"name":"oWeapon","path":"objects/oWeapon/oWeapon.yy",},"eventNum":0,"eventType":4,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
     {"$GMEvent":"v1","%Name":"","collisionObjectId":{"name":"oPowerupPickup","path":"objects/oPowerupPickup/oPowerupPickup.yy",},"eventNum":0,"eventType":4,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":3,"eventType":2,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
+    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":4,"eventType":2,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
   ],
   "managed":true,
   "name":"oPlayer2_local",
@@ -20,8 +21,8 @@
     "path":"folders/Objects/offline.yy",
   },
   "parentObjectId":{
-    "name":"oEnemy_Parent",
-    "path":"objects/oEnemy_Parent/oEnemy_Parent.yy",
+    "name":"oPlayer_parent",
+    "path":"objects/oPlayer_parent/oPlayer_parent.yy",
   },
   "persistent":false,
   "physicsAngularDamping":0.1,

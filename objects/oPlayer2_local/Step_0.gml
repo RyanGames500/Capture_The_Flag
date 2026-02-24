@@ -241,7 +241,18 @@ if (state != PLAYER2.DEAD) {
         var range = 26;
         var hx = x + (range * sign(image_xscale));
         var hy = y - 10;
-        
+ 
+ 	if(can_sfx=false)
+	{
+    // --- SOLO ESTO PARA EL EFECTO ---
+    var _slash = instance_create_layer(hx, hy, "Instances", oMeleeFX);
+    _slash.image_xscale = sign(image_xscale);
+    _slash.depth = depth - 10; 
+    // -------------------------------
+	can_sfx=true;
+	alarm[4]=10;
+	}
+ 
         var target = instance_place(hx, hy, oPlayer_offline); 
         if (target != noone && target.state != PLAYERSTATE2.DEAD) {
             
@@ -343,7 +354,7 @@ if (state != PLAYER2.DEAD) {
 
 
 // ======================================================
-// 🧠 MÁQUINA DE ESTADOS (TU SISTEMA)
+// MAQUINA DE ESTADOS
 // ======================================================
 
 is_grounded = place_meeting(x, y + 1, obj_wall) 
@@ -407,6 +418,12 @@ case PLAYER2.WALK:
     break;
 }
 
+if (abs(push_h) > 0.8) {
+    hsp = push_h; // AQUÍ SÍ: Sobreescribe el hsp que puso el WALK o JUMP
+    push_h = lerp(push_h, 0, 0.1); 
+} else {
+    push_h = 0;
+}
 
 // --- MUERTE LOCAL ---
 if (hp <= 0 && !isDead) {
@@ -420,14 +437,14 @@ if (hp <= 0 && !isDead) {
 }
 
 // ======================================================
-// 🌍 GRAVEDAD (UNA SOLA VEZ)
+// GRAVEDAD
 // ======================================================
 if (state != PLAYER2.DEAD)
     vsp += grv;
 
 
 // ======================================================
-// COLISIÓN HORIZONTAL
+// COLISION HORIZONTAL
 // ======================================================
 if (place_meeting(x + hsp, y, obj_wall)) {
     while (!place_meeting(x + sign(hsp), y, obj_wall))
@@ -438,7 +455,7 @@ x += hsp;
 
 
 // ======================================================
-// COLISIÓN PLATAFORMA PASABLE (solo bajando)
+// COLISION PLATAFORMA PASABLE
 // ======================================================
 if (vsp > 0) {
     var plat = instance_place(x, y + vsp, oPlataformaPasable);

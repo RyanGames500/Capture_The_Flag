@@ -1,3 +1,5 @@
+
+
 if (input_activo) global.myName = texto_input;
 
 draw_set_halign(fa_center);
@@ -377,3 +379,4 @@ if (show_kick_menu) {
     draw_set_valign(fa_middle);
     draw_text(kick_menu_x + 60, kick_menu_y + 20, "EXPULSAR");
 }
+

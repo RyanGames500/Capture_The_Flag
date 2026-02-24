@@ -91,32 +91,116 @@ if (has_flag) {
 	gpu_set_blendmode(bm_normal);
 }
 
+if (state == PLAYERSTATE2.DEAD) exit;
+
+// --- CONFIGURACIÓN BASE ---
+var _escala = 4; 
+var _xx = 40; 
+var _yy = 40;
+var _alto_barra = 12 * _escala; // Altura de cada bloque de barra
+var _offset_y = _alto_barra + (4 * _escala); // Espacio para la siguiente barra
+
+// 1. BARRA DE VIDA (Fija)
+vida_visual = lerp(vida_visual, health, 0.2);
+draw_sprite_ext(spr_HUD_Bar_Empty, 0, _xx, _yy, _escala, _escala, 0, c_white, 1);
+var _w = sprite_get_width(spr_HUD_Bar_Health);
+var _h = sprite_get_height(spr_HUD_Bar_Health);
+draw_sprite_part_ext(spr_HUD_Bar_Health, 0, 0, 0, _w * (vida_visual/100), _h, _xx, _yy, _escala, _escala, c_white, 1);
+
+// Variable para saber dónde dibujar la siguiente barra
+var _current_y = _yy + _offset_y;
+
+// --- 2. BARRA DE ESCUDO (Azul) ---
+if (has_shield) {
+    draw_sprite_ext(spr_HUD_Bar_Empty, 0, _xx, _current_y, _escala, _escala, 0, c_white, 1);
+    var _porc_s = clamp(shield_timer / 600, 0, 1);
+    draw_sprite_part_ext(spr_HUD_Bar_Shield, 0, 0, 0, _w * _porc_s, _h, _xx, _current_y, _escala, _escala, c_white, 1);
+    
+    _current_y += _offset_y; // Bajamos la posición para el siguiente
+}
+
+// --- 3. BARRA DE DAÑO BOOST (Roja o Naranja) ---
+if (damage_boost > 1) {
+    draw_sprite_ext(spr_HUD_Bar_Empty, 0, _xx, _current_y, _escala, _escala, 0, c_white, 1);
+    // Suponiendo que el daño dura unos 10 segundos (600 frames)
+    var _porc_d = clamp(damage_timer / 600, 0, 1); 
+    
+    // Aquí puedes usar spr_HUD_Bar_Health (rojo) o uno amarillo si tienes
+    draw_sprite_part_ext(spr_HUD_Bar_Blank, 0, 0, 0, _w * _porc_d, _h, _xx, _current_y, _escala, _escala, c_orange, 1);
+    
+    _current_y += _offset_y;
+}
+
+// --- 4. BARRA DE VELOCIDAD (Amarilla o Verde) ---
+if (speed_timer > 0) {
+    draw_sprite_ext(spr_HUD_Bar_Empty, 0, _xx, _current_y, _escala, _escala, 0, c_white, 1);
+    var _porc_sp = clamp(speed_timer / 600, 0, 1);
+    
+    // Usamos c_lime o c_yellow para diferenciarla
+    draw_sprite_part_ext(spr_HUD_Bar_Blank, 0, 0, 0, _w * _porc_sp, _h, _xx, _current_y, _escala, _escala, c_lime, 1);
+    
+    _current_y += _offset_y;
+}
+
+// --- 5. BARRA DE MUNICIÓN INFINITA (Opcional) ---
+if (infinite_ammo) {
+    draw_sprite_ext(spr_HUD_Bar_Empty, 0, _xx, _current_y, _escala, _escala, 0, c_white, 1);
+    var _porc_a = clamp(ammo_timer / 600, 0, 1);
+    draw_sprite_part_ext(spr_HUD_Bar_Blank, 0, 0, 0, _w * _porc_a, _h, _xx, _current_y, _escala, _escala, c_aqua, 1);
+}
+
+draw_set_color(c_white);
+
+
+// --- CONFIGURACIÓN ---
+var _escala_hud = 4; // Mantenemos tu escala original
+var _gui_w = display_get_gui_width();
 var _gui_h = display_get_gui_height();
-var _draw_y = _gui_h - 150; // Posición arriba de la vida
 
-// --- DIBUJAR ICONOS DE POWERUPS ---
+// AJUSTE DE POSICIÓN:
+// _bx: Menos resta = más a la derecha. (Antes 150, ahora 135)
+// _by: Más resta = más arriba. (Antes 150, ahora 180)
+var _bx = _gui_w - 135; 
+var _by = _gui_h - 180; 
 
-// ESCUDO (Azul)
-if (shield_timer > 0) {
-    draw_set_color(c_aqua);
-    draw_text(20, _draw_y, "ESCUDO: " + string(ceil(shield_timer/60)) + "s");
-    draw_rectangle(20, _draw_y + 20, 20 + (shield_timer/6), _draw_y + 25, false);
-    _draw_y -= 40;
+// Dimensiones del cuadro para centrar
+var _ancho_cuadro = sprite_get_width(spr_HUD_Box) * _escala_hud;
+var _alto_cuadro  = sprite_get_height(spr_HUD_Box) * _escala_hud;
+var _centro_x = _bx + (_ancho_cuadro / 2);
+var _centro_y = _by + (_alto_cuadro / 2);
+
+// 1. DIBUJAR EL CUADRO ANIMADO
+draw_sprite_ext(spr_HUD_Box, image_index, _bx, _by, _escala_hud, _escala_hud, 0, c_white, 1);
+
+var w = guns[weapon.index];
+draw_set_font(fnt_menu);
+draw_set_halign(fa_center);
+
+if (w != noone && is_struct(w)) {
+    // --- DIBUJAR ARMA ---
+    draw_sprite_ext(w.sprite, 0, _centro_x, _centro_y, _escala_hud - 1, _escala_hud - 1, 0, c_white, 1);
+
+    // --- MUNICIÓN CON SEGURO ---
+    var _res_val = reserve[$ w.ammoType];
+    var _res_texto = (_res_val == undefined) ? "0" : string(_res_val);
+    var _ammo_text = string(w.ammo) + " / " + _res_texto;
+    
+    var _col_ammo = (w.ammo == 0) ? c_red : c_white;
+    draw_text_transformed_color(_centro_x, _by + _alto_cuadro + 10, _ammo_text, 1, 1, 0, _col_ammo, _col_ammo, _col_ammo, _col_ammo, 1);
+} 
+else {
+    // --- CASO MELEE ---
+    draw_sprite_ext(spr_Hand, 0, _centro_x-15, _centro_y, _escala_hud, _escala_hud, 0, c_white, 1);
+    draw_text_transformed_color(_centro_x, _by + _alto_cuadro + 10, "MELEE", 1, 1, 0, c_aqua, c_aqua, c_aqua, c_aqua, 1);
 }
 
-// DAÑO X2 (Rojo)
-if (damage_timer > 0) {
-    draw_set_color(c_red);
-    draw_text(20, _draw_y, "DAÑO X2: " + string(ceil(damage_timer/60)) + "s");
-    draw_rectangle(20, _draw_y + 20, 20 + (damage_timer/6), _draw_y + 25, false);
-    _draw_y -= 40;
+// --- INDICADOR DE GRANADAS ---
+if (granadas > 0) {
+    var _gx = _bx - 40;
+    var _gy = _by + (_alto_cuadro / 2);
+    draw_sprite_ext(spr_granada, 0, _gx, _gy, 2, 2, 0, c_white, 1);
+    draw_set_halign(fa_right);
+    draw_text_transformed(_gx - 10, _gy - 10, "x" + string(granadas), 1, 1, 0);
 }
 
-// MUNICIÓN INFINITA (Dorado)
-if (ammo_timer > 0) {
-    draw_set_color(c_orange);
-    draw_text(20, _draw_y, "AMMO INF: " + string(ceil(ammo_timer/60)) + "s");
-    draw_rectangle(20, _draw_y + 20, 20 + (ammo_timer/6), _draw_y + 25, false);
-}
-
-draw_set_color(c_white); // Reset
+draw_set_halign(fa_left);

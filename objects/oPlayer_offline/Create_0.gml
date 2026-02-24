@@ -15,6 +15,9 @@ enum PLAYERSTATE2 {
     INTRO
 }
 state = PLAYERSTATE2.IDLE; // Iniciamos en IDLE directamente en local
+can_sfx=false;
+
+push_h = 0; // Fuerza de retroceso acumulada
 
 // --- SISTEMA DE ARMAS ---
 guns = [noone];
@@ -99,3 +102,6 @@ crush_cd = 0;
 death_reason = "pvp";
 last_killer = "";
 is_bot = false;
+
+vida_visual = health;
+escudo_visual = shield_timer;

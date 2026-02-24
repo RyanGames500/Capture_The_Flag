@@ -1,5 +1,63 @@
-draw_text(100,100,global.puntos_rojo);
-draw_text(100,200,global.puntos_azul);
+// --- FILTRO DE SALA ---
+if (room == rm_menu) exit; 
+
+// --- CONFIGURACIÓN ---
+var _gui_w = display_get_gui_width();
+var _mx = _gui_w / 2;
+var _my = 60;
+var _escala_m = 2.5; // Bajamos un pelín la escala para que no sature
+var _distancia_escudos = 140; // Qué tan lejos del centro están los escudos
+var _distancia_puntos = 60;   // Qué tan lejos del centro están los números
+
+// --- DIBUJAR FONDO ESTILIZADO ---
+draw_set_alpha(0.6);
+draw_rectangle_color(_mx - 180, _my - 30, _mx + 180, _my + 30, c_black, c_black, c_black, c_black, false);
+draw_set_alpha(1);
+
+draw_set_font(fnt_menu);
+draw_set_valign(fa_middle);
+
+// --- 1. EQUIPO AZUL ---
+// Escudo (A la izquierda)
+var _x_azul = _mx - _distancia_escudos;
+draw_sprite_ext(spr_shield_blue, 0, _x_azul, _my, _escala_m, _escala_m, 0, c_white, 1);
+
+// Alerta Azul (Justo sobre el escudo azul)
+if (global.bandera_azul_robada) {
+    var _blink = abs(sin(current_time * 0.015));
+    // El icono Quest parpadea justo en el centro del escudo o un poco arriba
+    draw_sprite_ext(spr_alert_icon, 0, _x_azul, _my - 5, 2.5, 2.5, 0, c_white, _blink);
+}
+
+// Puntaje Azul
+draw_set_halign(fa_center);
+draw_text_transformed_color(_mx - _distancia_puntos, _my, string(global.puntos_azul), 1.6, 1.6, 0, c_aqua, c_aqua, c_white, c_white, 1);
+
+
+// --- 2. VS (CENTRO) ---
+draw_set_halign(fa_center);
+draw_text_transformed(_mx, _my, "VS", 0.7, 0.7, 0);
+
+
+// --- 3. EQUIPO ROJO ---
+// Escudo (A la derecha)
+var _x_rojo = _mx + _distancia_escudos;
+draw_sprite_ext(spr_shield_red, 0, _x_rojo, _my, _escala_m, _escala_m, 0, c_white, 1);
+
+// Alerta Roja (Justo sobre el escudo rojo)
+if (global.bandera_roja_robada) {
+    var _blink = abs(sin(current_time * 0.015));
+    draw_sprite_ext(spr_alert_icon, 0, _x_rojo, _my - 5, 2.5, 2.5, 0, c_white, _blink);
+}
+
+// Puntaje Rojo
+draw_set_halign(fa_center);
+draw_text_transformed_color(_mx + _distancia_puntos, _my, string(global.puntos_rojo), 1.6, 1.6, 0, c_orange, c_orange, c_white, c_white, 1);
+
+// Reset
+draw_set_halign(fa_left);
+draw_set_valign(fa_top);
+
 
 #region Dibujar Avisos(Flag Capture)
 var gw = display_get_gui_width();
@@ -270,7 +328,7 @@ draw_set_alpha(1);
 draw_set_color(global.myTeam == "AZUL" ? c_aqua : c_red);
 draw_set_halign(fa_left);
 draw_text_transformed(40, gh - 65, global.myName, 1.2, 1.2, 0); // Tu nombre
-draw_rectangle(40, gh - 40, 40 + (health * 2), gh - 35, false); // Barra de vida mini
+//draw_rectangle(40, gh - 40, 40 + (health * 2), gh - 35, false); // Barra de vida mini
 #endregion
 
 #region // --- TARJETA RIVAL (Lado Derecho) ---
@@ -314,7 +372,7 @@ if (instance_exists(oOtherPlayer))
     // 3. INDICADOR DE ESTADO
     draw_set_color(c_lime);
     draw_set_halign(fa_right);
-    draw_text_transformed(gw - 40, gh - 35, "• ONLINE", 0.8, 0.8, 0);
+    draw_text_transformed(gw - 40, gh - 35, " ONLINE", 0.8, 0.8, 0);
     
     draw_set_alpha(1); // Reset
 }
@@ -437,3 +495,4 @@ if (global.game_over)
     draw_set_alpha(1); 
 }
 #endregion
+

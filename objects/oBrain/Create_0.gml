@@ -133,6 +133,9 @@ sent_ready = false;
 
 pseudoHostClientId = -1
 victory_alpha = 0; // Empieza invisible
+// --- ESTADO DE LAS BANDERAS ---
+global.bandera_azul_robada = false;
+global.bandera_roja_robada = false;
 global.score_blue = 0;
 global.score_red = 0;
 oBrain.t = 0;
@@ -159,4 +162,3 @@ weap_check_every  = 90;  // cada 1.5s
 timer_intro = -1;
 intro_disparada = false; // Para que solo pase una vez por partida
 //ConnectToServer();
-

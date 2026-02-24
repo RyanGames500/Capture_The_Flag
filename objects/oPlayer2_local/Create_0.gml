@@ -29,7 +29,8 @@ reserve = {
     escop: 0,
     shell: 0
 };
-
+can_sfx=false;
+push_h=0;
 current_node = noone;
 target_node  = noone;
 path_node    = noone;

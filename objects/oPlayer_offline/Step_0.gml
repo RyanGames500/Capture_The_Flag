@@ -30,6 +30,8 @@ if (shield_timer > 0) {
 if (damage_timer > 0) { damage_timer--; if (damage_timer <= 0) damage_boost = 1; }
 if (ammo_timer > 0) { ammo_timer--; if (ammo_timer <= 0) infinite_ammo = false; }
 
+
+
 // --- SUELO ---
 is_grounded = place_meeting(x, y + 1, obj_wall) || place_meeting(x, y + 1, oPlataformaPasable);
 
@@ -82,7 +84,18 @@ if (melee_active > 0) {
     var range = 26;
     var hx = x + (range * sign(image_xscale));
     var hy = y - 10;
-    // En local, solo dañaríamos si creas un oBot o oEnemy
+
+	if(can_sfx=false)
+	{
+    // --- SOLO ESTO PARA EL EFECTO ---
+    var _slash = instance_create_layer(hx, hy, "Instances", oMeleeFX);
+    _slash.image_xscale = sign(image_xscale);
+    _slash.depth = depth - 10; 
+    // -------------------------------
+	can_sfx=true;
+	alarm[4]=10;
+	}
+
     var target = instance_place(hx, hy, oPlayer2_local); 
     if (target != noone) {
         target.hp -= melee_damage;
@@ -97,7 +110,7 @@ if (mouse_check_button_pressed(mb_right)) {
         melee_cd = room_speed div 3;
         var dir = point_direction(x, y - 16, mouse_x, mouse_y);
         var fuerza = 8;
-        var nade = instance_create_layer(x + lengthdir_x(15, dir), y - 16 + lengthdir_y(15, dir), "Instances", oMyEntity);
+        var nade = instance_create_layer(x + lengthdir_x(15, dir), y - 16 + lengthdir_y(15, dir), "Instances", oGranada);
         nade.owner_name = global.myName;
         nade.sprite_index = spr_granada;
         nade.damage = 40;
@@ -113,6 +126,7 @@ if (mouse_check_button_pressed(mb_right)) {
 }
 
 if (state != PLAYERSTATE2.DEAD) vsp += grv;
+
 
 // --- MÁQUINA DE ESTADOS ---
 switch (state) {
@@ -149,6 +163,13 @@ switch (state) {
     break;
 }
 
+
+if (abs(push_h) > 0.8) {
+    hsp = push_h; // AQUÍ SÍ: Sobreescribe el hsp que puso el WALK o JUMP
+    push_h = lerp(push_h, 0, 0.1); 
+} else {
+    push_h = 0;
+}
 // --- PLATAFORMAS ---
 var plat = instance_place(x, y + 1, oMovingPlatform);
 if (plat != noone && vsp >= 0) {
@@ -219,6 +240,10 @@ var objetivo = (global.myTeam == "AZUL") ? oFlag : oFlag2;
 if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE2.DEAD && !has_flag && !objetivo.has_flag) {
     has_flag = true;
     with(objetivo) { has_flag = true; portador_instancia = other.id; }
+	
+	// HUD: Marcamos que la bandera del enemigo fue robada
+    if (global.myTeam == "AZUL") global.bandera_roja_robada = true; 
+    else global.bandera_azul_robada = true;
 }
 
 // --- ANOTACIÓN LOCAL ---
@@ -230,6 +255,11 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending) {
         x = spawnX; y = spawnY; 
         has_flag = false; portador_instancia = noone; 
     }
+	
+	// HUD: La bandera enemiga volvió a su base al anotar
+    if (global.myTeam == "AZUL") global.bandera_roja_robada = false;
+    else global.bandera_azul_robada = false;
+	
     var notif = instance_create_layer(0, 0, "Instances", oNotification);
     notif.text = "¡ANOTASTE!";
     notif.color = c_lime;
@@ -239,6 +269,11 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending) {
 var miBandera = (global.myTeam == "AZUL") ? oFlag2 : oFlag;
 if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (miBandera.x != miBandera.spawnX)) {
     with(miBandera) { x = spawnX; y = spawnY; }
+	
+	// HUD: Recuperaste tu bandera, la alerta se apaga
+    if (global.myTeam == "AZUL") global.bandera_azul_robada = false;
+    else global.bandera_roja_robada = false;
+	
     var notif = instance_create_layer(0, 0, "Instances", oNotification);
     notif.text = "¡SALVASTE TU BANDERA!";
     notif.color = c_aqua;

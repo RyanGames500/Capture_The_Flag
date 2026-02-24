@@ -650,6 +650,11 @@ break;
 		    var equipoCapturador = theMessageStruct.team;
 		    var idDelQueCapturo = senderClientId; // <--- USAMOS EL ID ÚNICO DEL EMISOR
 		    var banderaObjetivo = (equipoCapturador == "AZUL") ? oFlag : oFlag2;
+			
+			// --- HUD ONLINE: Activar alerta ---
+		    // Si el equipo AZUL capturó, significa que la bandera ROJA está robada
+		    if (equipoCapturador == "AZUL") global.bandera_roja_robada = true;
+		    else global.bandera_azul_robada = true;
 
 		    with(banderaObjetivo) {
 		        has_flag = true;
@@ -683,6 +688,8 @@ break;
 
         case "flag_return":
 		{
+			global.bandera_azul_robada = false;
+			
             with(oFlag2) {
                 x = spawnX;
                 y = spawnY;
@@ -773,6 +780,11 @@ case "sync_score":
 
     global.puntos_azul = theMessageStruct.azul;
     global.puntos_rojo = theMessageStruct.rojo;
+
+	// --- HUD ONLINE: Limpiar alertas ---
+    // Si la bandera que volvió es la ROJA, apagamos su alerta
+    if (flag_scored == "ROJA") global.bandera_roja_robada = false;
+    else global.bandera_azul_robada = false;
 
     // --- SOLO resetear si la bandera que volvió es la que YO llevaba ---
     if (flag_scored == miObjetivo) {

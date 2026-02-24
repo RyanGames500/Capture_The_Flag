@@ -220,7 +220,9 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
             recoil_angle += random_range(-angKick, angKick);
 
             // empuje al cuerpo
-            hsp -= lengthdir_x(push, weapon.angle);
+			var push2 = 6;
+			push_h = -lengthdir_x(push2, weapon.angle); 
+			hsp -= lengthdir_x(push2, weapon.angle);
 
             // pellets config
             var pellets = 7;
@@ -297,8 +299,8 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
             scrCamShake(10); // Sacudida fuerte
 
             // Recoil masivo hacia atrás
-            var push = 3.5;
-            hsp -= lengthdir_x(push, weapon.angle);
+            var push = 12;
+            push_h -= lengthdir_x(push, weapon.angle);
             vsp -= lengthdir_y(push / 2, weapon.angle); // Te empuja un poco arriba también
 
             recoil_kick += 8;

@@ -180,6 +180,17 @@ if (melee_active > 0)
     var hx = x + (range * sign(image_xscale));
     var hy = y - 10;
 
+	if(can_sfx=false)
+	{
+    // --- SOLO ESTO PARA EL EFECTO ---
+    var _slash = instance_create_layer(hx, hy, "Instances", oMeleeFX);
+    _slash.image_xscale = sign(image_xscale);
+    _slash.depth = depth - 10; 
+    // -------------------------------
+	can_sfx=true;
+	alarm[4]=10;
+	}
+
     // Buscamos a alguien en el área
     var target = instance_place(hx, hy, oOtherPlayer);
     
@@ -360,6 +371,13 @@ if (canShoot && melee_active <= 0)
         break;
 }
 
+if (abs(push_h) > 0.8) {
+    hsp = push_h; // AQUÍ SÍ: Sobreescribe el hsp que puso el WALK o JUMP
+    push_h = lerp(push_h, 0, 0.1); 
+} else {
+    push_h = 0;
+}
+
 var plat = instance_place(x, y + 1, oMovingPlatform);
 if (plat != noone && vsp >= 0)
 {
@@ -485,22 +503,14 @@ if (health <= 0 && !isDead)
     }
 }
 
-// --- LÓGICA DE SOLTAR AL MORIR (ÚNICA Y DEFINITIVA) ---
-// Solo entramos si el jugador muere Y REALMENTE tiene una bandera capturada
+// --- SOLTAR BANDERA AL MORIR (ÚNICA Y DEFINITIVA) ---
 if (state == PLAYERSTATE.DEAD && has_flag == true) 
 {
-    // 1. Apagamos el switch inmediatamente para que no se repita
     has_flag = false;
-    
-    // 2. Identificamos la bandera ENEMIGA (la que llevamos robada)
-    // Si yo soy AZUL, la que suelto es la ROJA (oFlag)
-    // Si yo soy ROJO, la que suelto es la AZUL (oFlag2)
     var bandera_robada = (global.myTeam == "AZUL") ? oFlag : oFlag2;
-    
     var drop_x = x; 
     var drop_y = y;
 
-    // 3. Movemos la bandera robada al suelo
     with (bandera_robada) 
     {
         has_flag = false;
@@ -511,23 +521,23 @@ if (state == PLAYERSTATE.DEAD && has_flag == true)
         sprite_index = spr_suela;
     }
     
-    // 4. Avisamos a los demás (Broadcast)
+    // HUD: La bandera sigue "robada" (fuera de base), así que no apagamos la alerta aún.
+
     if (global.ONLINE && instance_exists(oOtherPlayer)) 
     {
         with(oOtherPlayer) {
             SendEventToClient(clientId, "flag_dropped", { 
                 team: global.myTeam, 
                 dropX: drop_x, 
-                dropY: drop_y 
+                dropY: drop_y  
             });
         }
     }
 }
 
 // --- CÓDIGO DE CAPTURA MEJORADO ---
-var objetivo = (global.myTeam == "AZUL") ? oFlag : oFlag2; // Bandera enemiga
+var objetivo = (global.myTeam == "AZUL") ? oFlag : oFlag2;
 
-// Solo capturo si: No hay punto pendiente + Colisión + No estoy muerto + Yo no tengo bandera + NADIE la tiene
 if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD && !has_flag && !objetivo.has_flag) 
 {
     has_flag = true;
@@ -536,7 +546,10 @@ if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD
         portador_instancia = other.id;
     }
 
-    // Avisar a todos
+    // --- HUD: ACTIVAR ALERTA ---
+    if (global.myTeam == "AZUL") global.bandera_roja_robada = true; 
+    else global.bandera_azul_robada = true;
+
     if (instance_exists(oOtherPlayer)) {
         with(oOtherPlayer) {
             SendEventToClient(clientId, "flag_capture", { team: global.myTeam });
@@ -547,10 +560,9 @@ if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD
 // --- CÓDIGO DE ANOTACIÓN EN BASE ---
 var miBase = (global.myTeam == "AZUL") ? obj_base_blue : obj_base_red;
 
-// AÑADIMOS !score_pending para que solo entre una vez
 if (place_meeting(x, y, miBase) && has_flag && !score_pending) 
 {
-    score_pending = true; // 🚩 BLOQUEO INMEDIATO
+    score_pending = true; 
     has_flag = false;
 
     with (objetivo) {
@@ -559,12 +571,16 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending)
         velocidad_caida = 0;
     }
 
+    // --- HUD: DESACTIVAR ALERTA (Bandera vuelve a casa) ---
+    if (global.myTeam == "AZUL") global.bandera_roja_robada = false;
+    else global.bandera_azul_robada = false;
+
     var flag_scored = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
 
     if (oBrain.AmIPseudoHost) {
         if (global.myTeam == "AZUL") global.puntos_azul++; else global.puntos_rojo++;
 
-		has_flag = false; score_pending = false;
+        has_flag = false; score_pending = false;
 
         if (flag_scored == "ROJA") {
             with (oFlag) { x=spawnX; y=spawnY; velocidad_caida=0; has_flag=false; portador_instancia=noone; }
@@ -572,20 +588,16 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending)
             with (oFlag2){ x=spawnX; y=spawnY; velocidad_caida=0; has_flag=false; portador_instancia=noone; }
         }
 
-        // BROADCAST A TODOS LOS "OTHER"
         with(oOtherPlayer) {
             SendEventToClient(clientId, "sync_score", {
                 azul: global.puntos_azul,
                 rojo: global.puntos_rojo,
                 resetFlag: flag_scored,
-				
             });
         }
         
-        // El Host se desbloquea tras procesar todo
         score_pending = false;
 
-        // --- Tus notificaciones (Se quedan igual) ---
         var notif = instance_create_layer(0, 0, "Instances", oNotification);
         notif.target_scale = 1.5;
         var miObjetivo = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
@@ -598,7 +610,6 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending)
         }
     } 
     else {
-        // CLIENTE: Envía a todos los OtherPlayer (aunque solo el Host lo procesará)
         with(oOtherPlayer) {
             SendEventToClient(clientId, "request_point", {
                 team: (global.myTeam == "AZUL") ? "AZUL" : "ROJA",
@@ -608,13 +619,16 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending)
     }
 }
 
-
 // --- DEVOLVER MI BANDERA A BASE ---
 var miBandera = (global.myTeam == "AZUL") ? oFlag2 : oFlag;
 
 if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (miBandera.x != miBandera.spawnX)) 
 {
     score_pending = true; 
+
+    // --- HUD: DESACTIVAR MI ALERTA (Recuperada) ---
+    if (global.myTeam == "AZUL") global.bandera_azul_robada = false;
+    else global.bandera_roja_robada = false;
 
     if (oBrain.AmIPseudoHost) {
         with(miBandera) { x = spawnX; y = spawnY; }
@@ -643,7 +657,6 @@ if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (
         }
     }
 }
-
 //Invulnerabilidad
 	// Lógica del timer
 	if (invul_timer > 0) {

@@ -17,7 +17,8 @@ enum PLAYERSTATE {
 }
 // IE2ZCP
 state = PLAYERSTATE.INTRO;
-
+can_sfx=false;
+push_h=0;
 //ARMAS - 1 a la ves
 guns = [noone];
 
@@ -125,3 +126,6 @@ shield_timer = 0;
 damage_timer = 0;
 ammo_timer = 0;
 emote_cd = 0; // Timer para el cooldown de emotes
+
+vida_visual = health;
+escudo_visual = shield_timer; 
