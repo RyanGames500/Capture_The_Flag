@@ -21,7 +21,7 @@ can_sfx=false;
 push_h=0;
 //ARMAS - 1 a la ves
 guns = [noone];
-
+t2=0
 weapon = {
     index: 0,
     angle: 0,

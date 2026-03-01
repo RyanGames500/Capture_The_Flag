@@ -190,8 +190,8 @@ if (w != noone && is_struct(w)) {
 } 
 else {
     // --- CASO B: SIN ARMA (MELEE / MANOS) ---
-    // Aquí usamos el icono de la mano (asegúrate que el sprite spr_Hand exista o usa uno de ataque)
-    draw_sprite_ext(spr_Hand, 0, _centro_x-20, _centro_y, _escala_hud, _escala_hud, 0, c_white, 1);
+    // Aquí usamos el icono de la mano (asegúrate que el sprite y exista o usa uno de ataque)
+    draw_sprite_ext(spr_Hand, 0, _centro_x-15, _centro_y, _escala_hud, _escala_hud, 0, c_white, 1);
     
     draw_text_transformed_color(_centro_x, _by + _alto_cuadro + 10, "MELEE", 1, 1, 0, c_aqua, c_aqua, c_aqua, c_aqua, 1);
 }

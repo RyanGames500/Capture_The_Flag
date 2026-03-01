@@ -628,6 +628,14 @@ break;
 		        damage_alpha = 0.4; // Flash rojo sexy
 		        health -= dmg;
 
+				if(health<=0) and oPlayer.t2=0
+				{
+				oPlayer.t2=1;
+					//if global.sfx = true {audio_play_sound(sndPlayer_Dead,1,0);}
+					SendMessageToClient(senderClientId ,  "point")
+			
+				}
+
 		        if (state != PLAYERSTATE.DEAD)
 		        {
 		            state = PLAYERSTATE.HIT;
@@ -650,11 +658,6 @@ break;
 		    var equipoCapturador = theMessageStruct.team;
 		    var idDelQueCapturo = senderClientId; // <--- USAMOS EL ID ÚNICO DEL EMISOR
 		    var banderaObjetivo = (equipoCapturador == "AZUL") ? oFlag : oFlag2;
-			
-			// --- HUD ONLINE: Activar alerta ---
-		    // Si el equipo AZUL capturó, significa que la bandera ROJA está robada
-		    if (equipoCapturador == "AZUL") global.bandera_roja_robada = true;
-		    else global.bandera_azul_robada = true;
 
 		    with(banderaObjetivo) {
 		        has_flag = true;
@@ -688,8 +691,6 @@ break;
 
         case "flag_return":
 		{
-			global.bandera_azul_robada = false;
-			
             with(oFlag2) {
                 x = spawnX;
                 y = spawnY;
@@ -713,61 +714,59 @@ break;
 		}
 			break;
 
-	case "request_point":
-	{
-	    if (oBrain.AmIPseudoHost) {
-	        var teamRequest = theMessageStruct.team;
-	        var flagToReset = theMessageStruct.resetFlag;
-	        var isSystem = (teamRequest == "SISTEMA");
+case "request_point":
+{
+    if (oBrain.AmIPseudoHost) {
+        var teamRequest = theMessageStruct.team;
+        var flagToReset = theMessageStruct.resetFlag;
+        var isSystem = (teamRequest == "SISTEMA");
 
-	        if (!isSystem) {
-	            if (teamRequest == "AZUL") global.puntos_azul++; else global.puntos_rojo++;
-	        }
+        if (!isSystem) {
+            if (teamRequest == "AZUL") {
+                global.puntos_azul++;
+                // --- EFECTO SEXY PARA EL HOST ---
+                with(oBrain) { marcador_escala_azul = 3; marcador_shake = 15; }
+            } else {
+                global.puntos_rojo++;
+                // --- EFECTO SEXY PARA EL HOST ---
+                with(oBrain) { marcador_escala_rojo = 3; marcador_shake = 15; }
+            }
+        }
 
-	        // Reset físico
-	        if (flagToReset == "ROJA") with (oFlag) { x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
-	        else with (oFlag2){ x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
+        // Reset físico de banderas
+        if (flagToReset == "ROJA") with (oFlag) { x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
+        else with (oFlag2){ x=spawnY; y=spawnY; has_flag=false; portador_instancia=noone; }
 
-			// ¡AÑADE ESTO!: El Host también debe soltarla localmente si él era el portador
-			var miObjetivoHost = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
-			if (flagToReset == miObjetivoHost) {
-			    oPlayer.has_flag = false;
-			    oPlayer.score_pending = false;
-			}
+        var miObjetivoHost = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
+        if (flagToReset == miObjetivoHost) {
+            oPlayer.has_flag = false;
+            oPlayer.score_pending = false;
+        }
 
-	        // El Host crea su propia notificación aquí si él es el que recibe el pedido
-	        var notif = instance_create_layer(0, 0, "Instances", oNotification);
-	        if (isSystem) {
-	            // Si el host es el mismo equipo de la bandera que regresó
-	            var miColor = (global.myTeam == "AZUL") ? "AZUL" : "ROJA";
-	            if (flagToReset == miColor) {
-	                notif.text = "SALVASTE TU BANDERA!";
-	                notif.color = c_blue;
-	            } else {
-	                notif.text = "EL ENEMIGO RECUPERO SU BANDERA";
-	                notif.color = c_gray;
-	            }
-	        } else {
-	            notif.text = "EL ENEMIGO ANOTO!";
-	            notif.color = c_red;
-	            notif.target_scale = 1.5;
-	        }
+        // Notificaciones...
+        var notif = instance_create_layer(0, 0, "Instances", oNotification);
+        if (isSystem) {
+            var miColor = (global.myTeam == "AZUL") ? "AZUL" : "ROJA";
+            if (flagToReset == miColor) { notif.text = "SALVASTE TU BANDERA!"; notif.color = c_blue; }
+            else { notif.text = "EL ENEMIGO RECUPERO SU BANDERA"; notif.color = c_gray; }
+        } else {
+            notif.text = "EL ENEMIGO ANOTO!";
+            notif.color = c_red;
+            notif.target_scale = 1.5;
+        }
 
-	        // MANDAR SYNC AL CLIENTE
-	        if (instance_exists(oOtherPlayer)) {
-			
-				with(oOtherPlayer){
-	            SendEventToClient(clientId, "sync_score", {
-	                azul: global.puntos_azul,
-	                rojo: global.puntos_rojo,
-	                resetFlag: flagToReset,
-	                reason: (isSystem) ? "RETORNO" : "PUNTO"
-	            });
-				}
-	        }
-	    }
-	}
-	break;
+        // SYNC A TODOS LOS CLIENTES
+        with(oOtherPlayer){
+            SendEventToClient(clientId, "sync_score", {
+                azul: global.puntos_azul,
+                rojo: global.puntos_rojo,
+                resetFlag: flagToReset,
+                reason: (isSystem) ? "RETORNO" : "PUNTO"
+            });
+        }
+    }
+}
+break;
 
 
 
@@ -778,33 +777,34 @@ case "sync_score":
     var miObjetivo = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
     var miColor = (global.myTeam == "AZUL") ? "AZUL" : "ROJA";
 
+    // --- ACTIVAR EFECTO SEXY SEGÚN QUIÉN ANOTÓ ---
+    with(oBrain) {
+        marcador_shake = 15;
+        if (theMessageStruct.azul > global.puntos_azul) marcador_escala_azul = 3;
+        if (theMessageStruct.rojo > global.puntos_rojo) marcador_escala_rojo = 3;
+    }
+
     global.puntos_azul = theMessageStruct.azul;
     global.puntos_rojo = theMessageStruct.rojo;
 
-	// --- HUD ONLINE: Limpiar alertas ---
-    // Si la bandera que volvió es la ROJA, apagamos su alerta
-    if (flag_scored == "ROJA") global.bandera_roja_robada = false;
-    else global.bandera_azul_robada = false;
-
-    // --- SOLO resetear si la bandera que volvió es la que YO llevaba ---
+    // Resetear si yo la llevaba
     if (flag_scored == miObjetivo) {
         oPlayer.has_flag = false;
         oPlayer.score_pending = false;
     }
     
-    // Si recuperaron mi bandera, solo desbloqueo el score por si acaso
     if (flag_scored == miColor) {
         oPlayer.score_pending = false;
     }
 
-    // --- RESET FÍSICO ---
+    // Reset físico de banderas
     if (flag_scored == "ROJA") {
         with (oFlag) { has_flag = false; portador_instancia = noone; x = spawnX; y = spawnY; velocidad_caida = 0; sprite_index = spr_suela; }
     } else {
         with (oFlag2) { has_flag = false; portador_instancia = noone; x = spawnX; y = spawnY; velocidad_caida = 0; sprite_index = spr_suela; }
     }
 
-    // --- NOTIFICACIONES ---
+    // Notificaciones (lo que ya tenías)
     var notif = instance_create_layer(0, 0, "Instances", oNotification);
     if (reason == "RETORNO") {
         if (flag_scored == miColor) { notif.text = "SALVASTE TU BANDERA!"; notif.color = c_aqua; }
@@ -857,14 +857,31 @@ case "flag_dropped":
 }
 break;
 
-			// --- Dentro del switch(eventName) ---
-		case "finalizar_partida":
-		{
-			  global.game_over = true;
-			  // Cambiamos "data" por "theMessageStruct" que es como se llama en tu función
-			  global.winner_team = theMessageStruct.winner;
-		}
-		break;
+// --- Dentro del switch(eventName) ---
+case "finalizar_partida":
+{
+    global.game_over = true;
+    // Usamos theMessageStruct que es tu variable de red
+    global.winner_team = theMessageStruct.winner;
+    
+    // 🏆 PROCESO DE PROGRESO PERSONAL (CLIENTE)
+    // El seguro "puntos_procesados" evita que esto se repita
+    if (!puntos_procesados) 
+    {
+        puntos_procesados = true;
+        
+        var mi_equipo_num = (global.myTeam == "ROJO") ? 1 : 2;
+        
+        if (global.winner_team == mi_equipo_num) {
+            scr_add_victory(); // El cliente suma sus +25 copas y XP
+        } else {
+            scr_add_loss();    // El cliente resta sus -15 copas
+        }
+        
+        show_debug_message(">>> CLIENTE: Progreso personal actualizado.");
+    }
+}
+break;
 			
 			case "host_abandono":
 		    // El host se fue, así que nos desconectamos nosotros también

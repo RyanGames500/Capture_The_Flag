@@ -1,3 +1,5 @@
+if(global.game_over) exit;
+
 // --- INDICADOR DE BANDERA TIPO RADAR (Fix Equipos) ---
 if (state != PLAYERSTATE.DEAD) {
     

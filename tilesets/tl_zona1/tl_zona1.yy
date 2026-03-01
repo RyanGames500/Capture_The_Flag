@@ -12,8 +12,8 @@
   "out_tilehborder":2,
   "out_tilevborder":2,
   "parent":{
-    "name":"Capture de Flag",
-    "path":"Capture de Flag.yyp",
+    "name":"Otros",
+    "path":"folders/Sprites/Otros.yy",
   },
   "resourceType":"GMTileSet",
   "resourceVersion":"2.0",

@@ -1,3 +1,4 @@
+
 var _guiW = display_get_gui_width();
 var _guiH = display_get_gui_height();
 

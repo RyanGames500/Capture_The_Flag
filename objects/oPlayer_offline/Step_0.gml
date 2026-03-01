@@ -240,28 +240,40 @@ var objetivo = (global.myTeam == "AZUL") ? oFlag : oFlag2;
 if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE2.DEAD && !has_flag && !objetivo.has_flag) {
     has_flag = true;
     with(objetivo) { has_flag = true; portador_instancia = other.id; }
-	
-	// HUD: Marcamos que la bandera del enemigo fue robada
-    if (global.myTeam == "AZUL") global.bandera_roja_robada = true; 
-    else global.bandera_azul_robada = true;
 }
 
 // --- ANOTACIÓN LOCAL ---
 var miBase = (global.myTeam == "AZUL") ? obj_base_blue : obj_base_red;
+
 if (place_meeting(x, y, miBase) && has_flag && !score_pending) {
-    if (global.myTeam == "AZUL") global.puntos_azul++; else global.puntos_rojo++;
+    
+    // 1. ACTUALIZAR PUNTOS Y ACTIVAR EFECTO SEXY EN OBRAIN
+    if (global.myTeam == "AZUL") {
+        global.puntos_azul++;
+        with(oBrain) { 
+            marcador_escala_azul = 3; 
+            marcador_shake = 15; 
+        }
+    } else {
+        global.puntos_rojo++;
+        with(oBrain) { 
+            marcador_escala_rojo = 3; 
+            marcador_shake = 15; 
+        }
+    }
+
+    // 2. LÓGICA DE LA BANDERA (Lo que ya tenías)
     has_flag = false;
     with (objetivo) { 
-        x = spawnX; y = spawnY; 
-        has_flag = false; portador_instancia = noone; 
+        x = spawnX; 
+        y = spawnY; 
+        has_flag = false; 
+        portador_instancia = noone; 
     }
-	
-	// HUD: La bandera enemiga volvió a su base al anotar
-    if (global.myTeam == "AZUL") global.bandera_roja_robada = false;
-    else global.bandera_azul_robada = false;
-	
+
+    // 3. NOTIFICACIÓN
     var notif = instance_create_layer(0, 0, "Instances", oNotification);
-    notif.text = "¡ANOTASTE!";
+    notif.text = "ANOTASTE!";
     notif.color = c_lime;
 }
 
@@ -269,13 +281,8 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending) {
 var miBandera = (global.myTeam == "AZUL") ? oFlag2 : oFlag;
 if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (miBandera.x != miBandera.spawnX)) {
     with(miBandera) { x = spawnX; y = spawnY; }
-	
-	// HUD: Recuperaste tu bandera, la alerta se apaga
-    if (global.myTeam == "AZUL") global.bandera_azul_robada = false;
-    else global.bandera_roja_robada = false;
-	
     var notif = instance_create_layer(0, 0, "Instances", oNotification);
-    notif.text = "¡SALVASTE TU BANDERA!";
+    notif.text = "SALVASTE TU BANDERA!";
     notif.color = c_aqua;
 }
 

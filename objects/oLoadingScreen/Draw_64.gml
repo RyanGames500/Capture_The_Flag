@@ -21,7 +21,7 @@ draw_set_font(fnt_menu);
 draw_text(gw/2, gh/2 + 80, mensaje);
 
 // Si es Online, podemos dibujar un iconito de red
-if (global.ONLINE) {
+if (conector_listo) {
     draw_set_color(c_lime);
     draw_circle(gw/2 - 100, gh/2 + 80, 4, false);
 }
@@ -54,4 +54,9 @@ if (timer_timeout <= 0) {
     // Mientras carga, solo el mensaje normal
     draw_set_color(c_white);
     draw_text(gw/2, gh/2 + 80, mensaje);
+	
+
 }
+
+	var status = gmda_status();
+	draw_text(gw/2, gh/2 + 100, status);

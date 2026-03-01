@@ -557,11 +557,23 @@ if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD
     }
 }
 
+
 // --- CÓDIGO DE ANOTACIÓN EN BASE ---
 var miBase = (global.myTeam == "AZUL") ? obj_base_blue : obj_base_red;
 
 if (place_meeting(x, y, miBase) && has_flag && !score_pending) 
 {
+// --- NUEVO: SUMAR A ESTADISTICAS PERSONALES ---
+    global.flags_captured += 1; // Sumas una bandera a tu historial
+    global.xp += 25;            // Te damos XP por anotar
+
+	#region --- PREPARAR GUARDADO EN LA NUBE ---
+	with(oBrain){
+	save_state = "prepare";
+	save_timer = room_speed; // 1 segundo de espera para no chocar con el input
+	}
+	#endregion	
+	
     score_pending = true; 
     has_flag = false;
 
@@ -571,17 +583,24 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending)
         velocidad_caida = 0;
     }
 
-    // --- HUD: DESACTIVAR ALERTA (Bandera vuelve a casa) ---
     if (global.myTeam == "AZUL") global.bandera_roja_robada = false;
     else global.bandera_azul_robada = false;
 
     var flag_scored = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
 
     if (oBrain.AmIPseudoHost) {
-        if (global.myTeam == "AZUL") global.puntos_azul++; else global.puntos_rojo++;
+        // --- LOGICA DEL HOST ---
+        if (global.myTeam == "AZUL") {
+            global.puntos_azul++;
+            with(oBrain) { marcador_escala_azul = 3; marcador_shake = 15; } // EFECTO SEXY
+        } else {
+            global.puntos_rojo++;
+            with(oBrain) { marcador_escala_rojo = 3; marcador_shake = 15; } // EFECTO SEXY
+        }
 
         has_flag = false; score_pending = false;
 
+        // Reset de banderas (tu código original)
         if (flag_scored == "ROJA") {
             with (oFlag) { x=spawnX; y=spawnY; velocidad_caida=0; has_flag=false; portador_instancia=noone; }
         } else {
@@ -597,19 +616,19 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending)
         }
         
         score_pending = false;
-
         var notif = instance_create_layer(0, 0, "Instances", oNotification);
         notif.target_scale = 1.5;
         var miObjetivo = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
         if (flag_scored == miObjetivo) {
-            notif.text = "¡TU EQUIPO ANOTO!";
+            notif.text = "TU EQUIPO ANOTO!";
             notif.color = c_lime;
         } else {
-            notif.text = "¡EL ENEMIGO ANOTO!";
+            notif.text = "EL OTRO EQUIPO ANOTO!";
             notif.color = c_orange;
         }
     } 
     else {
+        // --- LOGICA DEL CLIENTE (Envía petición al Host) ---
         with(oOtherPlayer) {
             SendEventToClient(clientId, "request_point", {
                 team: (global.myTeam == "AZUL") ? "AZUL" : "ROJA",
@@ -624,11 +643,16 @@ var miBandera = (global.myTeam == "AZUL") ? oFlag2 : oFlag;
 
 if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (miBandera.x != miBandera.spawnX)) 
 {
+	// --- NUEVO: SUMAR A ESTADISTICAS PERSONALES ---
+    global.flags_returned += 1; // Sumas una defensa a tu historial
+    global.xp += 15;            // Te damos XP por salvarla
+	#region --- PREPARAR GUARDADO EN LA NUBE ---
+	with(oBrain){
+	save_state = "prepare";
+	save_timer = room_speed; // 1 segundo de espera para no chocar con el input
+	}
+	#endregion	
     score_pending = true; 
-
-    // --- HUD: DESACTIVAR MI ALERTA (Recuperada) ---
-    if (global.myTeam == "AZUL") global.bandera_azul_robada = false;
-    else global.bandera_roja_robada = false;
 
     if (oBrain.AmIPseudoHost) {
         with(miBandera) { x = spawnX; y = spawnY; }
@@ -657,6 +681,7 @@ if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (
         }
     }
 }
+
 //Invulnerabilidad
 	// Lógica del timer
 	if (invul_timer > 0) {
@@ -704,5 +729,27 @@ global.sharedProperties = {
 	
 	
 	
-	
 
+//Subida de nivel
+if (global.xp >= 100) 
+{
+    global.lvl += 1;
+    global.xp -= 100; // Mantiene el sobrante (si tenías 110 XP, te quedas con 10 XP para el siguiente nivel)
+    
+    // Crear la notificación visual
+    if (instance_exists(oNotification)) {
+        var notif = instance_create_layer(0, 0, "Instances", oNotification);
+        notif.text = "SUBISTE AL NIVEL " + string(global.lvl) + "!";
+        notif.color = c_yellow;
+        notif.target_scale = 2; // Para que se vea más grande que las de puntos
+    }
+    
+    // --- GUARDADO AUTOMÁTICO AL SUBIR DE NIVEL ---
+    ini_open("data.ini");
+    ini_write_real("user", "lvl", global.lvl);
+    ini_write_real("user", "xp", global.xp);
+    ini_close();
+    
+    //sonido
+    if(global.sfx)audio_play_sound(snd_levelup, 1, false);
+}

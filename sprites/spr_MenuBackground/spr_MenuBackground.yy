@@ -25,8 +25,8 @@
   "nineSlice":null,
   "origin":0,
   "parent":{
-    "name":"Capture de Flag",
-    "path":"Capture de Flag.yyp",
+    "name":"Otros",
+    "path":"folders/Sprites/Otros.yy",
   },
   "preMultiplyAlpha":false,
   "resourceType":"GMSprite",

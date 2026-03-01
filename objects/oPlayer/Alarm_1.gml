@@ -22,7 +22,7 @@ health = 100;
 isDead = false;
 state = PLAYERSTATE.IDLE;
 visible = true;
-
+t2=0;
 // Activamos el timer para que sea invulnerable 3 segundos MÁS después de aparecer
 invul_timer = 180; 
 invulnerable = true; 

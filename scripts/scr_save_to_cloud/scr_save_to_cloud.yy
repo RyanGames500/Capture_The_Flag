@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"scr_save_to_cloud",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_save_to_cloud",
+  "parent":{
+    "name":"Alertas",
+    "path":"folders/Scripts/Alertas.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

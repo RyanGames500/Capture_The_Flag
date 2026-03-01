@@ -11,7 +11,7 @@ function callback_ReceivedMessage(theMessage , senderClientId){
 			{
 			if oPlayer.isDead = false 
 			{
-				oPlayer.kills++;
+				global.kills++;
 			}
 		
 			}

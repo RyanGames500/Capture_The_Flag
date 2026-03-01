@@ -13,8 +13,8 @@
     "path":"folders/Objects/Platforms.yy",
   },
   "parentObjectId":{
-    "name":"obj_wall",
-    "path":"objects/obj_wall/obj_wall.yy",
+    "name":"oPlataformaPasable",
+    "path":"objects/oPlataformaPasable/oPlataformaPasable.yy",
   },
   "persistent":false,
   "physicsAngularDamping":0.1,

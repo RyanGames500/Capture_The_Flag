@@ -1,6 +1,6 @@
 
 // Menú principal más limpio
-menu_options = ["PLAY", "OPTIONS", "OFFLINE", "EXIT"]; 
+menu_options = ["PLAY", "OPTIONS", "PROFILE", "OFFLINE", "EXIT"];
 index = 0;
 
 // Nueva lista para cuando elijas PLAY
@@ -10,10 +10,10 @@ play_index = 0;
 waiting_timer = 0;
 waiting_message = "Buscando Rival";
 menu_state = "main"; // Empezamos en el menú
+save_state = "idle";
+save_timer = 0;
 
-
-global.myName = "";          // Aquí se guardará el nombre final
-texto_input = "Escribe tu nombre..."; // Lo que se ve en el cuadro
+texto_input = "Name"; // Lo que se ve en el cuadro
 cursor_timer = 0;            // Para que la rayita del texto parpadee
 max_caracteres = 12;         // Que no se pasen de largo
 input_activo = false;        // ¿Está el jugador escribiendo?
@@ -63,3 +63,9 @@ if (global.regresar_a_offline) {
 
 random_tips = ["Usa las paredes como cobertura", "Captura la bandera enemiga rapido", "El trabajo en equipo es la clave"];
 tip_index = 0;
+
+
+
+menu_delay = 0; // Para evitar que el ENTER del nombre active el menú
+mensaje_texto = "";
+mensaje_alpha = 0; // Para que aparezca y desaparezca suave

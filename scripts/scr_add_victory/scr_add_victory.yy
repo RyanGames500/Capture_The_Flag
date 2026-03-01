@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"scr_add_victory",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_add_victory",
+  "parent":{
+    "name":"Alertas",
+    "path":"folders/Scripts/Alertas.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

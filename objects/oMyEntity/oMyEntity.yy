@@ -11,8 +11,8 @@
   "name":"oMyEntity",
   "overriddenProperties":[],
   "parent":{
-    "name":"Objects",
-    "path":"folders/Objects.yy",
+    "name":"Otros",
+    "path":"folders/Sprites/Otros.yy",
   },
   "parentObjectId":null,
   "persistent":false,

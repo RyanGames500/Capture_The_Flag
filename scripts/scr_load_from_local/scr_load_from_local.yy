@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"scr_load_from_local",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_load_from_local",
+  "parent":{
+    "name":"Alertas",
+    "path":"folders/Scripts/Alertas.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

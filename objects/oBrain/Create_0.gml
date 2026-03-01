@@ -136,10 +136,18 @@ victory_alpha = 0; // Empieza invisible
 // --- ESTADO DE LAS BANDERAS ---
 global.bandera_azul_robada = false;
 global.bandera_roja_robada = false;
+// Variables para el efecto "sexy" del marcador
+marcador_escala_azul = 1.6;
+marcador_escala_rojo = 1.6;
+marcador_shake = 0;
+save_state = "idle";
+save_timer = 0;
+global.test_write_id = "";
 global.score_blue = 0;
 global.score_red = 0;
 oBrain.t = 0;
 global.myTeam = "";
+
 global.puntos_azul = 0;
 global.puntos_rojo = 0;
 global.winner_team = 0;
@@ -161,4 +169,13 @@ weap_check_every  = 90;  // cada 1.5s
 
 timer_intro = -1;
 intro_disparada = false; // Para que solo pase una vez por partida
-//ConnectToServer();
+puntos_procesados = false; // Este es nuestro "seguro"
+
+
+
+
+
+//Iniciar la conexion
+ConnectToServer();
+
+//room_goto_next();

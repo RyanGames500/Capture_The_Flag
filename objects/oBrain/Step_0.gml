@@ -3,7 +3,8 @@
 // ======================================================
 
 // --- 1. ACTIVACIÓN DE PAUSA (ESC) ---
-if (keyboard_check_pressed(vk_escape) && !global.game_over) {
+if (keyboard_check_pressed(vk_escape) && !global.game_over && room != rm_menu)
+{
     global.pausa = !global.pausa;
     if (global.pausa) {
         window_set_cursor(cr_arrow);
@@ -14,36 +15,23 @@ if (keyboard_check_pressed(vk_escape) && !global.game_over) {
 // --- 2. LÓGICA DEL MENÚ DE PAUSA ---
 if (global.pausa) {
     var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
-    
-    // En ONLINE solo tenemos 2 opciones (Continuar y Salir), en OFFLINE 3 (Reiniciar)
     var max_index = (global.ONLINE) ? 1 : 2;
     pause_index = clamp(pause_index + move, 0, max_index);
 
     if (keyboard_check_pressed(vk_enter)) {
         if (global.ONLINE) {
-            // LÓGICA PAUSA ONLINE
             if (pause_index == 0) global.pausa = false;
-            if (pause_index == 1) 
-			{ 
-			// 1. Mandar el evento a los demás antes de desconectarnos
-			    var _msg = string(global.myName) + " abandono la partida!";
-    
-			    // Enviamos un paquete de tipo "player_left_msg" a todos los demás
-			    with(oOtherPlayer) {
-			        SendEventToClient(clientId, "player_left_msg", { texto: _msg });
-			    }
-				
-				LeaveRoom();
-				
-			}
+            if (pause_index == 1) { 
+                var _msg = string(global.myName) + " abandonó la partida!";
+                with(oOtherPlayer) { SendEventToClient(clientId, "player_left_msg", { texto: _msg }); }
+                LeaveRoom();
+            }
         } else {
-            // LÓGICA PAUSA OFFLINE
             switch(pause_index) {
                 case 0: global.pausa = false; break;
                 case 1: // REINICIAR
                     global.pausa = false;
-                    global.puntos_azul = 0; 
-					global.puntos_rojo = 0;
+                    global.puntos_azul = 0; global.puntos_rojo = 0;
                     room_restart();
                 break;
                 case 2: // SALIR
@@ -54,9 +42,8 @@ if (global.pausa) {
             }
         }
     }
-    // Solo bloqueamos el resto del código (exit) si estamos en OFFLINE
-    if (!global.ONLINE) exit; 
 }
+
 
 // --- 3. DETECCIÓN DE GANADOR (SOLO OFFLINE) ---
 if (global.ONLINE == false && global.game_over == false) {
@@ -93,11 +80,16 @@ if (global.game_over == true) {
             if (keyboard_check_pressed(vk_enter)) {
                 if (victory_index == 0) {
 					// REINTENTAR
+					puntos_procesados = false;
                     global.puntos_azul = 0; 
                     global.puntos_rojo = 0;
                     global.game_over = false; 
                     room_restart();
                 } else {
+					#region Carga local
+					scr_load_from_local();
+					#endregion
+					puntos_procesados = false;
 					global.game_over = false; 
                     global.puntos_azul = 0;
                     global.puntos_rojo = 0;
@@ -204,7 +196,14 @@ if (global.game_over == false)
             global.game_over = true;
             global.winner_team = _ganador;
 
-            // 🔥 CAMBIO: Avisamos a TODOS los clientes que terminó la partida
+// EL HOST PROCESA SU PROPIO PROGRESO (Privado)
+    if (!puntos_procesados) {
+        puntos_procesados = true;
+        var mi_equipo = (global.myTeam == "ROJO") ? 1 : 2;
+        if (_ganador == mi_equipo) scr_add_victory(); else scr_add_loss();
+    }
+
+            // CAMBIO: Avisamos a TODOS los clientes que terminó la partida
             var _data = { winner: _ganador };
             with(oOtherPlayer) {
                 SendEventToClient(clientId, "finalizar_partida", _data);
@@ -396,3 +395,25 @@ if (oBrain.AmIPseudoHost)
     }
 }
 
+//Guardado en la nube
+// --- PROCESADOR DE GUARDADO INVISIBLE ---
+if (save_state == "prepare") {
+    save_timer--;
+    if (save_timer <= 0) {
+        save_state = "sending";
+    }
+}
+
+if (save_state == "sending") {
+    // Solo entramos aquí UNA VEZ para disparar el proceso
+    if (!variable_instance_exists(id, "nube_guardada") || nube_guardada2 == false) {
+        nube_guardada2 = true; // Marcamos que ya empezamos
+        
+        
+        
+        alarm[3] = 60; // 2 segundos (si vas a 30fps) o 1 segundo (si vas a 60fps)
+        show_debug_message(">>> Guardando en la nube... Alarma 1 iniciada.");
+        
+        save_state = "waiting"; // <--- CAMBIAMOS A UN ESTADO DE ESPERA
+    }
+}

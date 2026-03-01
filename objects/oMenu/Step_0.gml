@@ -2,15 +2,37 @@ var mid_x = room_width / 2-300;
 var mid_y = room_height / 2 - 280;
 
 if (mouse_check_button_pressed(mb_left)) {
-    // Verificamos si el mouse está dentro del cuadro redondeado (usando mid_x y mid_y)
+	if (global.registrado == 0) {
+    // Verificamos si el mouse está dentro del cuadro
     if (mouse_x > mid_x - 200 && mouse_x < mid_x + 200 &&
         mouse_y > mid_y - 30 && mouse_y < mid_y + 30) {
         
         input_activo = true;
-        keyboard_string = ""; 
-        texto_input = "";
+        keyboard_string = texto_input; // Mejor que inicie con lo que ya había escrito
     } else {
+        // --- AQUÍ EL TRUCO: Si hace clic fuera y el input estaba activo, GUARDAMOS ---
+        if (input_activo) {
+            // Aplicamos la misma lógica que el ENTER
+            global.myName = (texto_input == "") ? "Jugador" : texto_input;
+            gmda_setNewname((texto_input == "") ? "Jugador" : texto_input);
+			global.registrado=1;
+			menu_delay = 5;
+			
+            #region Guardado local
+			scr_save_to_local();
+            #endregion
+
+			#region --- PREPARAR GUARDADO EN LA NUBE ---
+			save_state = "prepare";
+			save_timer = room_speed; // 1 segundo de espera para no chocar con el input
+			#endregion
+			
+            keyboard_string = ""; 
+			mensaje_texto = "Nombre guardado!";
+			mensaje_alpha = 4; // Lo ponemos en 2 para que dure un poco más antes de desvanecerse
+        }
         input_activo = false;
+		}
     }
 }
 
@@ -25,15 +47,34 @@ if (input_activo) {
     // Al presionar ENTER aquí, SOLO desactivamos el input
     if (keyboard_check_pressed(vk_enter)) {
         global.myName = (texto_input == "") ? "Jugador" : texto_input;
+		gmda_setNewname((texto_input == "") ? "Jugador" : texto_input);
+
+			global.registrado=1;
+			menu_delay = 5;
+
+		#region Guardado local
+		scr_save_to_local();
+		#endregion
+
+		#region --- PREPARAR GUARDADO EN LA NUBE ---
+		save_state = "prepare";
+		save_timer = room_speed; // 1 segundo de espera para no chocar con el input
+		#endregion
+		
         input_activo = false; 
         keyboard_string = ""; // Limpiamos para que no afecte el menú
-        exit; // IMPORTANTE: Salimos del evento para que este mismo ENTER no active el botón "PLAY"
+		mensaje_texto = "Nombre guardado!";
+		mensaje_alpha = 2; // Lo ponemos en 2 para que dure un poco más antes de desvanecerse
+        //exit; // IMPORTANTE: Salimos del evento para que este mismo ENTER no active el botón "PLAY"
     }
 }
 
 // --- 2. LÓGICA DEL MENÚ (Solo si no estás escribiendo) ---
 if (!input_activo) {
-    var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+if (menu_delay > 0) {
+        menu_delay--;
+    } else {
+var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
 
 // --- ESTADO PRINCIPAL ---
     if (menu_state == "main") {
@@ -50,7 +91,12 @@ if (!input_activo) {
                     show_message("Opciones...");
                 break;
 
-				case 2: // --- NUEVO: CONFIGURACIÓN MODO OFFLINE ---
+				case 2: 
+				    menu_state = "profile";
+					show_debug_message(">>> ENTRANDO AL PERFIL");
+				break;
+
+				case 3: 
 					global.ONLINE = false;
 					if(global.ONLINE){
 					DisconnectFromServer();}
@@ -72,7 +118,7 @@ if (!input_activo) {
 				    ];
 				break;
                 
-                case 3: // EXIT
+                case 4: // EXIT
                     game_end();
                 break;
             }
@@ -223,7 +269,7 @@ else if (menu_state == "play_selection") {
     }
 
 }
-
+}
 if (menu_state == "connecting") {
     waiting_timer++;
     if (waiting_timer > room_speed) waiting_timer = 0; // Reinicia cada segundo
@@ -303,4 +349,67 @@ if (oBrain.AmIPseudoHost) {
             }
         }
     }
+}
+if (menu_state == "profile") {
+    // 1. Activar edición con la tecla E
+    if (keyboard_check_pressed(ord("E"))) {
+        if (!input_activo) {
+            input_activo = true;
+            keyboard_string = global.myName; // Empezamos con el nombre actual
+        }
+    }
+
+    // 2. Si estamos editando...
+    if (input_activo) {
+        // Limitamos caracteres
+        if (string_length(keyboard_string) <= 12) {
+            global.myName = keyboard_string;
+        } else {
+            keyboard_string = global.myName;
+        }
+
+        // Confirmar cambio con ENTER
+        if (keyboard_check_pressed(vk_enter)) {
+            input_activo = false;
+			#region --- PREPARAR GUARDADO EN LA NUBE ---
+			save_state = "prepare";
+			save_timer = room_speed; // 1 segundo de espera para no chocar con el input
+			#endregion
+            if (global.myName == "") global.myName = "Soldado";
+            show_debug_message(">>> Nombre actualizado desde el perfil.");
+        }
+    }
+
+    // 3. Salir si no estamos escribiendo
+    if (keyboard_check_pressed(vk_escape) && !input_activo) {
+        menu_state = "main";
+    }
+}
+//Guardado en la nube
+// --- PROCESADOR DE GUARDADO INVISIBLE ---
+if (save_state == "prepare") {
+    save_timer--;
+    if (save_timer <= 0) {
+        save_state = "sending";
+    }
+}
+
+if (save_state == "sending") {
+    // Solo entramos aquí UNA VEZ para disparar el proceso
+    if (!variable_instance_exists(id, "nube_guardada") || nube_guardada == false) {
+        nube_guardada = true; // Marcamos que ya empezamos
+        
+        
+        
+        alarm[1] = 60; // 2 segundos (si vas a 30fps) o 1 segundo (si vas a 60fps)
+        show_debug_message(">>> Guardando en la nube... Alarma 1 iniciada.");
+        
+        save_state = "waiting"; // <--- CAMBIAMOS A UN ESTADO DE ESPERA
+    }
+}
+	
+
+// Lógica de desvanecimiento del mensaje
+if (mensaje_alpha > 0) {
+    mensaje_alpha -= 0.05; // Velocidad a la que desaparece
 }

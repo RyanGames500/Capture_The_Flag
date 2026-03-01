@@ -112,7 +112,7 @@ if (reloading)
 }
 
 // ======================================================
-// 🎮 RESET DE TECLAS (IA simula teclado)
+// RESET DE TECLAS
 // ======================================================
 key_left  = false;
 key_right = false;
@@ -122,7 +122,7 @@ key_shoot = false;
 
 
 // ======================================================
-// 🧠 IA – SOLO PERSEGUIR BANDERA ENEMIGA
+// IA – SOLO PERSEGUIR BANDERA
 // ======================================================
 var objetivo_bandera;
 var miBandera;
@@ -140,7 +140,7 @@ if (team == "AZUL") {
 
 if (state != PLAYER2.DEAD) {
     // ======================================================
-    // 💬 IA DE EMOTES (Reacciones lógicas del Bot)
+    // IA DE EMOTES 
     // ======================================================
     if (emote_cd > 0) emote_cd--;
     var _emote_auto = -1;
@@ -183,7 +183,7 @@ if (state != PLAYER2.DEAD) {
     var target_y;
 
     // ======================================================
-    // 🔥 LÓGICA DE DISPARO (Ignora si el player está muerto)
+    // LÓGICA DE DISPARO (Ignora si el player está muerto)
     // ======================================================
     key_shoot = false; 
 
@@ -203,7 +203,7 @@ if (state != PLAYER2.DEAD) {
     }
 
     // ======================================================
-    // 🔪 LÓGICA DE MELEE Y GRANADAS
+    // LOGICA DE MELEE Y GRANADAS
     // ======================================================
     if (melee_cd > 0) melee_cd--;
 
@@ -256,7 +256,7 @@ if (state != PLAYER2.DEAD) {
         var target = instance_place(hx, hy, oPlayer_offline); 
         if (target != noone && target.state != PLAYERSTATE2.DEAD) {
             
-            // 🔥 FILTRO DE ESCUDO: Si el objetivo tiene escudo, no recibe daño
+            // FILTRO DE ESCUDO: Si el objetivo tiene escudo, no recibe daño
             if (!target.has_shield) {
                 health -= melee_damage; 
                 with(target) { 
@@ -271,8 +271,8 @@ if (state != PLAYER2.DEAD) {
         }
     }
 
-// ======================================================
-    // 🧠 PRIORIDADES Y TARGET (ACTUALIZADO: DEFENDER BANDERA)
+	// ======================================================
+    // PRIORIDADES Y TARGET
     // ======================================================
     var dist_jugador = 10000;
     var player_vivo = false;
@@ -289,7 +289,7 @@ if (state != PLAYER2.DEAD) {
 
     // --- TOMA DE DECISIÓN CRÍTICA ---
     if (player_tiene_mi_bandera) {
-        // 🚨 PRIORIDAD 1: ¡El jugador robó nuestra bandera! A por él sin importar nada.
+        // PRIORIDAD 1: ¡El jugador robó nuestra bandera! A por él sin importar nada.
         target_x = oPlayer_offline.x;
         target_y = oPlayer_offline.y;
     } 
@@ -314,7 +314,7 @@ if (state != PLAYER2.DEAD) {
         }
     }
 
-    // [Resto del código de movimiento y saltos sin cambios...]
+ 
     if (instance_exists(oPlayer_offline) && dist_jugador < 40 && melee_cd <= 0) {
         melee_cd = room_speed div 3;
         melee_active = 6;
@@ -326,7 +326,7 @@ if (state != PLAYER2.DEAD) {
         target_y = miBase.y;
     }
 
-    if (target_x == undefined) exit;
+    //if (target_x == undefined) exit;
 
     var dx = target_x - x;
     var dy = target_y - y;
@@ -499,9 +499,22 @@ if (place_meeting(x, y, miBase)
 && has_flag
 && state != PLAYER2.DEAD) {
 
-    if (team == "AZUL") global.puntos_azul++;
-    else global.puntos_rojo++;
-
+    //if (team == "ROJO") global.puntos_azul++;
+    //else global.puntos_rojo++;
+    // 1. ACTUALIZAR PUNTOS Y ACTIVAR EFECTO SEXY EN OBRAIN
+    if (team == "ROJO") {
+        global.puntos_rojo++;
+        with(oBrain) { 
+            marcador_escala_rojo = 3; 
+            marcador_shake = 15; 
+        }
+    } else {
+        global.puntos_azul++;
+        with(oBrain) { 
+            marcador_escala_azul = 3; 
+            marcador_shake = 15; 
+        }
+    }
     has_flag = false;
 
     with (objetivo_bandera) {
@@ -512,7 +525,7 @@ if (place_meeting(x, y, miBase)
     }
 
     var notif = instance_create_layer(0, 0, "Instances", oNotification);
-    notif.text  = "¡EL ENEMIGO ANOTO!";
+    notif.text  = "EL ENEMIGO ANOTO!";
     notif.color = c_red;
 }
 

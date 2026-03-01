@@ -11,9 +11,10 @@ function callback_LeaveRoom(){
         oBrain.ammo_spawned = false;
         oBrain.weapons_spawned = false;
         oBrain.victory_alpha = 0; // Resetear el fade de la victoria
-        // Si usas intro estilo Brawl Stars:
-        oBrain.intro_disparada = false;
-        oBrain.timer_intro = 120; 
+		oBrain.puntos_procesados = false;
+        //// Si usas intro estilo Brawl Stars:
+        //oBrain.intro_disparada = false;
+        //oBrain.timer_intro = 120; 
     }
 
     // 3. Limpieza de red y objetos de otros jugadores

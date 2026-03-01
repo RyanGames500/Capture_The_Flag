@@ -7,7 +7,9 @@ function callback_ConnectToServer(){
         oLoadingScreen.conector_listo = true;
         oLoadingScreen.mensaje = "CONEXION EXITOSA!";
     }
-    
+    show_debug_message("Rocket conectado con exito.");
+	
+
     // Si quieres que cambie de room automáticamente al conectar:
     // ChangeRoom("public"); 
 }
