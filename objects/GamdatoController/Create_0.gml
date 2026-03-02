@@ -2,9 +2,37 @@
 gmda_setController("2293_6zm1L7oE22LEmSTvnk5Jcq99czZ9TBz88bRzJ5","2293_vOFiDZbwM6VxcxscewPaRxxzdQNL1XED33zBQA"); // Game Id & Game Key
 gmda_setLeaderboard("P165jRqN3uNR2O8zAsN"); //Table key
 
-gmda_define_achievement("Grand Lord","jsKT","Destroy all enemies","1");//achievement 1
-gmda_define_achievement("Pig Rider","VOnY","Ride a pig","2");//achievement 2
-gmda_define_achievement("Gold fever","H34sjdf34","Get 10,000 gold","3");//achievement 3
+// --- DEFINICIÓN DE LOGROS (GAMDATO) ---
+
+// 1. Exterminador (50 bajas)
+gmda_define_achievement("Exterminador", "EDfBTkqW", "Elimina a 50 enemigos en total.", "1");
+
+// 2. Conquistador (10 victorias)
+gmda_define_achievement("Conquistador", "bQlLwO0e", "Consigue 10 victorias para tu equipo.", "2");
+
+// 3. Centinela (10 recuperaciones)
+gmda_define_achievement("Centinela", "Mgt4bwuS", "Recupera tu bandera 10 veces fuera de la base.", "3");
+
+// 4. Capturador (10 agarres)
+gmda_define_achievement("Capturador", "wpMbRYcU", "Agarra la bandera enemiga 10 veces.", "4");
+
+// 5. Estratega (Racha de 5)
+gmda_define_achievement("Estratega", "lJjtqUBp", "Consigue una racha de 5 bajas sin morir.", "5");
+
+// 6. Segador de Almas (500 bajas)
+gmda_define_achievement("Segador de Almas", "K4ynEN93", "Elimina a 500 enemigos en total.", "6");
+
+// 7. Leyenda Viva (100 victorias)
+gmda_define_achievement("Leyenda Viva", "54FbyQ8N", "Consigue 100 victorias totales.", "7");
+
+// 8. Guardian Eterno (50 recuperaciones)
+gmda_define_achievement("Guardian Eterno", "Y8c81dy3", "Recupera tu bandera 50 veces.", "8");
+
+// 9. Infiltrado Real (200 capturas)
+gmda_define_achievement("Infiltrado Real", "Zm9IBCfG", "Captura la bandera enemiga 200 veces.", "9");
+
+// 10. Fantasma del Campo (Racha de 15)
+gmda_define_achievement("Fantasma del Campo", "JkLFQ8yq", "Elimina a 15 enemigos sin ser derrotado.", "10");
 
 
 // --- DATOS DEL PERFIL ---

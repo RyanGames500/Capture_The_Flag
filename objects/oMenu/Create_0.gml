@@ -1,6 +1,6 @@
 
 // Menú principal más limpio
-menu_options = ["PLAY", "OPTIONS", "PROFILE", "OFFLINE", "EXIT"];
+menu_options = ["PLAY","OFFLINE","ACHIEVEMENTS", "PROFILE", "OPTIONS", "EXIT"];
 index = 0;
 
 // Nueva lista para cuando elijas PLAY
@@ -69,3 +69,11 @@ tip_index = 0;
 menu_delay = 0; // Para evitar que el ENTER del nombre active el menú
 mensaje_texto = "";
 mensaje_alpha = 0; // Para que aparezca y desaparezca suave
+
+
+//scroll de logros
+scroll_y = 0;
+scroll_target = 0;
+scroll_max = (10 * 90) - 450; 
+ach_surf = -1;
+copiado_timer = 0;

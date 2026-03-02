@@ -214,17 +214,43 @@ else if (menu_state == "lobby_espera") {
     draw_set_color(make_color_rgb(12, 14, 18));
     draw_rectangle(0, 0, gui_w, gui_h, false);
     
+    // --- LÓGICA DE COPIAR CÓDIGO (TÍTULO) ---
     draw_set_font(fnt_menu);
     draw_set_halign(fa_center);
-    draw_set_color(c_aqua);
-    draw_text(gui_w / 2, 50, "SALA: " + string(global.myRoomCode));
+    
+    var tx = gui_w / 2;
+    var ty = 50;
+    var room_text = "SALA: " + string(global.myRoomCode);
+    
+    var mx = device_mouse_x_to_gui(0);
+    var my = device_mouse_y_to_gui(0);
+    var hover_room = point_in_rectangle(mx, my, tx - 150, ty - 20, tx + 150, ty + 20);
 
-    // --- 2. LÓGICA DE SLOTS (LIMPIEZA Y LLENADO) ---
+    if (copiado_timer > 0) {
+        copiado_timer--;
+        draw_set_color(c_lime);
+        draw_set_alpha(copiado_timer / 90);
+        draw_text(tx, ty - 25, "COPIADO!");
+        draw_set_alpha(1);
+    } else if (hover_room) {
+        draw_set_color(c_white);
+        // Texto de ayuda al pasar el mouse
+        draw_text_transformed(tx, ty - 25, "CLIC PARA COPIAR", 0.7, 0.7, 0);
+        if (mouse_check_button_pressed(mb_left)) {
+            clipboard_set_text(string(global.myRoomCode));
+            copiado_timer = 90;
+        }
+    } else {
+        draw_set_color(c_aqua);
+    }
+    draw_text(tx, ty, room_text);
+
+    // --- 2. LÓGICA DE SLOTS (TU VERSIÓN REPARADA) ---
     for (var j = 0; j < 8; j++) global.slot_nombres[j] = "---";
 
     if (oBrain.AmIPseudoHost) {
         // --- SOY EL HOST ---
-        global.slot_nombres[0] = global.myName; // Mi nombre del INI/Registro
+        global.slot_nombres[0] = global.myName; 
         var _index = 1;
         with(oOtherPlayer) {
             if (_index < 8) {
@@ -238,7 +264,6 @@ else if (menu_state == "lobby_espera") {
         var _host_encontrado = false;
         var _next_free_slot = 1;
 
-        // Primero posicionamos al Host en el slot 0
         with(oOtherPlayer) {
             if (isHost) {
                 global.slot_nombres[0] = (Name != "" && Name != "Cargando...") ? Name : "Lider...";
@@ -246,7 +271,6 @@ else if (menu_state == "lobby_espera") {
             }
         }
         
-        // Luego posicionamos a los DEMÁS invitados
         with(oOtherPlayer) {
             if (!isHost && _next_free_slot < 8) {
                 global.slot_nombres[_next_free_slot] = Name;
@@ -254,8 +278,7 @@ else if (menu_state == "lobby_espera") {
             }
         }
 
-        // ¡EL FIX!: Yo (el cliente actual) me pongo en el siguiente slot disponible
-        // Esto evita que veas "NAME" o "---" en tu propio lugar
+        // Tu Fix para el nombre local
         if (_next_free_slot < 8) {
             global.slot_nombres[_next_free_slot] = global.myName;
         }
@@ -272,29 +295,24 @@ else if (menu_state == "lobby_espera") {
         var _x = es_derecha ? (gui_w / 2) + 50 : (gui_w / 2) - 450;
         var _y = 200 + ((i % mitad) * (slot_h + padding));
         
-        // Color según equipo
         var color_equipo = es_derecha ? c_red : c_aqua;
         
-        // Fondo del slot
         draw_set_alpha(0.4);
         draw_set_color(c_black);
         draw_roundrect_ext(_x, _y, _x + slot_w, _y + slot_h, 10, 10, false);
         
-        // Borde y detalle
         draw_set_alpha(1);
         draw_set_color(color_equipo);
-        draw_rectangle(_x, _y, _x + 8, _y + slot_h, false); // Barra lateral
+        draw_rectangle(_x, _y, _x + 8, _y + slot_h, false); 
         
-        // Dibujar el nombre
         draw_set_color(c_white);
         draw_set_halign(fa_left);
         draw_set_valign(fa_middle);
         var nombre_final = global.slot_nombres[i];
         
-        // Si el nombre es el mío, lo resaltamos un poco
         if (nombre_final == global.myName) {
             draw_set_color(c_yellow);
-            draw_text(_x + 25, _y + (slot_h/2), nombre_final + " (TU)");
+            draw_text(_x + 25, _y + (slot_h/2), string(nombre_final) + " (TU)");
         } else {
             draw_text(_x + 25, _y + (slot_h/2), nombre_final);
         }
@@ -302,6 +320,7 @@ else if (menu_state == "lobby_espera") {
 
     // --- 4. FOOTER / BOTONES ---
     draw_set_halign(fa_center);
+    draw_set_valign(fa_top);
     if (oBrain.AmIPseudoHost) {
         var cant = 1; with(oOtherPlayer) cant++;
         if (cant == global.max_players_allowed) {
@@ -378,6 +397,24 @@ if (menu_state == "play_selection") {
 }
 if (menu_state == "profile") {
     draw_player_profile(room_width/2, room_height/2);
+}
+else if (menu_state == "achievements") {
+    var cx = gui_w / 2;
+    var cy = gui_h / 2;
+    
+    // Título de la pantalla
+    draw_set_font(fnt_menu);
+    draw_set_color(c_aqua);
+    draw_set_halign(fa_center);
+    draw_text(cx, 60, "--- ACHIEVEMENTS ---");
+
+
+    var tabla_ancho = 525; // El 'horsize' que definiste en la función
+    gmda_draw_achievements(cx - (tabla_ancho / 2), 150);
+
+    // Pie de página
+    draw_set_color(c_gray);
+    draw_text(cx-200, gui_h - 50, "Presiona ESC o ENTER para volver");
 }
 // --- DIBUJAR MENÚ DE KICK ---
 if (show_kick_menu) {

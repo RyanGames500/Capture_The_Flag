@@ -87,16 +87,7 @@ var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
                     play_index = 0;
                 break;
                 
-                case 1: // OPTIONS
-                    show_message("Opciones...");
-                break;
-
-				case 2: 
-				    menu_state = "profile";
-					show_debug_message(">>> ENTRANDO AL PERFIL");
-				break;
-
-				case 3: 
+                case 1: 
 					global.ONLINE = false;
 					if(global.ONLINE){
 					DisconnectFromServer();}
@@ -116,15 +107,31 @@ var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
 				        "INICIAR BATALLA",
 				        "BACK"
 				    ];
+                break;
+
+				case 2:
+				menu_state = "achievements";
+				break;
+
+				case 3: 
+				    menu_state = "profile";
+					show_debug_message(">>> ENTRANDO AL PERFIL");
 				break;
                 
-                case 4: // EXIT
+                case 4: 
+					show_message("options...");
+                break;
+				
+                case 5: 
                     game_end();
                 break;
             }
         }
     }
     else if (menu_state == "private") {
+    if (global.myName != "" && global.myName != "NAME") {
+        texto_input = global.myName;
+    }
         p_index = clamp(p_index + move, 0, array_length(private_options) - 1);
 
         if (keyboard_check_pressed(vk_enter)) {
@@ -412,4 +419,17 @@ if (save_state == "sending") {
 // Lógica de desvanecimiento del mensaje
 if (mensaje_alpha > 0) {
     mensaje_alpha -= 0.05; // Velocidad a la que desaparece
+}
+
+
+if (menu_state == "achievements") {
+    if (keyboard_check_pressed(vk_escape)) {
+        menu_state = "main";
+    }
+	
+	var move_scroll = (mouse_wheel_down() - mouse_wheel_up()) * 40;
+    scroll_target = clamp(scroll_target + move_scroll, 0, scroll_max);
+    
+    // Interpolación suave (Lerp) para que no sea un movimiento brusco
+    scroll_y = lerp(scroll_y, scroll_target, 0.15);
 }
