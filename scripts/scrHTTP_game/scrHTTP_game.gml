@@ -4,12 +4,12 @@ function scrHTTP_game(response,valueref){
 switch(response){
 /////////////////////////// ACHIEVEMENTS /////////////////////
 case gmd_resp_achunlocked: //Achievement got successfully
-	show_message_async("Achievement got successfully");
+	show_debug_message("Achievement got successfully");
 	var object_effect=instance_create_depth(room_width-450,room_height-60,depth,achievement_got_effect);
 	object_effect.ach_id=valueref;
 break;
 case gmd_resp_achalreadygot: //Achievement is already unlocked
-show_message_async("Achievement is already unlocked...");
+show_debug_message("Achievement is already unlocked...");
 break;
 case gmd_resp_invalidach: //Achievement not found
 show_message_async("Achievement not found");

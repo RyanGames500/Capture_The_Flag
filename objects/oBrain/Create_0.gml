@@ -172,8 +172,16 @@ intro_disparada = false; // Para que solo pase una vez por partida
 puntos_procesados = false; // Este es nuestro "seguro"
 
 
+//seleccion de skin o personajes
+timer_seleccion = 15 * room_speed; // 15 segundos
+esperando_rival = false;
+mi_listo = false;
+rival_listo = false;
 
-
+global.pj_selected = 0;
+global.mi_listo = false;
+global.rival_listo = false;
+global.pj_rival = -1;
 
 //Iniciar la conexion
 ConnectToServer();

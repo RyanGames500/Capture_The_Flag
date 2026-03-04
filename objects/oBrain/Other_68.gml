@@ -141,9 +141,10 @@ case "state_update":
         new_enemy.team = (new_enemy.clientId % 2 == 0) ? "AZUL" : "ROJO";
         new_enemy.sharedProperties = realData.SP;
 
-        if (oBrain.AmIPseudoHost) {
-            oBrain.timer_intro = 30; 
+if (oBrain.AmIPseudoHost) {
+            oBrain.timer_intro = 15 * room_speed; 
             oBrain.intro_disparada = false; 
+            global.fase_seleccion = true; // Nueva variable para bloquear el movimiento
         }
     }
 break;

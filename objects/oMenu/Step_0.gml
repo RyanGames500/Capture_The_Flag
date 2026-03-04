@@ -408,10 +408,10 @@ if (save_state == "sending") {
         
         
         
-        alarm[1] = 60; // 2 segundos (si vas a 30fps) o 1 segundo (si vas a 60fps)
+        alarm[1] = 60;
         show_debug_message(">>> Guardando en la nube... Alarma 1 iniciada.");
         
-        save_state = "waiting"; // <--- CAMBIAMOS A UN ESTADO DE ESPERA
+        save_state = "waiting"; 
     }
 }
 	
@@ -430,6 +430,6 @@ if (menu_state == "achievements") {
 	var move_scroll = (mouse_wheel_down() - mouse_wheel_up()) * 40;
     scroll_target = clamp(scroll_target + move_scroll, 0, scroll_max);
     
-    // Interpolación suave (Lerp) para que no sea un movimiento brusco
+    // Interpolación suave para que no sea un movimiento brusco
     scroll_y = lerp(scroll_y, scroll_target, 0.15);
 }

@@ -312,7 +312,7 @@ else if (menu_state == "lobby_espera") {
         
         if (nombre_final == global.myName) {
             draw_set_color(c_yellow);
-            draw_text(_x + 25, _y + (slot_h/2), string(nombre_final) + " (TU)");
+            draw_text(_x + 25, _y + (slot_h/2), string(nombre_final) /*+ " (TU)"*/);
         } else {
             draw_text(_x + 25, _y + (slot_h/2), nombre_final);
         }

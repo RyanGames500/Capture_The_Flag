@@ -103,34 +103,35 @@ if (global.game_over == true) {
         }
     }
 }
-// --- LÓGICA DE INTRO ESTILO BRAWL STARS (Solo Host) ---
+// --- LÓGICA DE SELECCIÓN Y INTRO (Solo Host maneja el tiempo) ---
 if (oBrain.AmIPseudoHost && !intro_disparada) {
-    if (timer_intro > 0) {
+    
+    // 1. Manejo del Cronómetro (15 segundos iniciales)
+  if (timer_intro > 0) {
         timer_intro--;
-    } 
+        
+        // Cada 10 frames (para no saturar) mandamos el tiempo al cliente
+        if (timer_intro % 10 == 0) {
+            with(oOtherPlayer) {
+                SendEventToClient(clientId, "sync_timer", { tiempo:	oBrain.timer_intro });
+            }
+        }
+    }
     else if (timer_intro == 0) {
-        timer_intro = -1; // Desactivar timer
-        intro_disparada = true; // No repetir esto en la misma partida
+        timer_intro = -1; 
+        intro_disparada = true; 
 
+        // --- Recopilar nombres para la Intro ---
         var listaAzul = (global.myTeam == "AZUL") ? global.myName : "";
         var listaRojo = (global.myTeam == "ROJO") ? global.myName : "";
 
         with(oOtherPlayer) {
-            var nameStr = "Jugador"; 
-            if (is_struct(sharedProperties) && variable_struct_exists(sharedProperties, "name")) {
-                nameStr = sharedProperties.name;
-            } else if (variable_instance_exists(id, "Name") && Name != "") {
-                nameStr = Name;
-            }
-            
-            if (team == "AZUL") {
-                listaAzul += (listaAzul == "" ? "" : " & ") + nameStr;
-            } else {
-                listaRojo += (listaRojo == "" ? "" : " & ") + nameStr;
-            }
+            var nameStr = (variable_instance_exists(id, "Name")) ? Name : "Jugador";
+            if (team == "AZUL") listaAzul += (listaAzul == "" ? "" : " & ") + nameStr;
+            else listaRojo += (listaRojo == "" ? "" : " & ") + nameStr;
         }
 
-        // MANDAR EL GRITO FINAL A TODOS LOS CLIENTES
+        // MANDAR EL GRITO FINAL A TODOS
         with(oOtherPlayer) {
             SendEventToClient(clientId, "sync_names_teams", { 
                 azules: listaAzul, 
@@ -415,5 +416,39 @@ if (save_state == "sending") {
         show_debug_message(">>> Guardando en la nube... Alarma 1 iniciada.");
         
         save_state = "waiting"; // <--- CAMBIAMOS A UN ESTADO DE ESPERA
+    }
+}
+
+// --- LÓGICA DE MOVIMIENTO PARA EL DIBUJO ---
+if (!intro_disparada && room != rm_menu) 
+{
+    if (!global.mi_listo) 
+    {
+        // Detectar flechas
+        var move = keyboard_check_pressed(vk_right) - keyboard_check_pressed(vk_left);
+        
+        if (move != 0) {
+            global.pj_selected += move;
+            // Ciclo de 3 opciones (0, 1, 2)
+            if (global.pj_selected > 2) global.pj_selected = 0;
+            if (global.pj_selected < 0) global.pj_selected = 2;
+        }
+
+        // Confirmar selección
+        if (keyboard_check_pressed(vk_enter)) {
+            global.mi_listo = true;
+            // Avisar al otro jugador
+            with(oOtherPlayer) {
+                SendEventToClient(clientId, "pj_listo", { pj: global.pj_selected });
+            }
+        }
+    }
+}
+
+// Auto-selección si el tiempo se acaba y no presionó Enter
+if (timer_intro == 0 && !global.mi_listo) {
+    global.mi_listo = true;
+    with(oOtherPlayer) {
+        SendEventToClient(clientId, "pj_listo", { pj: global.pj_selected });
     }
 }

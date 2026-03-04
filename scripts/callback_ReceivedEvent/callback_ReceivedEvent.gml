@@ -1,6 +1,19 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
 
+case "sync_timer":
+    oBrain.timer_intro = theMessageStruct.tiempo;
+break;
+
+case "pj_listo":
+{
+    // El rival nos avisa qué personaje eligió
+    global.rival_listo = true;
+    global.pj_rival = theMessageStruct.pj;
+    show_debug_message(">>> Rival listo con personaje: " + string(global.pj_rival));
+}
+break;
+
 //Partiva Privada
 
 case "SYNC_LIMIT":
@@ -111,7 +124,10 @@ case "sync_names_teams":
 {
     var _azules = theMessageStruct.azules;
     var _rojos = theMessageStruct.rojos;
-
+    // El cliente recibe esto del host y activa su propia intro
+    global.fase_seleccion = false;
+    oBrain.intro_disparada = true;
+    oBrain.timer_intro = -1;
     // Usamos una función para no repetir código
     scr_trigger_intro(_azules, _rojos);
 }

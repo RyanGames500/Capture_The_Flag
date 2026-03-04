@@ -493,5 +493,49 @@ draw_set_color(c_white);
 
 
 
+// --- DIBUJAR SELECCIÓN DE PERSONAJE ---
+if (!intro_disparada && room != rm_menu) {
+    var mid_x = display_get_gui_width() / 2;
+    var mid_y = display_get_gui_height() / 2;
 
+    // 1. Fondo semi-transparente para que se vea el mapa atrás pero oscuro
+    draw_set_alpha(0.7);
+    draw_set_color(c_black);
+    draw_rectangle(0, 0, display_get_gui_width(), display_get_gui_height(), false);
+    draw_set_alpha(1);
+
+    // 2. Dibujar el Cronómetro
+    draw_set_halign(fa_center);
+    draw_set_font(fnt_large); // Usa tu fuente de HUD
+    var segundos = ceil(timer_intro / 60);
+    draw_text_transformed_color(mid_x, 80, "ELIGE TU CLASE: " + string(segundos), 1.5, 1.5, 0, c_white, c_white, c_yellow, c_yellow, 1);
+
+    // 3. Dibujar los Personajes (Ejemplo con 3 clases)
+    var spacing = 150;
+    for (var i = 0; i < 3; i++) {
+        var xx = mid_x - spacing + (i * spacing);
+        var yy = mid_y;
+        
+        // Color de fondo del cuadro
+        var col = (global.pj_selected == i) ? c_yellow : c_dkgray;
+        draw_rectangle_color(xx - 60, yy - 60, xx + 60, yy + 60, col, col, col, col, false);
+        
+        // Dibujar el Sprite del Personaje (Ajusta sPJs_Idle por tu sprite)
+        // draw_sprite(sPJs_Iconos, i, xx, yy); 
+        draw_text(xx, yy + 70, (i == 0 ? "ASALTO" : (i == 1 ? "TANQUE" : "MEDICO")));
+
+        // Marca de "LISTO"
+        if (global.pj_selected == i && global.mi_listo) {
+            draw_text_color(xx, yy - 80, "READY!", c_lime, c_lime, c_green, c_green, 1);
+        }
+    }
+
+// --- CAMBIA EL PUNTO 4 DE TU DRAW GUI POR ESTO ---
+var rival_txt = "RIVAL ELIGIENDO...";
+if (global.rival_listo) {
+    var clase_rival = (global.pj_rival == 0 ? "ASALTO" : (global.pj_rival == 1 ? "TANQUE" : "MEDICO"));
+    rival_txt = "RIVAL LISTO: " + clase_rival;
+}
+draw_text_color(mid_x, mid_y + 180, rival_txt, c_orange, c_orange, c_white, c_white, 1);
+}
 
