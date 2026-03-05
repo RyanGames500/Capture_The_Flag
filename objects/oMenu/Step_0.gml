@@ -256,13 +256,13 @@ else if (menu_state == "play_selection") {
 
         if (keyboard_check_pressed(vk_enter)) {
             switch(play_index) {
-                case 0: // PARTIDA RÁPIDA (Lo que antes era el caso 0 del main)
+                case 0: // PARTIDA RÁPIDA 
                     if (global.myName == "") global.myName = "Player_" + string(irandom(999));
                     menu_state = "connecting";
                     ChangeRoom("auto_matchmake_2");
                 break;
 
-                case 1: // PARTIDA PRIVADA (Lo que antes era el caso 1 del main)
+                case 1: // PARTIDA PRIVADA 
                     menu_state = "private";
                     p_index = 0;
                 break;

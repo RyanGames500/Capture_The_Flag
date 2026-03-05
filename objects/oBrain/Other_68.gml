@@ -142,7 +142,7 @@ case "state_update":
         new_enemy.sharedProperties = realData.SP;
 
 if (oBrain.AmIPseudoHost) {
-            oBrain.timer_intro = 15 * room_speed; 
+            oBrain.timer_intro = 60 * 60; 
             oBrain.intro_disparada = false; 
             global.fase_seleccion = true; // Nueva variable para bloquear el movimiento
         }

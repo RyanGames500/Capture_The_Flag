@@ -103,17 +103,33 @@ if (global.game_over == true) {
         }
     }
 }
-// --- LÓGICA DE SELECCIÓN Y INTRO (Solo Host maneja el tiempo) ---
+// --- LÓGICA DE SELECCIÓN Y INTRO ---
 if (oBrain.AmIPseudoHost && !intro_disparada) {
     
-    // 1. Manejo del Cronómetro (15 segundos iniciales)
-  if (timer_intro > 0) {
+    // 🔥 CAMBIO PARA MULTIJUGADOR: Verificar si ABSOLUTAMENTE TODOS están listos
+    var todos_ready = global.mi_listo; // Empezamos asumiendo que yo estoy listo
+    
+    with(oOtherPlayer) {
+        // Si tan solo uno de los otros no ha dado Enter, todos_ready se vuelve falso
+        if (variable_instance_exists(id, "isReady")) {
+            if (!isReady) todos_ready = false;
+        } else {
+            // Si por alguna razón no tiene la variable, asumimos que no está listo
+            todos_ready = false;
+        }
+    }
+
+    // Si todos están listos (o el tiempo se acabó), empezamos
+    if (todos_ready && timer_intro > 0) { 
+        timer_intro = 0; 
+    } 
+
+    // 1. Manejo del Cronómetro 
+    if (timer_intro > 0) {
         timer_intro--;
-        
-        // Cada 10 frames (para no saturar) mandamos el tiempo al cliente
         if (timer_intro % 10 == 0) {
             with(oOtherPlayer) {
-                SendEventToClient(clientId, "sync_timer", { tiempo:	oBrain.timer_intro });
+                SendEventToClient(clientId, "sync_timer", { tiempo: oBrain.timer_intro });
             }
         }
     }
@@ -121,14 +137,17 @@ if (oBrain.AmIPseudoHost && !intro_disparada) {
         timer_intro = -1; 
         intro_disparada = true; 
 
-        // --- Recopilar nombres para la Intro ---
+        // --- Recopilar nombres para la Intro (Esto ya te sirve para varios) ---
         var listaAzul = (global.myTeam == "AZUL") ? global.myName : "";
         var listaRojo = (global.myTeam == "ROJO") ? global.myName : "";
 
         with(oOtherPlayer) {
             var nameStr = (variable_instance_exists(id, "Name")) ? Name : "Jugador";
-            if (team == "AZUL") listaAzul += (listaAzul == "" ? "" : " & ") + nameStr;
-            else listaRojo += (listaRojo == "" ? "" : " & ") + nameStr;
+            if (team == "AZUL") {
+                listaAzul += (listaAzul == "" ? "" : " & ") + nameStr;
+            } else {
+                listaRojo += (listaRojo == "" ? "" : " & ") + nameStr;
+            }
         }
 
         // MANDAR EL GRITO FINAL A TODOS
@@ -234,16 +253,13 @@ else
     victory_alpha = 0; 
 }
 
-// ======================================================
-// 🔨 3. LÓGICA DE MARTILLOS (SOLO HOST)
-// ======================================================
 if (oBrain.AmIPseudoHost) {
     with(oHammer) {
         if (!ataca && irandom(200) == 1) { 
             ataca = true;
             image_speed = 1;
             
-            // 🔥 CAMBIO: Avisar a TODOS los clientes del ataque
+            // CAMBIO: Avisar a TODOS los clientes del ataque
             var hammerData = { _id: myHammerId };
             with(oOtherPlayer) {
                 SendEventToClient(clientId, "hammer_attack", hammerData);
@@ -419,27 +435,31 @@ if (save_state == "sending") {
     }
 }
 
-// --- LÓGICA DE MOVIMIENTO PARA EL DIBUJO ---
-if (!intro_disparada && room != rm_menu) 
-{
-    if (!global.mi_listo) 
-    {
-        // Detectar flechas
-        var move = keyboard_check_pressed(vk_right) - keyboard_check_pressed(vk_left);
+// --- LÓGICA DE SELECCIÓN VERTICAL (Escalable para N jugadores) ---
+if (!intro_disparada && room != rm_menu) {
+    if (!global.mi_listo) {
+        var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
         
         if (move != 0) {
-            global.pj_selected += move;
-            // Ciclo de 3 opciones (0, 1, 2)
-            if (global.pj_selected > 2) global.pj_selected = 0;
-            if (global.pj_selected < 0) global.pj_selected = 2;
+            global.pj_selected = (global.pj_selected + move + 3) % 3; // Ciclo seguro 0,1,2
+            
+            // GRITAR A TODOS: "Cambié de cara" + "Mi ID"
+            with(oOtherPlayer) {
+                SendEventToClient(clientId, "pj_cambiando", { 
+                    pj: global.pj_selected, 
+                    fromId: global.clientId // <--- IMPORTANTE: Quién envió el cambio
+                });
+            }
         }
 
-        // Confirmar selección
         if (keyboard_check_pressed(vk_enter)) {
             global.mi_listo = true;
-            // Avisar al otro jugador
+            // GRITAR A TODOS: "Estoy listo" + "Mi ID"
             with(oOtherPlayer) {
-                SendEventToClient(clientId, "pj_listo", { pj: global.pj_selected });
+                SendEventToClient(clientId, "pj_listo", { 
+                    pj: global.pj_selected, 
+                    fromId: global.clientId 
+                });
             }
         }
     }
@@ -449,6 +469,9 @@ if (!intro_disparada && room != rm_menu)
 if (timer_intro == 0 && !global.mi_listo) {
     global.mi_listo = true;
     with(oOtherPlayer) {
-        SendEventToClient(clientId, "pj_listo", { pj: global.pj_selected });
-    }
+                SendEventToClient(clientId, "pj_listo", { 
+                    pj: global.pj_selected, 
+                    fromId: global.clientId 
+                });
+            }
 }

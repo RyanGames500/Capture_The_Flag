@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"draw_bomb_slot",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"draw_bomb_slot",
+  "parent":{
+    "name":"TOOLS",
+    "path":"folders/Scripts/TOOLS.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

@@ -1,31 +1,36 @@
 function callback_LeaveRoom(){
-    // 1. Limpiamos variables globales de juego
+    // 1. Variables de Juego (Puntaje y Estado)
     global.game_over = false;
-    global.pausa = false; // ¡IMPORTANTE! Si no, el menú principal podría salir pausado
+    global.pausa = false; 
     global.puntos_rojo = 0;
     global.puntos_azul = 0;
     global.winner_team = 0;
 
-    // 2. Limpiamos variables de control del oBrain
+    // 2. RESET DE SELECCIÓN (Lo más importante para que no falle la próxima)
+    global.mi_listo = false;       // Para que te deje presionar Enter otra vez
+    global.rival_listo = false;    // Para que el rival no aparezca como "Ready"
+    global.pj_selected = 0;        // Vuelve al primer personaje (Asalto)
+    global.pj_rival = -1;          // -1 significa "Vacío" o "Buscando"
+
+    // 3. Control del Cerebro (oBrain)
     if (instance_exists(oBrain)) {
+        oBrain.intro_disparada = false; // FUNDAMENTAL: Para que vuelva a dibujar el GUI de selección
+        oBrain.timer_intro = 60 * 60;   // Resetea el tiempo a 15 segundos
+        
+        // Otras limpiezas que ya tenías
         oBrain.ammo_spawned = false;
         oBrain.weapons_spawned = false;
-        oBrain.victory_alpha = 0; // Resetear el fade de la victoria
-		oBrain.puntos_procesados = false;
-        //// Si usas intro estilo Brawl Stars:
-        //oBrain.intro_disparada = false;
-        //oBrain.timer_intro = 120; 
+        oBrain.victory_alpha = 0; 
+        oBrain.puntos_procesados = false;
     }
 
-    // 3. Limpieza de red y objetos de otros jugadores
-    // Es vital destruir a los otros jugadores para que no aparezcan duplicados luego
-    instance_destroy(oOtherPlayer);
+    // 4. Limpieza de Instancias
+    instance_destroy(oOtherPlayer); // Borramos al rival anterior
     
-    // 4. Resetear el cursor (por si estaba oculto)
+    // 5. Reset del Sistema
     window_set_cursor(cr_arrow);
-
-    // 5. Volver al menú
-    show_debug_message("Regresé a mi sala privada y limpié la partida.");
+    show_debug_message(">>> LOBBY LIMPIO: Selección reseteada correctamente.");
+    
     room_goto(rm_menu);
 }
 

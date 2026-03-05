@@ -33,7 +33,8 @@ BSI = 0;
 has_flag = false;
 invulnerable=0;
 Name = "Cargando..."; 
-
+mySelectedPJ = 0;
+isReady = false;
 WSI = 0;
 ammo=0;
 reloading=0;

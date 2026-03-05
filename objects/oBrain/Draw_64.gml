@@ -17,6 +17,33 @@ draw_set_color(global.myTeam == "AZUL" ? c_aqua : c_red);
 draw_set_halign(fa_left);
 draw_text_transformed(40, gh - 65, global.myName, 1.2, 1.2, 0); // Tu nombre
 #endregion
+
+#region // PING HUD
+if(global.ONLINE){
+    var pad = 10;
+    var gw = display_get_gui_width();
+    var xx2 = gw - pad;
+    var yy2 = pad;
+
+    if (sprite_exists(spr_ping))
+    {
+        draw_sprite_ext(spr_ping, 0, xx2 - 100, yy2 + 10, 1, 1, 0, c_white, 1);
+    }
+
+    var col_ping = c_lime;
+    if (global.ping > 120) col_ping = c_yellow;
+    if (global.ping > 200) col_ping = c_red;
+
+    draw_set_font(fnt_killfeed);
+    draw_set_halign(fa_right);
+    draw_set_valign(fa_top);
+    draw_set_color(c_black);
+    draw_text_transformed(xx2 + 1, yy2 + 1, string(global.ping) + " ms",0.8,0.8,0);
+    draw_set_color(col_ping);
+    draw_text_transformed(xx2, yy2, string(global.ping) + " ms",0.8,0.8,0);
+    draw_set_color(c_white);
+}
+#endregion
 }
 if (room == rm_menu) exit;
 
@@ -282,32 +309,6 @@ if (instance_exists(oOtherPlayer))
 }
 #endregion
 
-#region // PING HUD
-if(global.ONLINE){
-    var pad = 10;
-    var gw = display_get_gui_width();
-    var xx2 = gw - pad;
-    var yy2 = pad;
-
-    if (sprite_exists(spr_ping))
-    {
-        draw_sprite_ext(spr_ping, 0, xx2 - 100, yy2 + 10, 1, 1, 0, c_white, 1);
-    }
-
-    var col_ping = c_lime;
-    if (global.ping > 120) col_ping = c_yellow;
-    if (global.ping > 200) col_ping = c_red;
-
-    draw_set_font(fnt_killfeed);
-    draw_set_halign(fa_right);
-    draw_set_valign(fa_top);
-    draw_set_color(c_black);
-    draw_text_transformed(xx2 + 1, yy2 + 1, string(global.ping) + " ms",0.8,0.8,0);
-    draw_set_color(col_ping);
-    draw_text_transformed(xx2, yy2, string(global.ping) + " ms",0.8,0.8,0);
-    draw_set_color(c_white);
-}
-#endregion
 }
 // ======================================================
 // 2. MARCADOR DINÁMICO (VS)
@@ -493,49 +494,48 @@ draw_set_color(c_white);
 
 
 
-// --- DIBUJAR SELECCIÓN DE PERSONAJE ---
 if (!intro_disparada && room != rm_menu) {
-    var mid_x = display_get_gui_width() / 2;
-    var mid_y = display_get_gui_height() / 2;
-
-    // 1. Fondo semi-transparente para que se vea el mapa atrás pero oscuro
-    draw_set_alpha(0.7);
-    draw_set_color(c_black);
-    draw_rectangle(0, 0, display_get_gui_width(), display_get_gui_height(), false);
+    var sw = display_get_gui_width();
+    var sh = display_get_gui_height();
+    
+    // 1. FONDO ELEGANTE (No negro plano)
+    draw_set_alpha(0.8);
+    draw_rectangle_color(0, 0, sw, sh, c_black, c_black, make_color_rgb(10, 30, 50), make_color_rgb(10, 30, 50), false);
     draw_set_alpha(1);
 
-    // 2. Dibujar el Cronómetro
+    // 2. CRONÓMETRO CON BRILLO
     draw_set_halign(fa_center);
-    draw_set_font(fnt_large); // Usa tu fuente de HUD
-    var segundos = ceil(timer_intro / 60);
-    draw_text_transformed_color(mid_x, 80, "ELIGE TU CLASE: " + string(segundos), 1.5, 1.5, 0, c_white, c_white, c_yellow, c_yellow, 1);
+    var segs = ceil(timer_intro / 60);
+    var wave = sin(current_time * 0.01) * 0.1;
+    draw_text_transformed_color(sw/2, 70, "INICIO EN: " + string(segs), 1.5 + wave, 1.5 + wave, 0, c_yellow, c_yellow, c_orange, c_orange, 1);
 
-    // 3. Dibujar los Personajes (Ejemplo con 3 clases)
-    var spacing = 150;
-    for (var i = 0; i < 3; i++) {
-        var xx = mid_x - spacing + (i * spacing);
-        var yy = mid_y;
-        
-        // Color de fondo del cuadro
-        var col = (global.pj_selected == i) ? c_yellow : c_dkgray;
-        draw_rectangle_color(xx - 60, yy - 60, xx + 60, yy + 60, col, col, col, col, false);
-        
-        // Dibujar el Sprite del Personaje (Ajusta sPJs_Idle por tu sprite)
-        // draw_sprite(sPJs_Iconos, i, xx, yy); 
-        draw_text(xx, yy + 70, (i == 0 ? "ASALTO" : (i == 1 ? "TANQUE" : "MEDICO")));
+    // --- CONTADORES PARA SLOTS ---
+    var countAzul = 0;
+    var countRojo = 0;
+    var gapY = 180; 
+    var startY = sh * 0.25;
 
-        // Marca de "LISTO"
-        if (global.pj_selected == i && global.mi_listo) {
-            draw_text_color(xx, yy - 80, "READY!", c_lime, c_lime, c_green, c_green, 1);
-        }
+    // 3. DIBUJAR MI SLOT
+    var myX = (global.myTeam == "AZUL") ? sw * 0.25 : sw * 0.75;
+    var myY = startY + ((global.myTeam == "AZUL" ? countAzul : countRojo) * gapY);
+    
+    // Función de dibujo mejorada (ver abajo)
+    draw_bomb_slot(myX, myY, global.pj_selected, global.myName, global.mi_listo, true, global.myTeam);
+    
+    if (global.myTeam == "AZUL") countAzul++; else countRojo++;
+
+    // 4. DIBUJAR SLOTS DE OTROS
+    with(oOtherPlayer) {
+        var isAzul = (team == "AZUL");
+        var drawX = isAzul ? sw * 0.25 : sw * 0.75;
+        var drawY = startY + ((isAzul ? countAzul : countRojo) * gapY);
+        
+        // Verificamos que las variables existan para evitar errores
+        var _pj = variable_instance_exists(id, "mySelectedPJ") ? mySelectedPJ : 0;
+        var _rdy = variable_instance_exists(id, "isReady") ? isReady : false;
+        
+        draw_bomb_slot(drawX, drawY, _pj, Name, _rdy, false, team);
+        
+        if (isAzul) countAzul++; else countRojo++;
     }
-
-// --- CAMBIA EL PUNTO 4 DE TU DRAW GUI POR ESTO ---
-var rival_txt = "RIVAL ELIGIENDO...";
-if (global.rival_listo) {
-    var clase_rival = (global.pj_rival == 0 ? "ASALTO" : (global.pj_rival == 1 ? "TANQUE" : "MEDICO"));
-    rival_txt = "RIVAL LISTO: " + clase_rival;
 }
-draw_text_color(mid_x, mid_y + 180, rival_txt, c_orange, c_orange, c_white, c_white, 1);
-}
-

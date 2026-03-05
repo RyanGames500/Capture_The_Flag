@@ -1,17 +1,38 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
 
+//case "pj_cambiando":
+//    global.pj_rival = theMessageStruct.pj; // Actualiza la cara del rival en mi pantalla
+//break;
+
 case "sync_timer":
     oBrain.timer_intro = theMessageStruct.tiempo;
 break;
 
+//case "pj_listo":
+//{
+//    // El rival nos avisa qué personaje eligió
+//    global.rival_listo = true;
+//    global.pj_rival = theMessageStruct.pj;
+//    show_debug_message(">>> Rival listo con personaje: " + string(global.pj_rival));
+//}
+//break;
+
+case "pj_cambiando":
+    with(oOtherPlayer) {
+        if (clientId == theMessageStruct.fromId) {
+            mySelectedPJ = theMessageStruct.pj; // Guardamos el PJ individualmente
+        }
+    }
+break;
+
 case "pj_listo":
-{
-    // El rival nos avisa qué personaje eligió
-    global.rival_listo = true;
-    global.pj_rival = theMessageStruct.pj;
-    show_debug_message(">>> Rival listo con personaje: " + string(global.pj_rival));
-}
+    with(oOtherPlayer) {
+        if (clientId == theMessageStruct.fromId) {
+            mySelectedPJ = theMessageStruct.pj;
+            isReady = true; // Marcamos a esta persona como lista
+        }
+    }
 break;
 
 //Partiva Privada
