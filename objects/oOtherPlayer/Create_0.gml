@@ -45,6 +45,7 @@ melee_prev_net = 0;
 hit_bloqueo_timer = 0;
 thisPlayerTeam="";
 has_shield = false;
+max_health = enemyHealth;
 // Cuando aparece un jugador nuevo en mi pantalla...
 if (global.ONLINE) {
     SendEventToClient(clientId, "sync_lobby_name", { 

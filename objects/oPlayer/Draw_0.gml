@@ -1,4 +1,5 @@
-// --- BARRA DE VIDA ÉPICA (LOCAL) ---
+
+
 var _x1 = x - 30;
 var _y1 = y - 45;
 var _x2 = x + 30;
@@ -8,19 +9,24 @@ var _y2 = y - 40;
 draw_set_color(c_black);
 draw_rectangle(_x1 - 1, _y1 - 1, _x2 + 1, _y2 + 1, false);
 
-// 2. Fondo de la barra (Gris oscuro para ver cuánto falta)
+// 2. Fondo de la barra
 draw_set_color(c_dkgray);
 draw_rectangle(_x1, _y1, _x2, _y2, false);
 
-// 3. La vida (Azul con un toque cian para que brille)
-var _width = (health / 100) * (_x2 - _x1);
+// --- 3. LA VIDA DINÁMICA ---
+// Usamos max_health para que el porcentaje sea real según la clase
+var _ancho_barra = (_x2 - _x1); // Esto es 60
+var _porcentaje = clamp(health / max_health, 0, 1); 
+var _width_final = _porcentaje * _ancho_barra;
+
 if (health > 0) {
+    // Color Azul/Cian para el jugador local (Aliado de sí mismo)
     draw_set_color(c_blue);
-    draw_rectangle(_x1, _y1, _x1 + _width, _y2, false);
+    draw_rectangle(_x1, _y1, _x1 + _width_final, _y2, false);
     
     // Un toque de brillo arriba para darle relieve
     draw_set_color(c_aqua);
-    draw_line(_x1, _y1, _x1 + _width, _y1);
+    draw_line(_x1, _y1, _x1 + _width_final, _y1);
 }
 
 draw_set_halign(fa_center);

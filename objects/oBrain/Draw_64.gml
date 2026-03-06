@@ -1,3 +1,4 @@
+
 if (global.game_over == false) 
 {
 #region --- TARJETA JUGADOR LOCAL ---
@@ -393,7 +394,7 @@ if (global.pausa && !global.game_over) {
     }
 }
 
-// --- 4. PANTALLA DE RESULTADOS (CORREGIDA) ---
+// --- 4. PANTALLA DE RESULTADOS ---
 if (global.game_over) 
 {
     var mid_x = display_get_gui_width() / 2;
@@ -494,7 +495,7 @@ draw_set_color(c_white);
 
 
 
-if (!intro_disparada && room != rm_menu) {
+if (!intro_disparada && room != rm_menu && global.ONLINE==true) {
     var sw = display_get_gui_width();
     var sh = display_get_gui_height();
     
@@ -539,3 +540,4 @@ if (!intro_disparada && room != rm_menu) {
         if (isAzul) countAzul++; else countRojo++;
     }
 }
+

@@ -435,43 +435,72 @@ if (save_state == "sending") {
     }
 }
 
-// --- LÓGICA DE SELECCIÓN VERTICAL (Escalable para N jugadores) ---
+// --- LÓGICA DE SELECCIÓN VERTICAL (Actualizada para 4 personajes) ---
 if (!intro_disparada && room != rm_menu) {
     if (!global.mi_listo) {
         var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
         
         if (move != 0) {
-            global.pj_selected = (global.pj_selected + move + 3) % 3; // Ciclo seguro 0,1,2
+            // CAMBIO AQUÍ: Sumamos 4 y usamos % 4 para que el ciclo sea 0, 1, 2, 3
+            global.pj_selected = (global.pj_selected + move + 4) % 4; 
             
-            // GRITAR A TODOS: "Cambié de cara" + "Mi ID"
+            // Sonido de cambio (opcional)
+            if (global.sfx) audio_play_sound(snd_scroll, 1, false);
+
             with(oOtherPlayer) {
                 SendEventToClient(clientId, "pj_cambiando", { 
                     pj: global.pj_selected, 
-                    fromId: global.clientId // <--- IMPORTANTE: Quién envió el cambio
-                });
-            }
-        }
-
-        if (keyboard_check_pressed(vk_enter)) {
-            global.mi_listo = true;
-            // GRITAR A TODOS: "Estoy listo" + "Mi ID"
-            with(oOtherPlayer) {
-                SendEventToClient(clientId, "pj_listo", { 
-                    pj: global.pj_selected, 
                     fromId: global.clientId 
                 });
             }
         }
+
+// oBrain - Step Event (Lógica de selección)
+
+if (!global.mi_listo && keyboard_check_pressed(vk_enter)) {
+    global.mi_listo = true;
+    
+    // 1. DETERMINAR POSICIÓN SEGÚN EQUIPO
+    var _spawnX, _spawnY;
+    
+    if (global.myTeam == "AZUL") {
+        // Si existe el objeto base, spawnea ahí. Si no, usa una coordenada segura.
+        _spawnX = instance_exists(obj_base_blue) ? obj_base_blue.x : 100;
+        _spawnY = instance_exists(obj_base_blue) ? obj_base_blue.y : 400;
+    } else {
+        _spawnX = instance_exists(obj_base_red) ? obj_base_red.x : room_width - 100;
+        _spawnY = instance_exists(obj_base_red) ? obj_base_red.y : 400;
+    }
+
+    // 2. CREAR AL JUGADOR EN SU BASE
+    var myPj = instance_create_layer(_spawnX, _spawnY, "Instances", oPlayer);
+    
+    // 3. EFECTO VISUAL (Opcional pero recomendado para que no aparezca de golpe)
+    var _col = (global.myTeam == "AZUL") ? c_aqua : c_red;
+    effect_create_above(ef_ring, _spawnX, _spawnY, 1, _col);
+
+    // 4. AVISAR A LA RED
+    if (global.ONLINE) {
+        with(oOtherPlayer) {
+            SendEventToClient(clientId, "pj_listo", { 
+                pj: global.pj_selected, 
+                fromId: global.clientId 
+            });
+        }
+    }
+    
+    if (global.sfx) audio_play_sound(snd_ready, 1, false);
+}
     }
 }
 
-// Auto-selección si el tiempo se acaba y no presionó Enter
+// Auto-selección al acabarse el tiempo
 if (timer_intro == 0 && !global.mi_listo) {
     global.mi_listo = true;
     with(oOtherPlayer) {
-                SendEventToClient(clientId, "pj_listo", { 
-                    pj: global.pj_selected, 
-                    fromId: global.clientId 
-                });
-            }
+        SendEventToClient(clientId, "pj_listo", { 
+            pj: global.pj_selected, 
+            fromId: global.clientId 
+        });
+    }
 }

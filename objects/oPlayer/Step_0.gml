@@ -283,7 +283,7 @@ if (state != PLAYERSTATE.DEAD) {
 switch (state) {
 
     case PLAYERSTATE.INTRO:
-
+	sprite_index = anims[mi_clase].idle;
     break;
 
 case PLAYERSTATE.IDLE:
@@ -294,7 +294,7 @@ if (canShoot && melee_active <= 0)
 
 
         //hsp = 0;
-        sprite_index = spr_player_idle;
+        sprite_index = anims[mi_clase].idle;
         if (key_jump && is_grounded) {is_grounded = false; vsp = jumpsp; state = PLAYERSTATE.JUMP; }
         if (key_right || key_left) state = PLAYERSTATE.WALK;
         break;
@@ -308,7 +308,7 @@ if (canShoot && melee_active <= 0)
 		var _current_speed = has_flag ? walksp * 0.7 : walksp; // 30% más lento si tiene la bandera
 		hsp = move * _current_speed;
         move = key_right - key_left;
-        sprite_index = spr_player_walk;
+        sprite_index = anims[mi_clase].walk;
         if (hsp != 0) image_xscale = sign(hsp) * 1.5;
         
         if (hsp == 0) state = PLAYERSTATE.IDLE;
@@ -332,7 +332,7 @@ if (canShoot && melee_active <= 0)
 
     case PLAYERSTATE.SHOT:
         hsp = 0; // Se detiene para disparar
-        sprite_index = spr_player_shot;
+        sprite_index = anims[mi_clase].idle;
         image_speed = 0.8; // Velocidad controlada
         
         // Crear bala en Frame 1
@@ -355,14 +355,14 @@ if (canShoot && melee_active <= 0)
 
     case PLAYERSTATE.HIT:
         // Lógica de recibir daño (ej: un pequeño salto hacia atrás)
-        sprite_index = spr_player_hit;
+        sprite_index = anims[mi_clase].hit;
         if (image_index >= image_number - 1) state = PLAYERSTATE.IDLE;
         break;
 
 		case PLAYERSTATE.DEAD:
         hsp = 0;
 
-        sprite_index = spr_player_dead;
+        sprite_index = anims[mi_clase].dead;
         if (image_index >= image_number - 1) 
 		{
 			//image_speed = 0; 
@@ -723,7 +723,8 @@ global.sharedProperties = {
 	_RA: recoil_angle,
 	_MELEE: melee_active,
 	_TEAM: team,
-	_SH: has_shield
+	_SH: has_shield,
+	_MH: max_health
 
 };
 	

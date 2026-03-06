@@ -95,20 +95,31 @@ if (has_flag) {
 
 if (state == PLAYERSTATE2.DEAD) exit;
 
+// oPlayer - Draw GUI Event (HUD PRINCIPAL)
+
 // --- CONFIGURACIÓN BASE ---
 var _escala = 4; 
 var _xx = 40; 
 var _yy = 40;
-var _alto_barra = 12 * _escala; // Altura de cada bloque de barra
-var _offset_y = _alto_barra + (4 * _escala); // Espacio para la siguiente barra
+var _alto_barra = 12 * _escala; 
+var _offset_y = _alto_barra + (4 * _escala); 
 
-// 1. BARRA DE VIDA (Fija)
+// 1. BARRA DE VIDA DINÁMICA
+// Usamos lerp para que la barrita se mueva suave cuando te curas o te pegan
 vida_visual = lerp(vida_visual, health, 0.2);
+
+// Dibujar el fondo vacío (el marco)
 draw_sprite_ext(spr_HUD_Bar_Empty, 0, _xx, _yy, _escala, _escala, 0, c_white, 1);
+
 var _w = sprite_get_width(spr_HUD_Bar_Health);
 var _h = sprite_get_height(spr_HUD_Bar_Health);
-draw_sprite_part_ext(spr_HUD_Bar_Health, 0, 0, 0, _w * (vida_visual/100), _h, _xx, _yy, _escala, _escala, c_white, 1);
 
+// --- EL TRUCO MAESTRO ---
+// Calculamos qué porcentaje de la barra llenar (valor entre 0 y 1)
+var _porcentaje_real = clamp(vida_visual / max_health, 0, 1);
+
+// Dibujamos solo la parte proporcional del sprite de vida
+draw_sprite_part_ext(spr_HUD_Bar_Health, 0, 0, 0, _w * _porcentaje_real, _h, _xx, _yy, _escala, _escala, c_white, 1);
 // Variable para saber dónde dibujar la siguiente barra
 var _current_y = _yy + _offset_y;
 

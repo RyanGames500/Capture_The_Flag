@@ -56,6 +56,7 @@ your sharedProperties
 		recoil_angle = real(SP._RA);
 		has_shield = real(SP._SH)
 		team = string(SP._TEAM);
+		max_health = real(SP._MH);
 
 		var net_melee = real(SP._MELEE);
 
