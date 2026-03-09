@@ -58,8 +58,11 @@ var gui_w = display_get_gui_width();
 var gui_h = display_get_gui_height();
 var spacing = 60;
 
+// --- DIBUJO DEL MENÚ PRINCIPAL ---
 if (menu_state == "main") {
     draw_set_font(fnt_menu);
+    draw_set_halign(fa_center);
+    
     for (var i = 0; i < array_length(menu_options); i++) {
         if (i == index) {
             draw_set_color(c_yellow);
@@ -70,7 +73,52 @@ if (menu_state == "main") {
         }
         draw_text(gui_w / 2, (gui_h / 2 - 100) + (i * spacing), txt);
     }
-} 
+
+    // EL SOBRE (Siempre visible en el Main)
+    var mx = device_mouse_x_to_gui(0);
+    var my = device_mouse_y_to_gui(0);
+    var scale = (mx > mail_x - 30 && mx < mail_x + 30 && my > mail_y - 30 && my < mail_y + 30) ? 2.2 : 2;
+
+    draw_sprite_ext(spr_textbox, 0, mail_x, mail_y, scale, scale, 0, c_white, 1);
+
+    if (hay_solicitud_pendiente) {
+        var wave = abs(sin(current_time / 200));
+        draw_set_color(c_red);
+        draw_circle(mail_x + 20, mail_y - 15, 6 + (wave * 2), false);
+        draw_set_color(c_white);
+    }
+    draw_set_font(fnt_small);
+    draw_text(mail_x, mail_y + 40, "[M] Correo");
+}
+
+// --- DIBUJO DEL ESTADO BUZÓN (Capa superior) ---
+else if (menu_state == "mailbox") {
+    var cx = gui_w / 2;
+    var cy = gui_h / 2;
+
+    // Fondo oscuro para que resalte el buzón
+    draw_set_alpha(0.8);
+    draw_set_color(c_black);
+    draw_rectangle(0, 0, gui_w, gui_h, false);
+    draw_set_alpha(1);
+
+    // Contenido del Buzón
+    draw_set_color(c_white);
+    draw_set_font(fnt_menu);
+    draw_text(cx, cy - 150, "--- BUZON ---");
+
+    if (hay_solicitud_pendiente && is_struct(datos_solicitud_recibida)) {
+        draw_text(cx, cy, "Solicitud de: " + string(datos_solicitud_recibida.desde_nombre));
+        draw_set_color(c_yellow);
+        draw_text(cx, cy + 50, "[Y] Aceptar   [N] Rechazar");
+    } else {
+        draw_set_color(c_gray);
+        draw_text(cx, cy, "No hay mensajes nuevos.");
+    }
+
+    draw_set_color(c_white);
+    draw_text(cx, cy + 150, "Presiona [ESC] para volver");
+}
 else if (menu_state == "private") {
     draw_set_font(fnt_menu);
     draw_set_color(c_aqua);
@@ -397,6 +445,25 @@ if (menu_state == "play_selection") {
 }
 if (menu_state == "profile") {
     draw_player_profile(room_width/2, room_height/2);
+	
+	// --- DIBUJAR RESULTADO DE BÚSQUEDA ---
+    if (estado_busqueda == "encontrado" && datos_busqueda_resultado != -1) {
+        var rx = 700; // Posición a la derecha de tu perfil
+        var ry = 200;
+        
+        draw_set_color(c_black); draw_set_alpha(0.8);
+        draw_rectangle(rx-20, ry-20, rx+300, ry+250, false);
+        draw_set_alpha(1); draw_set_color(c_white);
+        
+        draw_text(rx, ry, "JUGADOR ENCONTRADO:");
+        draw_text(rx, ry+40, "Nombre: " + string(datos_busqueda_resultado.nombre));
+        draw_text(rx, ry+70, "Copas: " + string(datos_busqueda_resultado.copas));
+        draw_text(rx, ry+100, "Rango: " + string(datos_busqueda_resultado.rank));
+        draw_text(rx, ry+130, "Kills: " + string(datos_busqueda_resultado.kills));
+        
+        draw_text(rx, ry+180, "[ENTER] para enviar solicitud");
+        draw_text(rx, ry+210, "[ESC] para cerrar");
+    }
 }
 else if (menu_state == "achievements") {
     var cx = gui_w / 2;
@@ -416,6 +483,219 @@ else if (menu_state == "achievements") {
     draw_set_color(c_gray);
     draw_text(cx-200, gui_h - 50, "Presiona ESC o ENTER para volver");
 }
+else if (menu_state == "friends_menu") {
+    var cx = gui_w / 2;
+    var cy = gui_h / 2;
+
+    if (friends_state == "main") {
+        draw_text(cx, cy - 150, "--- FRIENDS ---");
+        for (var i = 0; i < array_length(friends_options); i++) {
+            draw_set_color(i == friends_index ? c_yellow : c_white);
+            draw_text(cx, cy - 50 + (i * 60), (i == friends_index ? "> " : "") + friends_options[i]);
+        }
+    }
+    
+else if (friends_state == "lista") {
+    var cx = gui_w / 2;
+    var cy = gui_h / 2;
+    
+    draw_set_color(c_aqua);
+    draw_set_font(fnt_menu);
+    draw_text(cx, 80, "--- TUS AMIGOS ---");
+
+    // --- LÓGICA DE SCROLL SUAVE ---
+    scroll_y = lerp(scroll_y, scroll_target, 0.15);
+    
+    var start_y = 180 + scroll_y;
+    var card_h = 80;   
+    var card_w = 500;  
+    var gap = 15;      
+
+    if (array_length(global.lista_amigos) > 0) {
+        for (var i = 0; i < array_length(global.lista_amigos); i++) {
+            var yy = start_y + (i * (card_h + gap));
+            
+            // Solo dibujamos si está en pantalla
+            if (yy > 100 && yy < gui_h - 100) {
+                var amigo = global.lista_amigos[i];
+                var es_seleccionado = (i == friend_selected);
+                
+                // --- SEGURIDAD: Extraer datos verificando si existen ---
+                // Si 'nombre' no existe, pone "??". Si 'tag' no existe, pone "#0000"
+                var _nombre = variable_struct_exists(amigo, "nombre") ? amigo.nombre : "??";
+                var _tag    = variable_struct_exists(amigo, "tag")    ? amigo.tag    : "#0000";
+                
+                // --- FONDO DE LA TARJETA ---
+                draw_set_alpha(es_seleccionado ? 0.4 : 0.2);
+                draw_set_color(es_seleccionado ? c_yellow : c_black);
+                draw_roundrect_ext(cx - card_w/2, yy - card_h/2, cx + card_w/2, yy + card_h/2, 15, 15, false);
+                
+                if (es_seleccionado) {
+                    draw_set_alpha(0.8);
+                    draw_roundrect_ext(cx - card_w/2, yy - card_h/2, cx + card_w/2, yy + card_h/2, 15, 15, true);
+                }
+                
+                // --- TEXTOS ---
+                draw_set_alpha(1);
+                draw_set_valign(fa_middle);
+                
+                // Nombre
+                draw_set_halign(fa_left);
+                draw_set_color(c_white);
+                draw_set_font(fnt_menu);
+                draw_text(cx - card_w/2 + 30, yy, _nombre);
+                
+                // Tag sexy
+                draw_set_halign(fa_right);
+                draw_set_font(fnt_small);
+                draw_set_color(es_seleccionado ? c_white : c_aqua);
+                draw_text(cx + card_w/2 - 30, yy, "TAG: " + string(_tag));
+            }
+        }
+        
+        // Indicadores de flechas
+        draw_set_halign(fa_center);
+        draw_set_color(c_gray);
+        if (scroll_target < 0) draw_text(cx, 140, "▲");
+        if (array_length(global.lista_amigos) > 4) draw_text(cx, gui_h - 120, "▼");
+
+    } else {
+        draw_set_halign(fa_center);
+        draw_set_color(c_gray);
+        draw_text(cx, cy, "Tu lista esta vacia.\n¡Ve a 'ADD' para buscar amigos!");
+    }
+
+    draw_set_halign(fa_center);
+    draw_set_color(c_white);
+    draw_set_font(fnt_small);
+    //draw_text(cx, gui_h - 60, "[ESC] Volver   [FLECHAS] Navegar");
+	
+	// --- NUEVO: PANEL DE ACCIONES PARA EL AMIGO SELECCIONADO ---
+    if (array_length(global.lista_amigos) > 0) {
+        var amigo_act = global.lista_amigos[friend_selected];
+        var panel_y = gui_h - 180;
+        
+        // Dibujamos una pequeña barra de sugerencias
+        draw_set_color(c_black);
+        draw_set_alpha(0.6);
+        draw_rectangle(0, panel_y, gui_w, panel_y + 60, false);
+        draw_set_alpha(1);
+        
+        draw_set_font(fnt_small);
+        draw_set_halign(fa_center);
+        draw_set_color(c_yellow);
+        
+        // Texto dinámico según lo que puede hacer el usuario
+        var _txt_acciones = "[P] Ver Perfil   [FLECHAS] Navegar   [ESC] Volver";
+        draw_text(cx, panel_y + 30, _txt_acciones);
+        
+        // --- OPCIONAL: Dibujar Mini-Perfil si se pulsa una tecla (Pre-visualización) ---
+        if (keyboard_check(vk_control)) { // Si mantiene CTRL, mostramos el ID largo
+             draw_set_color(c_white);
+             draw_text(cx, panel_y - 20, "ID: " + string(amigo_act.id_largo));
+        }
+    }
+	
+}
+
+else if (friends_state == "anadir") {
+    draw_set_color(c_aqua);
+    draw_text(cx, cy - 220, "ESCRIBE EL ID DEL JUGADOR:");
+    
+    // Cuadro de búsqueda
+    draw_set_color(input_activo ? c_white : c_dkgray);
+    draw_rectangle(cx - 250, cy - 180, cx + 250, cy - 120, false);
+    
+    draw_set_color(c_black);
+    var cursor = (input_activo && (current_time mod 1000 < 500)) ? "|" : "";
+    draw_text(cx, cy - 150, friends_search_input + cursor);
+
+    // --- MANEJO INDEPENDIENTE DE ESTADOS ---
+    
+    // 1. CARGA
+    var es_buscando = (estado_busqueda == "buscando" || estado_busqueda == "buscando_nombre" || estado_busqueda == "buscando_perfil_final");
+    if (es_buscando) {
+        draw_set_color(c_yellow);
+        draw_text(cx, cy, "Buscando en la base de datos...");
+    }
+    
+    // 2. ÉXITO (Solo si NO está buscando ya)
+    if (estado_busqueda == "encontrado" && datos_busqueda_resultado != -1) {
+        draw_set_color(c_lime);
+        draw_text(cx, cy - 20, "JUGADOR ENCONTRADO!");
+        draw_set_color(c_white);
+        draw_text(cx, cy + 30, "Nombre: " + string(datos_busqueda_resultado.nombre));
+        draw_text(cx, cy + 60, "Copas: " + string(datos_busqueda_resultado.copas));
+        draw_set_color(c_yellow);
+        draw_text(cx, cy + 120, "Presiona [F] para enviar solicitud");
+    }
+    
+    // 3. ERROR (Prioridad absoluta si el estado es error)
+    if (estado_busqueda == "error") {
+        draw_set_color(c_red);
+        // Aquí mostramos el mensaje_texto que viene del callback para ser exactos
+        draw_text(cx, cy, string(mensaje_texto)); 
+    }
+    
+    draw_set_color(c_gray);
+    draw_text(cx, gui_h - 50, "ESC para volver");
+}
+	
+else if (friends_state == "perfil_amigo") {
+    var cx = gui_w / 2;
+    var cy = gui_h / 2;
+
+    // Fondo estético
+    draw_set_color(c_black); draw_set_alpha(0.85);
+    draw_rectangle(0, 0, gui_w, gui_h, false);
+    draw_set_alpha(1);
+
+    if (estado_busqueda == "buscando") {
+        draw_set_color(c_white);
+        draw_text(cx, cy, "Obteniendo datos de Rocket...");
+    } 
+    else if (estado_busqueda == "encontrado" && is_struct(datos_busqueda_resultado)) {
+        
+        // --- EXTRACCIÓN DE DATOS (Basado en tu scr_sincronizar_nube) ---
+        var _n = datos_busqueda_resultado.nombre;
+        var _t = datos_busqueda_resultado.friend_tag;
+        var _l = datos_busqueda_resultado.lvl;
+        var _c = datos_busqueda_resultado.copas;
+        var _k = datos_busqueda_resultado.kills;
+        var _w = datos_busqueda_resultado.wins;
+        var _f = datos_busqueda_resultado.flags; // Se llama 'flags' en tu struct
+
+        // --- DIBUJO DE CABECERA ---
+        draw_set_color(c_aqua);
+        draw_text_transformed(cx, cy - 200, "PERFIL DE JUGADOR", 1.2, 1.2, 0);
+        
+        draw_set_color(c_white);
+        draw_set_font(fnt_menu);
+        draw_text(cx, cy - 140, string(_n)); // Nombre grande
+        
+        draw_set_font(fnt_small);
+        draw_set_color(c_yellow);
+        draw_text(cx, cy - 100, "TAG: " + string(_t));
+
+        // --- DIBUJO DE STATS (TABLA) ---
+        draw_set_halign(fa_left);
+        var gx = cx - 150; // Guía izquierda para las stats
+        
+        draw_set_color(c_white);
+        draw_text(gx, cy - 20, "NIVEL: " + string(_l));
+        draw_text(gx, cy + 10, "COPAS: " + string(_c));
+        draw_text(gx, cy + 40, "KILLS: " + string(_k));
+        draw_text(gx, cy + 70, "VICTORIAS: " + string(_w));
+        draw_text(gx, cy + 100, "BANDERAS: " + string(_f));
+
+    }
+    
+    draw_set_color(c_gray);
+    draw_text(cx, gui_h - 60, "[ESC] VOLVER A LA LISTA");
+}
+}
+
+
 // --- DIBUJAR MENÚ DE KICK ---
 if (show_kick_menu) {
     draw_set_color(c_red);

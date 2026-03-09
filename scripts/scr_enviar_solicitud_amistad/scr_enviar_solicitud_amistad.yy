@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"scr_enviar_solicitud_amistad",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_enviar_solicitud_amistad",
+  "parent":{
+    "name":"TOOLS",
+    "path":"folders/Scripts/TOOLS.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

@@ -504,3 +504,4 @@ if (timer_intro == 0 && !global.mi_listo) {
         });
     }
 }
+	

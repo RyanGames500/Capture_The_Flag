@@ -12,7 +12,7 @@ identifyplayer - Identify player?, it will color player´s row(Leave it empty if
 /* Titles */
 var titles;
 titles[1]="Name: " //Name
-titles[2]="Score: " //Score
+titles[2]="Copas: " //Score
 titles[3]="Level: " //Extra information 1(example)
 titles[4]="Kills: " //Extra information 2(example)
 titles[5]="Country: " //Extra information 3(example)

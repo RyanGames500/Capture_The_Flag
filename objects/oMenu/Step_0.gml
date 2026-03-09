@@ -17,7 +17,13 @@ if (mouse_check_button_pressed(mb_left)) {
             gmda_setNewname((texto_input == "") ? "Jugador" : texto_input);
 			global.registrado=1;
 			menu_delay = 5;
-			
+	
+	// 2. GENERAR EL FRIEND TAG AQUÍ MISMO (Solo ocurre esta vez)
+    if (!variable_global_exists("miFriendTag") || global.miFriendTag == "" || global.miFriendTag == 0) {
+        global.miFriendTag = scr_generar_id_amigo();
+        show_debug_message(">>> TAG GENERADO EN REGISTRO: " + string(global.miFriendTag));
+    }
+	
             #region Guardado local
 			scr_save_to_local();
             #endregion
@@ -36,39 +42,101 @@ if (mouse_check_button_pressed(mb_left)) {
     }
 }
 
-// --- 1. LÓGICA DEL INPUT DE TEXTO ---
-if (input_activo) {
-    if (string_length(keyboard_string) <= max_caracteres) {
-        texto_input = keyboard_string;
-    } else {
-        keyboard_string = texto_input;
-    }
 
-    // Al presionar ENTER aquí, SOLO desactivamos el input
-    if (keyboard_check_pressed(vk_enter)) {
-        global.myName = (texto_input == "") ? "Jugador" : texto_input;
-		gmda_setNewname((texto_input == "") ? "Jugador" : texto_input);
+// --- CLIC PARA CONTROLAR EL FOCO DEL BUSCADOR ---
+if (mouse_check_button_pressed(mb_left)) {
+    if (menu_state == "friends_menu" && friends_state == "anadir") {
+        var cx = display_get_gui_width() / 2;
+        var cy = display_get_gui_height() / 2;
+        var mx = device_mouse_x_to_gui(0);
+        var my = device_mouse_y_to_gui(0);
 
-			global.registrado=1;
-			menu_delay = 5;
-
-		#region Guardado local
-		scr_save_to_local();
-		#endregion
-
-		#region --- PREPARAR GUARDADO EN LA NUBE ---
-		save_state = "prepare";
-		save_timer = room_speed; // 1 segundo de espera para no chocar con el input
-		#endregion
-		
-        input_activo = false; 
-        keyboard_string = ""; // Limpiamos para que no afecte el menú
-		mensaje_texto = "Nombre guardado!";
-		mensaje_alpha = 2; // Lo ponemos en 2 para que dure un poco más antes de desvanecerse
-        //exit; // IMPORTANTE: Salimos del evento para que este mismo ENTER no active el botón "PLAY"
+        // Si hace clic DENTRO: Encendemos el teclado
+        if (mx > cx - 250 && mx < cx + 250 && my > cy - 180 && my < cy - 120) {
+            var es_buscando = (estado_busqueda == "buscando" || estado_busqueda == "buscando_nombre" || estado_busqueda == "buscando_perfil_final");
+            
+            if (!es_buscando) {
+                input_activo = true;
+                keyboard_string = friends_search_input;
+                
+                if (estado_busqueda == "error" || estado_busqueda == "encontrado") {
+                    estado_busqueda = "idle";
+                }
+            }
+        } 
+        // Si hace clic FUERA: Solo apagamos el teclado (sin buscar)
+        else {
+            input_activo = false;
+        }
     }
 }
+// --- 1. LÓGICA DEL INPUT DE TEXTO ---
+if (input_activo) {
+// --- LÓGICA PARA PEGAR TEXTO (CTRL + V) ---
+    if (keyboard_check(vk_control) && keyboard_check_pressed(ord("V"))) {
+        if (clipboard_has_text()) {
+            var texto_pegado = clipboard_get_text();
+            // Limpiamos un poco el texto pegado (quitar saltos de línea por si acaso)
+            texto_pegado = string_replace_all(texto_pegado, "\n", "");
+            texto_pegado = string_replace_all(texto_pegado, "\r", "");
+            
+            // Añadimos el texto pegado al buffer actual
+            keyboard_string += texto_pegado;
+        }
+    }
 
+if (menu_state == "friends_menu" && friends_state == "anadir") {
+    // Solo actualizamos mientras no hayamos disparado la búsqueda
+    if (estado_busqueda == "idle" || estado_busqueda == "error") {
+        friends_search_input = keyboard_string;
+    }
+        
+    if (keyboard_check_pressed(vk_enter) && estado_busqueda == "idle") {
+        if (friends_search_input != "") {
+            // LIMPIEZA TOTAL DE ESPACIOS
+            var _val = string_trim(friends_search_input); 
+            
+            estado_busqueda = "buscando";
+            search_timer = 0; // REINICIAMOS EL TIMER AQUÍ MISMO
+            
+            // Bloqueamos el input para que no se manden más peticiones
+            input_activo = false; 
+            keyboard_string = "";
+            
+            ultimo_intento_busqueda = _val; 
+            
+            // PASO 1: ID Directo
+            request_datos_rival = ReadSimpleData("perfiles", _val);
+            
+            show_debug_message(">>> BUSCANDO EN NUBE: " + _val);
+        }
+    }
+		
+}
+    // Si NO estamos en amigos, es el input normal del nombre (registro o perfil)
+    else {
+        if (string_length(keyboard_string) <= max_caracteres) {
+            texto_input = keyboard_string;
+        } else {
+            keyboard_string = texto_input;
+        }
+
+        if (keyboard_check_pressed(vk_enter)) {
+            // Lógica original de guardar nombre
+            global.myName = (texto_input == "") ? "Jugador" : texto_input;
+            gmda_setNewname(global.myName);
+            global.registrado = 1;
+            menu_delay = 5;
+            scr_save_to_local();
+            save_state = "prepare";
+            save_timer = room_speed;
+            input_activo = false; 
+            keyboard_string = "";
+            mensaje_texto = "Nombre guardado!";
+            mensaje_alpha = 2;
+        }
+    }
+}
 // --- 2. LÓGICA DEL MENÚ (Solo si no estás escribiendo) ---
 if (!input_activo) {
 if (menu_delay > 0) {
@@ -109,24 +177,59 @@ var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
 				    ];
                 break;
 
-				case 2:
+
+				case 2: // FRIENDS
+				    menu_state = "friends_menu";
+				    friends_index = 0;
+				    friends_state = "main";
+					exit;
+				break;
+
+				case 3:
 				menu_state = "achievements";
 				break;
 
-				case 3: 
+				case 4: 
 				    menu_state = "profile";
 					show_debug_message(">>> ENTRANDO AL PERFIL");
 				break;
                 
-                case 4: 
+                case 5: 
 					show_message("options...");
                 break;
 				
-                case 5: 
+                case 6: 
                     game_end();
                 break;
             }
         }
+		
+		
+
+// Entrar por tecla
+    if (keyboard_check_pressed(ord("M"))) {
+        menu_state = "mailbox";
+    }
+    
+    // Entrar por clic en el sobre (usando tus variables mail_x/y del Create)
+    var mx = device_mouse_x_to_gui(0);
+    var my = device_mouse_y_to_gui(0);
+    if (mouse_check_button_pressed(mb_left)) {
+        if (mx > mail_x - 40 && mx < mail_x + 40 && my > mail_y - 40 && my < mail_y + 40) {
+            menu_state = "mailbox";
+        }
+    }
+	
+
+	
+}
+
+// Salir del buzón
+if (menu_state == "mailbox") {
+    if (keyboard_check_pressed(vk_escape)) {
+        menu_state = "main";
+    }
+
     }
     else if (menu_state == "private") {
     if (global.myName != "" && global.myName != "NAME") {
@@ -274,7 +377,42 @@ else if (menu_state == "play_selection") {
         }
         if (keyboard_check_pressed(vk_escape)) menu_state = "main";
     }
+else if (menu_state == "friends_menu") {
+    // --- SALIR HACIA ATRÁS ---
+    if (keyboard_check_pressed(vk_escape)) {
+        if (friends_state == "main") {
+            menu_state = "main";
+        } else {
+            // Si estábamos en añadir o lista, volvemos al submenú de amigos
+            friends_state = "main";
+            input_activo = false;
+            keyboard_string = "";
+        }
+        // Usamos exit para que no procese nada más este frame y no se raye
+        exit; 
+    }
 
+    var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+    
+    if (friends_state == "main") {
+        friends_index = clamp(friends_index + move, 0, array_length(friends_options) - 1);
+        
+        if (keyboard_check_pressed(vk_enter)) {
+            switch(friends_index) {
+                case 0: friends_state = "lista"; break;
+                case 1: 
+                    friends_state = "anadir";
+                    input_activo = true;
+                    keyboard_string = ""; 
+                    friends_search_input = "";
+                    estado_busqueda = "idle";
+                break;
+                case 2: menu_state = "main"; break;
+            }
+        }
+    }
+    // Nota: La lógica de "anadir" ya la movimos arriba al bloque global de input_activo
+}
 }
 }
 if (menu_state == "connecting") {
@@ -391,6 +529,19 @@ if (menu_state == "profile") {
     if (keyboard_check_pressed(vk_escape) && !input_activo) {
         menu_state = "main";
     }
+	
+if (keyboard_check_pressed(ord("B")) && !input_activo) {
+	var PLAYER_ID = gmda_getPlayerid();
+        var _id_buscado = get_string("Introduce el ID ÚNICO del jugador:", "");
+        
+        if (_id_buscado != "" && _id_buscado != string(PLAYER_ID)) {
+            estado_busqueda = "buscando";
+            // PASO DIRECTO: Leemos el perfil usando el ID como nombre de documento
+            request_datos_rival = ReadSimpleData("perfiles", string(_id_buscado));
+            
+            show_debug_message(">>> BUSCADOR: Pidiendo perfil del ID: " + string(_id_buscado));
+        }
+    }
 }
 //Guardado en la nube
 // --- PROCESADOR DE GUARDADO INVISIBLE ---
@@ -406,8 +557,9 @@ if (save_state == "sending") {
     if (!variable_instance_exists(id, "nube_guardada") || nube_guardada == false) {
         nube_guardada = true; // Marcamos que ya empezamos
         
-        
-        
+		//GUARDAR PERFIL EN LA NUBE 
+		scr_sincronizar_nube();
+		
         alarm[1] = 60;
         show_debug_message(">>> Guardando en la nube... Alarma 1 iniciada.");
         
@@ -421,6 +573,36 @@ if (mensaje_alpha > 0) {
     mensaje_alpha -= 0.05; // Velocidad a la que desaparece
 }
 
+// --- TIMEOUT AGRESIVO (2 SEGUNDOS) ---
+if (estado_busqueda == "buscando" || estado_busqueda == "buscando_nombre" || estado_busqueda == "buscando_perfil_final") {
+    
+    search_timer++;
+    
+    // Si pasan 120 frames (aprox 2 seg a 60fps) y no hay respuesta, cortamos
+    if (search_timer > 120) { 
+        if (estado_busqueda == "buscando") {
+            // Reintento rápido por nombre
+            show_debug_message(">>> ID TARDA MUCHO, SALTANDO A NOMBRE...");
+            request_datos_rival = ReadSimpleData("perfiles", ultimo_intento_busqueda);
+            estado_busqueda = "buscando_nombre";
+            search_timer = 0; // Reset para otros 2 segundos
+        } else {
+            // Fallo definitivo
+            estado_busqueda = "error";
+            mensaje_texto = "Usuario no encontrado!";
+            mensaje_alpha = 3;
+            search_timer = 0; 
+            show_debug_message(">>> CORTADO POR LENTITUD (Timeout Agresivo)");
+        }
+    }
+} else {
+    search_timer = 0; 
+}
+
+// --- 3. RESETEAR ESTADO AL TERMINAR EL MENSAJE ---
+if (estado_busqueda == "error" && mensaje_alpha <= 0) {
+    estado_busqueda = "idle";
+}
 
 if (menu_state == "achievements") {
     if (keyboard_check_pressed(vk_escape)) {
@@ -432,4 +614,95 @@ if (menu_state == "achievements") {
     
     // Interpolación suave para que no sea un movimiento brusco
     scroll_y = lerp(scroll_y, scroll_target, 0.15);
+}
+
+
+
+if (estado_busqueda == "encontrado" && keyboard_check_pressed(ord("F"))) {
+    if (is_struct(datos_busqueda_resultado)) {
+        var id_rival = string(ultimo_intento_busqueda); 
+        var mi_id = string(gmda_getPlayerid());
+        
+        // --- MODO TEST: Permitimos auto-envío ---
+        // Comentamos el IF original para que nos deje pasar
+        // if (id_rival != mi_id) { 
+            
+            scr_enviar_solicitud_amistad(id_rival); // Recuerda que id_rival aquí es el Tag que escribiste
+            
+            estado_busqueda = "idle";
+            friends_search_input = "";
+            datos_busqueda_resultado = -1; 
+            
+        /* } else {
+            mensaje_texto = "Ese eres tú, genio! jjj";
+            mensaje_alpha = 3;
+        } */
+    }
+}
+
+
+
+	if (menu_state == "mailbox") {
+    if (hay_solicitud_pendiente) {
+        // ACEPTAR
+        if (keyboard_check_pressed(ord("Y"))) {
+            scr_aceptar_solicitud();
+            mensaje_texto = "Ahora eres amigo de " + string(global.nombre_ultimo_amigo) + "!";
+            mensaje_alpha = 3;
+        }
+        
+        // RECHAZAR
+        if (keyboard_check_pressed(ord("N"))) {
+            DeleteSimpleData("solicitudes", string(global.miFriendTag));
+            hay_solicitud_pendiente = false;
+            show_debug_message(">>> Solicitud rechazada.");
+        }
+    }
+    
+    if (keyboard_check_pressed(vk_escape)) {
+        menu_state = "main";
+    }
+}
+
+if (friends_state == "lista") {
+    var num_amigos = array_length(global.lista_amigos);
+    
+    if (num_amigos > 0) {
+        var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+        
+        if (move != 0) {
+            friend_selected = clamp(friend_selected + move, 0, num_amigos - 1);
+            
+            // Si el seleccionado se sale de la vista, movemos el target del scroll
+            // Ajusta el -95 según necesites para que siempre se vea el seleccionado
+            if (friend_selected > 3) {
+                scroll_target = -(friend_selected - 3) * 95; 
+            } else {
+                scroll_target = 0;
+            }
+        }
+
+
+        // --- ACCIÓN: VER PERFIL (Consulta a Rocket/Nube) ---
+if (keyboard_check_pressed(ord("P"))) {
+    var _tag_objetivo = global.lista_amigos[friend_selected].tag;
+    
+    // Iniciamos la carga de datos del amigo
+    estado_busqueda = "buscando";
+    request_datos_rival = ReadSimpleData("perfiles", _tag_objetivo);
+    
+    // ESTADO NUEVO para que no te mande a "añadir"
+    friends_state = "perfil_amigo"; 
+    input_activo = false;
+}
+    }
+}
+
+if (friends_state == "perfil_amigo") {
+    if (keyboard_check_pressed(vk_escape)) {
+        friends_state = "lista";
+        estado_busqueda = "idle";
+    }
+    
+    // Aquí puedes añadir la lógica de invitar [I] si tienes sistema de mensajes
 }

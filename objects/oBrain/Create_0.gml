@@ -182,8 +182,12 @@ global.pj_selected = 0;
 global.mi_listo = false;
 global.rival_listo = false;
 global.pj_rival = -1;
-
+global.request_registro=0;
 //Iniciar la conexion
 ConnectToServer();
 
 //room_goto_next();
+
+alarm[4] = room_speed * 3;
+
+is_closing=false;

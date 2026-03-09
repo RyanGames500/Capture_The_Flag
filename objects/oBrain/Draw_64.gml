@@ -1,3 +1,43 @@
+var player_name=global.myName;
+var player_ID=gmda_getPlayerid();
+var status=gmda_status();
+
+draw_set_font(fnt_menu)
+//draw_text(100,300,"ID: "+string(is_closing));
+//draw_text(100,300+30,"Name: "+player_name);
+//draw_text(100,300+60,"Status: "+string(status));
+
+// Obtener los datos globales de puntaje
+var globalscores = gmda_getTabledata(gmda_globaltable, 1);
+
+// Dibujar los encabezados
+//draw_text(480, 220, "Name:");
+//draw_text(760, 220, "Score:");
+
+// Si existen puntajes globales
+if (globalscores > 0) {
+    var tablesize = ds_map_size(globalscores);
+    var rowinfo;
+    
+    // Iterar sobre los puntajes y nombres
+    for (var i = 1; i <= tablesize; i++) {
+        rowinfo = ds_map_find_value(globalscores, string(i));
+        var name = ds_map_find_value(rowinfo, "name");
+        var xscore = ds_map_find_value(rowinfo, "score");
+        
+        // Dibujar cada fila de la tabla con nombres y puntajes
+        //draw_text(480, 220 + 32 * i, string(i) + ". " + string(name));
+        //draw_text(780, 220 + 32 * i, string(xscore));
+    }
+}
+
+if is_closing=true and room == rm_menu
+{
+gmda_draw_table(25,330,globalscores,player_name)//y=590
+
+
+}
+
 
 if (global.game_over == false) 
 {
@@ -540,4 +580,5 @@ if (!intro_disparada && room != rm_menu && global.ONLINE==true) {
         if (isAzul) countAzul++; else countRojo++;
     }
 }
+
 

@@ -1,6 +1,6 @@
 
 // Menú principal más limpio
-menu_options = ["PLAY","OFFLINE","ACHIEVEMENTS", "PROFILE", "OPTIONS", "EXIT"];
+menu_options = ["PLAY","OFFLINE","FRIENDS","ACHIEVEMENTS", "PROFILE", "OPTIONS", "EXIT"];
 index = 0;
 
 // Nueva lista para cuando elijas PLAY
@@ -76,4 +76,44 @@ scroll_y = 0;
 scroll_target = 0;
 scroll_max = (10 * 90) - 450; 
 ach_surf = -1;
+//timer para copiar ids
 copiado_timer = 0;
+
+//Sistema de buscar y agregar amigos
+busqueda_nombre_tecleado = ""; 
+request_buscar_id = -1;
+request_datos_rival = -1;
+datos_busqueda_resultado = -1; // Aquí guardaremos lo que encontremos
+estado_busqueda = "idle"; // "idle", "buscando", "encontrado", "error"
+
+
+// --- NUEVO SISTEMA DE AMIGOS ---
+friends_options = ["FRIENDS", "ADD", "BACK"];
+friends_index = 0;
+
+// Variables para "Añadir Amigos"
+friends_search_input = ""; 
+request_sugeridos = -1;
+lista_sugeridos = []; // Aquí guardaremos los perfiles aleatorios
+amigos_agregados = []; // Aquí irán tus amigos reales (puedes cargarlos de local después)
+
+
+// Estado del menú de amigos
+friends_state = "main"; // "main", "lista", "anadir"
+search_timer = 0
+
+
+// --- VARIABLES INICIALES DEL BUZÓN ---
+hay_solicitud_pendiente = false;
+datos_solicitud_recibida = -1;
+request_solicitud = -1;
+peticion_recibida = false;
+
+// --- POSICIÓN DEL ICONO DEL BUZÓN ---
+// Estas variables ahora existen para TODO el objeto
+mail_x = (display_get_gui_width() / 2) + 220; 
+mail_y = (display_get_gui_height() / 2) - 230;
+
+scroll_y = 0;
+scroll_target = 0;
+friend_selected = 0; // Para saber a quién tienes resaltado

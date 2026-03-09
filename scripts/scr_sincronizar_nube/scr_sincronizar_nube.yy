@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"scr_sincronizar_nube",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_sincronizar_nube",
+  "parent":{
+    "name":"Alertas",
+    "path":"folders/Scripts/Alertas.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

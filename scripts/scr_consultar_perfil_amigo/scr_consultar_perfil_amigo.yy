@@ -1,12 +1,12 @@
 {
   "$GMScript":"v1",
-  "%Name":"get_nearest_node",
+  "%Name":"scr_consultar_perfil_amigo",
   "isCompatibility":false,
   "isDnD":false,
-  "name":"get_nearest_node",
+  "name":"scr_consultar_perfil_amigo",
   "parent":{
-    "name":"Alertas",
-    "path":"folders/Scripts/Alertas.yy",
+    "name":"TOOLS",
+    "path":"folders/Scripts/TOOLS.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",

@@ -1,6 +1,6 @@
 // Create
 gmda_setController("2293_6zm1L7oE22LEmSTvnk5Jcq99czZ9TBz88bRzJ5","2293_vOFiDZbwM6VxcxscewPaRxxzdQNL1XED33zBQA"); // Game Id & Game Key
-gmda_setLeaderboard("P165jRqN3uNR2O8zAsN"); //Table key
+gmda_setLeaderboard("3c1pq9YLwsD88StilkXRKRD"); //Table key
 
 // --- DEFINICIÓN DE LOGROS (GAMDATO) ---
 
@@ -49,6 +49,9 @@ global.copas = 0; // Tu moneda de progresión competitiva
 global.registrado = 0;
 global.myName = "Cargando...";          // Aquí se guardará el nombre final
 global.save_version=1;
+global.miFriendTag="";
+global.lista_amigos = []; // Creamos el array vacío
+global.nombre_ultimo_amigo=""; 
 
 #region Carga local
 scr_load_from_local();

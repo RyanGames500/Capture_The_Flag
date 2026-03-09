@@ -41,6 +41,43 @@ case gmd_resp_datareceived: /* DATA RECEIVED   */
 			if (ds_map_exists(gmd_load, "copas")) { 
 			    global.copas = real(ds_map_find_value(gmd_load, "copas")); 
 			}
+				
+			if (ds_map_exists(gmd_load, "id_friend")) {
+			    global.miFriendTag = string(ds_map_find_value(gmd_load, "id_friend")); 
+			}
+			
+if (ds_map_exists(gmd_load, "amigos_data")) {
+    var _amigos_sucio = string(ds_map_find_value(gmd_load, "amigos_data"));
+    
+    // LIMPIEZA MANUAL: Quitamos posibles comillas extra o barras que mete el servidor
+    var _amigos_limpio = _amigos_sucio;
+    
+    // Si el texto viene envuelto en comillas extra al principio y al final, las quitamos
+    if (string_char_at(_amigos_limpio, 1) == "\"") {
+        _amigos_limpio = string_copy(_amigos_limpio, 2, string_length(_amigos_limpio) - 2);
+    }
+    
+    // Quitamos las barras inclinadas que suelen romper el JSON (\")
+    _amigos_limpio = string_replace_all(_amigos_limpio, "\\\"", "\"");
+
+    show_debug_message(">>> [NUBE] Intentando parsear esto: " + _amigos_limpio);
+
+    try {
+        if (_amigos_limpio != "" && _amigos_limpio != "undefined") {
+            // --- AQUÍ ESTÁ EL TRUCO ---
+            // Como el debug muestra que el servidor mandó Base64, lo decodificamos:
+            var _json_real = base64_decode(_amigos_limpio); 
+            
+            show_debug_message(">>> [NUBE] Texto decodificado: " + _json_real);
+            
+            global.lista_amigos = json_parse(_json_real);
+            show_debug_message(">>> [NUBE] ¡Amigos cargados correctamente!");
+        }
+    } catch(_e) {
+        show_debug_message(">>> [ERROR] Falló el parseo. Error: " + string(_e));
+	}
+}
+			
 			//Guardar local
 			scr_save_to_local();
         }

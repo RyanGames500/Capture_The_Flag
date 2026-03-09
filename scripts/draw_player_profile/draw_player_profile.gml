@@ -17,7 +17,8 @@ function draw_player_profile(px, py) {
     draw_set_halign(fa_center);
     draw_set_font(fnt_small);
     
-    var player_id = string(gmda_getPlayerid()); 
+    //var player_id = string(gmda_getPlayerid()); 
+	var player_id = string(global.miFriendTag); 
     var id_y = cy - 230;
     
     var mouse_gui_x = device_mouse_x_to_gui(0);
