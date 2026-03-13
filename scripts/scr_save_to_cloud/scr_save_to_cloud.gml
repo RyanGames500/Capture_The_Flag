@@ -26,9 +26,16 @@ function scr_save_to_cloud() {
 		ds_map_add(gmd_savemap, "id_friend", string(global.miFriendTag));
 		ds_map_add(gmd_savemap, "id_friend", string(global.miFriendTag));
 
+		//// --- LISTA DE AMIGOS ---
+        //var _amigos_json = json_stringify(global.lista_amigos);
+        //ds_map_add(gmd_savemap, "amigos_data", _amigos_json);
+
 		// --- LISTA DE AMIGOS ---
-        var _amigos_json = json_stringify(global.lista_amigos);
-        ds_map_add(gmd_savemap, "amigos_data", _amigos_json);
+		var _json_string = json_stringify(global.lista_amigos);
+		// Convertimos el JSON a Base64 para que no se rompa en el camino
+		var _amigos_base64 = base64_encode(_json_string); 
+
+		ds_map_add(gmd_savemap, "amigos_data", _amigos_base64);
 
         // Enviar al servidor
         gmda_sendgamesave(gmd_savemap); 

@@ -30,8 +30,8 @@
   "resourceVersion":"2.0",
   "solid":false,
   "spriteId":{
-    "name":"sRed",
-    "path":"sprites/sRed/sRed.yy",
+    "name":"spr_base_roja",
+    "path":"sprites/spr_base_roja/spr_base_roja.yy",
   },
   "spriteMaskId":null,
   "visible":true,

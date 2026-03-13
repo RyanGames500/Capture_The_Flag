@@ -262,6 +262,8 @@
     {"id":{"name":"spr_arrow_hud","path":"sprites/spr_arrow_hud/spr_arrow_hud.yy",},},
     {"id":{"name":"spr_barril_explode","path":"sprites/spr_barril_explode/spr_barril_explode.yy",},},
     {"id":{"name":"spr_barril2_explode","path":"sprites/spr_barril2_explode/spr_barril2_explode.yy",},},
+    {"id":{"name":"spr_base_azul","path":"sprites/spr_base_azul/spr_base_azul.yy",},},
+    {"id":{"name":"spr_base_roja","path":"sprites/spr_base_roja/spr_base_roja.yy",},},
     {"id":{"name":"spr_bazooka","path":"sprites/spr_bazooka/spr_bazooka.yy",},},
     {"id":{"name":"spr_button","path":"sprites/spr_button/spr_button.yy",},},
     {"id":{"name":"spr_button2","path":"sprites/spr_button2/spr_button2.yy",},},

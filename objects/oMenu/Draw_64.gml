@@ -11,6 +11,9 @@ draw_set_font(fnt_menu);
 draw_set_halign(fa_center);
 draw_set_valign(fa_middle);
 
+draw_text(200,200,string(estado_busqueda))
+draw_text(200,300,string(friends_state))
+
 if (global.registrado == 0) {
     if (input_activo) global.myName = texto_input;
 
@@ -544,12 +547,72 @@ else if (friends_state == "lista") {
                 draw_set_color(c_white);
                 draw_set_font(fnt_menu);
                 draw_text(cx - card_w/2 + 30, yy, _nombre);
-                
+
+				// 1. INDICADOR DE ESTADO (Puntito Online/Offline)
+// Asumimos que Rocket te devuelve 'online' (true/false)
+// --- DENTRO DEL for DE LA LISTA DE AMIGOS ---
+var _amigo = global.lista_amigos[i];
+var _tag_amigo = _amigo.tag;
+
+// Usamos tu función gmda_status pasando el TAG del amigo
+// (Asumo que gmda_status devuelve 1 o true si está online)
+var _esta_online = gmda_status(_tag_amigo); 
+
+// Definimos el color según el resultado de tu función
+var _col_estado = (_esta_online) ? c_lime : c_gray;
+
+// Dibujamos el punto con el color real
+draw_set_color(_col_estado);
+draw_circle(cx - card_w/2 + 20, yy, 6, false);
+
+// 2. NIVEL (Lo ponemos pequeño al lado del nombre)
+var _lvl = variable_struct_exists(amigo, "lvl") ? amigo.lvl : 1;
+draw_set_halign(fa_left);
+draw_set_color(c_yellow);
+draw_set_font(fnt_small);
+draw_text(cx - card_w/2 + 70 + string_width(_nombre) + 10, yy, "Lv." + string(_lvl));
+
+// 3. BOTÓN ELIMINAR (Una X roja al final de la tarjeta)
+var _bx = cx + card_w/2 - 25; // Posición X del botón
+draw_set_color(c_red);
+draw_set_alpha(es_seleccionado ? 0.8 : 0.3); // Solo brilla si está seleccionado
+draw_circle(_bx, yy, 12, false); 
+draw_set_color(c_white);
+draw_set_halign(fa_center);
+draw_text(_bx, yy, "X");
+draw_set_alpha(1);
+
+
+// --- DENTRO DEL EVENTO DRAW GUI ---
+
+// 1. PRIMERO definimos mx y my (esto evita el error)
+var mx = device_mouse_x_to_gui(0);
+var my = device_mouse_y_to_gui(0);
+
+if (_esta_online) {
+    var _dx = cx + card_w/2 - 110; 
+    
+    draw_set_color(c_red);
+    draw_circle(_dx, yy, 12, false);
+    draw_set_color(c_white);
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle); // Para que el "!" quede centrado en el círculo
+    draw_text(_dx, yy, "!"); 
+    
+    // Tooltip si pasas el mouse
+    // Ahora mx y my ya existen, por lo que no dará error
+    if (point_distance(mx, my, _dx, yy) < 15) {
+        draw_set_color(c_white);
+        draw_set_halign(fa_left); // Reset para el texto del tooltip
+        draw_text(mx + 10, my - 20, "RETAR A DUELO");
+    }
+}
+			
                 // Tag sexy
                 draw_set_halign(fa_right);
                 draw_set_font(fnt_small);
                 draw_set_color(es_seleccionado ? c_white : c_aqua);
-                draw_text(cx + card_w/2 - 30, yy, "TAG: " + string(_tag));
+                draw_text(cx + card_w/2 - 40, yy, "TAG: " + string(_tag));
             }
         }
         
@@ -558,6 +621,7 @@ else if (friends_state == "lista") {
         draw_set_color(c_gray);
         if (scroll_target < 0) draw_text(cx, 140, "▲");
         if (array_length(global.lista_amigos) > 4) draw_text(cx, gui_h - 120, "▼");
+		
 
     } else {
         draw_set_halign(fa_center);
@@ -586,7 +650,7 @@ else if (friends_state == "lista") {
         draw_set_color(c_yellow);
         
         // Texto dinámico según lo que puede hacer el usuario
-        var _txt_acciones = "[P] Ver Perfil   [FLECHAS] Navegar   [ESC] Volver";
+        var _txt_acciones = "[P] Ver Perfil       [FLECHAS] Navegar      [X] Eliminar Amigo      [ESC] Volver";
         draw_text(cx, panel_y + 30, _txt_acciones);
         
         // --- OPCIONAL: Dibujar Mini-Perfil si se pulsa una tecla (Pre-visualización) ---
@@ -597,7 +661,6 @@ else if (friends_state == "lista") {
     }
 	
 }
-
 else if (friends_state == "anadir") {
     draw_set_color(c_aqua);
     draw_text(cx, cy - 220, "ESCRIBE EL ID DEL JUGADOR:");
@@ -628,6 +691,7 @@ else if (friends_state == "anadir") {
         draw_text(cx, cy + 60, "Copas: " + string(datos_busqueda_resultado.copas));
         draw_set_color(c_yellow);
         draw_text(cx, cy + 120, "Presiona [F] para enviar solicitud");
+		
     }
     
     // 3. ERROR (Prioridad absoluta si el estado es error)
@@ -639,9 +703,9 @@ else if (friends_state == "anadir") {
     
     draw_set_color(c_gray);
     draw_text(cx, gui_h - 50, "ESC para volver");
-}
-	
-else if (friends_state == "perfil_amigo") {
+}	
+else if (friends_state == "perfil_amigo") 
+{
     var cx = gui_w / 2;
     var cy = gui_h / 2;
 
@@ -650,9 +714,10 @@ else if (friends_state == "perfil_amigo") {
     draw_rectangle(0, 0, gui_w, gui_h, false);
     draw_set_alpha(1);
 
+
     if (estado_busqueda == "buscando") {
         draw_set_color(c_white);
-        draw_text(cx, cy, "Obteniendo datos de Rocket...");
+        draw_text(cx, cy, "Obteniendo datos...");
     } 
     else if (estado_busqueda == "encontrado" && is_struct(datos_busqueda_resultado)) {
         
@@ -689,7 +754,8 @@ else if (friends_state == "perfil_amigo") {
         draw_text(gx, cy + 100, "BANDERAS: " + string(_f));
 
     }
-    
+
+	
     draw_set_color(c_gray);
     draw_text(cx, gui_h - 60, "[ESC] VOLVER A LA LISTA");
 }

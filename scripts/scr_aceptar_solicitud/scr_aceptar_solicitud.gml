@@ -33,12 +33,14 @@ function scr_aceptar_solicitud() {
             SetSimpleData("amigos", string(global.miFriendTag), _data_amigos);
             
             // También le dejamos la confirmación al otro para que sea mutuo
-            var _confirmacion = {
-                quien_acepto_nombre: global.myName,
-                quien_acepto_tag: global.miFriendTag,
-                quien_acepto_id: string(gmda_getPlayerid())
-            };
-            SetSimpleData("confirmaciones", string(tag_amigo), _confirmacion);
+			var _confirmacion = {
+			    quien_acepto_nombre: global.myName,
+			    quien_acepto_tag: global.miFriendTag,
+			    quien_acepto_id: string(gmda_getPlayerid()),
+			    es_confirmacion: true // <-- Agrégale esto para mayor seguridad
+			};
+
+			SetSimpleData("confirmaciones", string(tag_amigo), _confirmacion);
 
             // Guardados extra
             scr_save_to_local();
@@ -49,7 +51,7 @@ function scr_aceptar_solicitud() {
         hay_solicitud_pendiente = false;
         datos_solicitud_recibida = -1;
         
-        mensaje_texto = "¡Ahora eres amigo de " + nombre_amigo + "!";
+        mensaje_texto = "Ahora eres amigo de " + nombre_amigo + "!";
         mensaje_alpha = 3;
         
         show_debug_message(">>> ROCKET: Colección 'amigos' actualizada para: " + string(global.miFriendTag));

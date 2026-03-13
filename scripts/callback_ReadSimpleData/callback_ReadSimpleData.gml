@@ -44,6 +44,60 @@ function callback_ReadSimpleData(readId, data) {
         oMenu.mensaje_alpha = 2;
         oMenu.search_timer = 0;
     }
+//(Caso D) ---
+else if (variable_struct_exists(data, "es_duelo")) {
+    var _id_retador = data.retador_id;
+
+    if (show_question(data.retador_nombre + " te reta. ¿Aceptar?")) {
+        
+        // 1. AVISO DIRECTO: Le decimos al retador que entre a la sala YA
+        SendEventToClient(_id_retador, "ENTRA_AL_DUELO", {
+            sala_destino: "duelo_" + string(_id_retador)
+        });
+
+        // 2. Nos movemos nosotros también
+        DeleteSimpleData("duelo_pendiente", global.miFriendTag);
+        ChangeRoom("duelo_" + string(_id_retador));
+        // El salto al room lo hará tu callback_ChangeRoom automáticamente
+    } else {
+        DeleteSimpleData("duelo_pendiente", global.miFriendTag);
+    }
+}
+// CASO E: ALGUIEN NOS CONFIRMÓ LA AMISTAD
+if (variable_struct_exists(data, "quien_acepto_tag") || variable_struct_exists(data, "es_confirmacion")) {
+    
+    var _tag_nuevo = data.quien_acepto_tag;
+    var _nom_nuevo = data.quien_acepto_nombre;
+    
+    // 1. Evitar duplicados (IMPORTANTE)
+    var _ya_lo_tengo = false;
+    for (var i = 0; i < array_length(global.lista_amigos); i++) {
+        if (global.lista_amigos[i].tag == _tag_nuevo) {
+            _ya_lo_tengo = true;
+            break;
+        }
+    }
+
+    if (!_ya_lo_tengo) {
+        var _nuevo = {
+            nombre: _nom_nuevo,
+            tag: _tag_nuevo,
+            id_largo: data.quien_acepto_id
+        };
+        array_push(global.lista_amigos, _nuevo);
+        
+        // Guardar cambios
+        scr_save_to_local();
+        SetSimpleData("amigos", string(global.miFriendTag), { lista: global.lista_amigos });
+        
+        mensaje_texto = "¡" + _nom_nuevo + " aceptó tu solicitud!";
+        mensaje_alpha = 3;
+        show_debug_message(">>> AMISTAD: ¡Confirmación procesada con éxito!");
+    }
+
+    // 2. BORRAMOS EL AVISO para que el radar deje de leerlo
+    DeleteSimpleData("confirmaciones", global.miFriendTag);
+}
 }
 
 

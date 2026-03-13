@@ -434,103 +434,127 @@ if (global.pausa && !global.game_over) {
     }
 }
 
-// --- 4. PANTALLA DE RESULTADOS ---
+// --- 4. PANTALLA DE RESULTADOS (ESTILO RETRO MEJORADO) ---
 if (global.game_over) 
 {
     var mid_x = display_get_gui_width() / 2;
     var mid_y = display_get_gui_height() / 2;
     var pulse = 1 + sin(get_timer() / 200000) * 0.05;
 
-    draw_set_alpha(victory_alpha); 
+    // Fondo oscuro detrás de todo
+    draw_set_alpha(victory_alpha * 0.8); 
     draw_set_color(c_black);
     draw_rectangle(0, 0, display_get_gui_width(), display_get_gui_height(), false);
 
+    // Medidas del panel
     var p_w = 600; 
-    var p_h = 520; // Aumentamos un poquito el alto del fondo para que quepa todo
+    var p_h = 520; 
     
+    // Sombra del panel
+    draw_set_alpha(victory_alpha);
     draw_set_color(c_black);
-    draw_roundrect_ext(mid_x - p_w/2 + 8, mid_y - p_h/2 + 8, mid_x + p_w/2 + 8, mid_y + p_h/2 + 8, 30, 30, false);
-    draw_set_color(make_color_rgb(40, 40, 45));
+    draw_roundrect_ext(mid_x - p_w/2 + 10, mid_y - p_h/2 + 10, mid_x + p_w/2 + 10, mid_y + p_h/2 + 10, 30, 30, false);
+    
+    // Fondo del panel principal (Gris oscuro azulado de la imagen)
+    draw_set_color(make_color_rgb(26, 26, 32));
     draw_roundrect_ext(mid_x - p_w/2, mid_y - p_h/2, mid_x + p_w/2, mid_y + p_h/2, 30, 30, false);
     
-    var _col_ganador = (global.winner_team == 1) ? c_red : c_aqua;
+    // Borde dinámico según el equipo ganador
+    var _col_ganador = (global.winner_team == 1) ? make_color_rgb(204, 0, 0) : c_aqua;
     draw_set_color(_col_ganador);
     draw_roundrect_ext(mid_x - p_w/2, mid_y - p_h/2, mid_x + p_w/2, mid_y + p_h/2, 30, 30, true);
 
-    // Partículas
-    for(var p=0; p<10; p++) {
-        var angle = random(360);
-        var dist = (get_timer()/1000 % 500) * (p/10);
+    // Partículas mejoradas (Efecto de chispas)
+    for(var p=0; p<8; p++) {
+        var angle = (get_timer()/5000 + (p * 45)) % 360;
+        var dist = 200 + (sin(get_timer()/100000) * 20);
         var px = mid_x + lengthdir_x(dist, angle);
         var py = mid_y + lengthdir_y(dist, angle);
-        draw_circle_color(px, py, 2, _col_ganador, c_white, false);
+        draw_circle_color(px, py, 3 * victory_alpha, _col_ganador, c_white, false);
     }
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
+    
+    // --- TÍTULO ---
     var _ganador_txt = (global.winner_team == 1) ? "VICTORIA ROJA!" : "VICTORIA AZUL!";
     draw_set_color(_col_ganador);
-    draw_text_transformed(mid_x, mid_y - 160, _ganador_txt, 3 * pulse, 3 * pulse, 0);
+    draw_text_transformed(mid_x, mid_y - 190, _ganador_txt, 2.5 * pulse, 2.5 * pulse, 0);
 
-    // --- BANDERAS ---
-    var spacing = 100;
+    // --- BANDERAS (Distribución de la imagen) ---
+    var spacing = 90;
     var start_x = mid_x - spacing; 
     for (var i = 1; i <= 3; i++) {
         var bx = start_x + ((i-1) * spacing);
-        if (global.puntos_azul >= i) draw_sprite_ext(spr_flag_blue, 0, bx, mid_y - 60, 1.3 * pulse, 1.3 * pulse, 0, c_white, victory_alpha);
-        else draw_sprite_ext(spr_flagvacia, 0, bx, mid_y - 60, 1.1, 1.1, 0, c_black, victory_alpha * 0.3);
+        // Banderas Azules (Fila superior)
+        if (global.puntos_azul >= i) draw_sprite_ext(spr_flag_blue, 0, bx, mid_y - 90, 1.2, 1.2, 0, c_white, victory_alpha);
+        else draw_sprite_ext(spr_flagvacia, 0, bx, mid_y - 90, 1.0, 1.0, 0, c_white, victory_alpha * 0.2);
         
-        if (global.puntos_rojo >= i) draw_sprite_ext(spr_flag_red, 0, bx, mid_y + 20, 1.3 * pulse, 1.3 * pulse, 0, c_white, victory_alpha);
-        else draw_sprite_ext(spr_flagvacia, 0, bx, mid_y + 20, 1.1, 1.1, 0, c_black, victory_alpha * 0.3);
+        // Banderas Rojas (Fila inferior)
+        if (global.puntos_rojo >= i) draw_sprite_ext(spr_flag_red, 0, bx, mid_y - 10, 1.2, 1.2, 0, c_white, victory_alpha);
+        else draw_sprite_ext(spr_flagvacia, 0, bx, mid_y - 10, 1.0, 1.0, 0, c_white, victory_alpha * 0.2);
     }
 
-    // --- RECOMPENSAS PERSONALES (Subidas un poco para que no choquen) ---
+    // --- RECOMPENSAS ---
     if (global.ONLINE && victory_alpha > 0.8) 
     {
         var mi_equipo = (global.myTeam == "ROJO") ? 1 : 2;
         var gane = (global.winner_team == mi_equipo);
-        var recompensas_y = mid_y + 105; // Ajuste fino de altura
+        var recompensas_y = mid_y + 90; 
 
         if (gane) {
-            draw_set_color(c_yellow);
-            draw_set_font(fnt_menu); 
-            draw_text_transformed(mid_x, recompensas_y, "+25 TROFEOS", 1.1 * pulse, 1.1 * pulse, 0);
-            draw_set_color(c_lime);
-            draw_set_font(fnt_small);
-            draw_text(mid_x, recompensas_y + 30, "+50 XP"); // Reduje de +35 a +30
+            draw_set_color(make_color_rgb(255, 235, 59)); // Amarillo brillante
+            draw_text_transformed(mid_x, recompensas_y, "+25 TROFEOS", 1.2 * pulse, 1.2 * pulse, 0);
+            draw_set_color(make_color_rgb(76, 175, 80)); // Verde XP
+            draw_text(mid_x, recompensas_y + 40, "+50 XP");
         } else {
             draw_set_color(c_red);
-            draw_set_font(fnt_menu);
-            draw_text_transformed(mid_x, recompensas_y, "-15 TROFEOS", 1.0, 1.0, 0);
+            draw_text(mid_x, recompensas_y, "-15 TROFEOS");
             draw_set_color(c_white);
-            draw_set_font(fnt_small);
-            draw_text(mid_x, recompensas_y + 30, "+5 XP");
+            draw_text(mid_x, recompensas_y + 40, "+5 XP");
         }
     }
 
-    // --- OPCIONES DINÁMICAS (BAJADAS PARA LIMPIEZA) ---
+    // --- BOTONES ESTILO CAJA (Igual a la imagen) ---
     if (victory_alpha >= 0.9) {
-        var opciones_vic = (global.ONLINE) ? ["EXIT"] : ["RESTART", "EXIT"];
+        var opciones_vic = (global.ONLINE) ? ["REVANCHA", "EXIT", "ENV. SOLICT"] : ["RESTART", "EXIT"];
+        var btn_w = 150;
+        var btn_h = 50;
+        var total_btns = array_length(opciones_vic);
+        var total_w = (total_btns * btn_w) + ((total_btns - 1) * 20);
+        var btn_start_x = mid_x - total_w / 2;
 
-        for (var i = 0; i < array_length(opciones_vic); i++) {
-            var color = (victory_index == i) ? c_yellow : c_white;
-            var escala = (victory_index == i) ? 1.3 : 1.1;
-            var txt = (victory_index == i) ? ">> " + opciones_vic[i] + " <<" : opciones_vic[i];
+        for (var i = 0; i < total_btns; i++) {
+            var bx = btn_start_x + (i * (btn_w + 20));
+            var by = mid_y + 180;
             
-            // 🔥 AQUÍ ESTÁ EL CAMBIO: Sumamos +190 en lugar de +140 para alejarlo de la XP
-            draw_set_color(color);
-            draw_text_transformed(mid_x, mid_y + 190 + (i * 45), txt, escala, escala, 0);
+            // Si el mouse o la selección está encima
+            var is_selected = (victory_index == i);
+            var b_col_border = is_selected ? c_yellow : _col_ganador;
+            var b_col_text = is_selected ? c_yellow : c_white;
+            var b_scale = is_selected ? 1.05 : 1.0;
+
+            // Caja del botón
+            draw_set_color(make_color_rgb(20, 20, 25)); // Fondo botón
+            draw_roundrect_ext(bx, by, bx + btn_w, by + btn_h, 10, 10, false);
+            draw_set_color(b_col_border);
+            draw_roundrect_ext(bx, by, bx + btn_w, by + btn_h, 10, 10, true);
+
+            // Texto del botón
+            var txt = opciones_vic[i];
+            if (txt == "EXIT") txt = "] EXIT ["; // Efecto decorativo de la imagen
+            
+            draw_set_color(b_col_text);
+            draw_set_font(fnt_small);
+            draw_text_transformed(bx + btn_w/2, by + btn_h/2, txt, b_scale, b_scale, 0);
         }
     }
-    
-    draw_set_alpha(1); 
 }
 
-// Reset Final
+// Resets
 draw_set_alpha(1);
 draw_set_halign(fa_left);
 draw_set_valign(fa_top);
-draw_set_color(c_white);
 
 
 

@@ -52,6 +52,8 @@ global.save_version=1;
 global.miFriendTag="";
 global.lista_amigos = []; // Creamos el array vacío
 global.nombre_ultimo_amigo=""; 
+global.ONLINE=false;
+global.avatar_id = 0;              // El que está puesto
 
 #region Carga local
 scr_load_from_local();

@@ -1,5 +1,57 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
+// --- DENTRO DE TU SWITCH DE EVENTOS DE RED (callback_ReceivedEvent) ---
+case "ENTRA_AL_DUELO":
+    var _sala = theMessageStruct.sala_destino;
+    
+    show_debug_message(">>> ¡Reto aceptado! Moviendo a la arena...");
+    
+    // El retador ahora sí se mueve
+    ChangeRoom(_sala);
+    // El salto al room lo hará tu callback_ChangeRoom automáticamente
+break;
+// --- RECIBIR INVITACIÓN DE DUELO ---
+case "reto_duelo":
+    var _nombre_retador = theMessageStruct.nombre;
+    var _clientId_retador = senderClientId; 
+
+    if (show_question(_nombre_retador + " te reta a un duelo 1vs1. ¿Aceptas?")) {
+        
+        // 1. Le avisamos que vamos para allá
+        SendEventToClient(_clientId_retador, "reto_aceptado", {
+            nombre_que_acepta: global.myName
+        });
+
+        // 2. Nos unimos a su sala privada usando SU ID de cliente
+        // Esto los separa del resto de la gente
+        ChangeRoom("duelo_" + string(_clientId_retador));
+        
+        // 3. ¡A la batalla!
+        room_goto(rm_stage1);
+        
+    } else {
+        SendEventToClient(_clientId_retador, "reto_rechazado", { nombre: global.myName });
+    }
+break;
+
+case "reto_aceptado":
+    var _quien = theMessageStruct.nombre_que_acepta;
+    
+    // Como tú eres el retador, la sala se llama con TU ID
+    // Así el otro sabe exactamente a dónde entrar
+    ChangeRoom("duelo_" + string(global.clientId));
+    
+    // También nos vamos a la room de pelea
+    room_goto(rm_stage1);
+    
+    show_debug_message(">>> DUELO: " + _quien + " aceptó. Iniciando sala privada.");
+break;
+
+case "reto_rechazado":
+    var _quien = theMessageStruct.nombre;
+    mensaje_texto = _quien + " ha rechazado el duelo.";
+    mensaje_alpha = 2;
+break;
 
 //case "pj_cambiando":
 //    global.pj_rival = theMessageStruct.pj; // Actualiza la cara del rival en mi pantalla

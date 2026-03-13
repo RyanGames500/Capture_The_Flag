@@ -153,6 +153,7 @@ var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
                 case 0: // Ahora PLAY abre el submenú de modos
                     menu_state = "play_selection";
                     play_index = 0;
+					exit;
                 break;
                 
                 case 1: 
@@ -221,17 +222,15 @@ var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
     }
 	
 
-	
-}
-
 // Salir del buzón
 if (menu_state == "mailbox") {
     if (keyboard_check_pressed(vk_escape)) {
         menu_state = "main";
     }
 
-    }
-    else if (menu_state == "private") {
+    }	
+}
+else if (menu_state == "private") {
     if (global.myName != "" && global.myName != "NAME") {
         texto_input = global.myName;
     }
@@ -412,6 +411,47 @@ else if (menu_state == "friends_menu") {
         }
     }
     // Nota: La lógica de "anadir" ya la movimos arriba al bloque global de input_activo
+	
+	if (friends_state == "lista") {
+    var num_amigos = array_length(global.lista_amigos);
+    
+    if (num_amigos > 0) {
+        var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+        
+        if (move != 0) {
+            friend_selected = clamp(friend_selected + move, 0, num_amigos - 1);
+            
+            // Si el seleccionado se sale de la vista, movemos el target del scroll
+            // Ajusta el -95 según necesites para que siempre se vea el seleccionado
+            if (friend_selected > 3) {
+                scroll_target = -(friend_selected - 3) * 95; 
+            } else {
+                scroll_target = 0;
+            }
+        }
+
+
+// --- ACCIÓN: VER PERFIL ---
+if (keyboard_check_pressed(ord("P"))) {
+    var _tag_objetivo = global.lista_amigos[friend_selected].tag;
+    
+    // Iniciamos la carga de datos del amigo
+    estado_busqueda = "buscando";
+    request_datos_rival = ReadSimpleData("perfiles", _tag_objetivo);
+    
+    friends_state = "perfil_amigo"; 
+    input_activo = false;
+}
+    
+}
+}
+
+	if (friends_state == "perfil_amigo") {
+	    if (keyboard_check_pressed(vk_escape)) {
+	        friends_state = "lista";
+	        estado_busqueda = "idle";
+	    }
+	}
 }
 }
 }
@@ -542,30 +582,59 @@ if (keyboard_check_pressed(ord("B")) && !input_activo) {
             show_debug_message(">>> BUSCADOR: Pidiendo perfil del ID: " + string(_id_buscado));
         }
     }
-}
-//Guardado en la nube
-// --- PROCESADOR DE GUARDADO INVISIBLE ---
-if (save_state == "prepare") {
-    save_timer--;
-    if (save_timer <= 0) {
-        save_state = "sending";
+	
+    
+    // Abrir selector con A
+    if (keyboard_check_pressed(ord("A")) && !mostrando_selector) {
+        mostrando_selector = true;
+        avatar_seleccionado = global.avatar_id; // Empezar en el actual
+    }
+    
+    // Si la ventanita está abierta
+if (mostrando_selector) {
+// Scroll con la rueda del ratón
+    if (mouse_wheel_up())   scroll_y_target -= 60;
+    if (mouse_wheel_down()) scroll_y_target += 60;
+
+    // Movimiento con flechas (Mantenemos lo de antes)
+    var total_iconos = sprite_get_number(spr_player_icon);
+    var columnas = 4;
+    var prev_sel = avatar_seleccionado;
+
+    if (keyboard_check_pressed(vk_right)) avatar_seleccionado = clamp(avatar_seleccionado + 1, 0, total_iconos - 1);
+    if (keyboard_check_pressed(vk_left))  avatar_seleccionado = clamp(avatar_seleccionado - 1, 0, total_iconos - 1);
+    if (keyboard_check_pressed(vk_down))  avatar_seleccionado = clamp(avatar_seleccionado + columnas, 0, total_iconos - 1);
+    if (keyboard_check_pressed(vk_up))    avatar_seleccionado = clamp(avatar_seleccionado - columnas, 0, total_iconos - 1);
+
+    // AUTO-SCROLL: Si el seleccionado se sale por abajo o por arriba, movemos el scroll
+    var fila_actual = floor(avatar_seleccionado / columnas);
+    var y_en_grid = fila_actual * 120;
+    
+    if (y_en_grid < scroll_y_target) scroll_y_target = y_en_grid;
+    if (y_en_grid > scroll_y_target + 120) scroll_y_target = y_en_grid - 120;
+
+    // Limitar el scroll para que no se vaya al infinito
+    var filas_totales = ceil(total_iconos / columnas);
+    var max_scroll = max(0, (filas_totales * 120) - 240);
+    scroll_y_target = clamp(scroll_y_target, 0, max_scroll);
+
+    if (keyboard_check_pressed(vk_space)) mostrando_selector = false;
+
+    if (keyboard_check_pressed(vk_enter)) {
+        if (avatar_seleccionado <= 1) { // Aquí pones tu condición de desbloqueo
+            global.avatar_id = avatar_seleccionado;
+            mostrando_selector = false;
+            scr_save_to_local();
+        } else {
+            oMenu.mensaje_texto = "Icono bloqueado!";
+            oMenu.mensaje_alpha = 2;
+        }
     }
 }
 
-if (save_state == "sending") {
-    // Solo entramos aquí UNA VEZ para disparar el proceso
-    if (!variable_instance_exists(id, "nube_guardada") || nube_guardada == false) {
-        nube_guardada = true; // Marcamos que ya empezamos
-        
-		//GUARDAR PERFIL EN LA NUBE 
-		scr_sincronizar_nube();
-		
-        alarm[1] = 60;
-        show_debug_message(">>> Guardando en la nube... Alarma 1 iniciada.");
-        
-        save_state = "waiting"; 
-    }
+
 }
+
 	
 
 // Lógica de desvanecimiento del mensaje
@@ -664,45 +733,129 @@ if (estado_busqueda == "encontrado" && keyboard_check_pressed(ord("F"))) {
     }
 }
 
-if (friends_state == "lista") {
-    var num_amigos = array_length(global.lista_amigos);
+
+//eliminar amigo
+if (mouse_check_button_pressed(mb_left)){
+	var gui_w = display_get_gui_width();
+    var gui_h = display_get_gui_height();
     
-    if (num_amigos > 0) {
-        var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
-        
-        if (move != 0) {
-            friend_selected = clamp(friend_selected + move, 0, num_amigos - 1);
+    var mx = device_mouse_x_to_gui(0);
+    var my = device_mouse_y_to_gui(0);
+    var cx = gui_w / 2;
+    var cx = gui_w / 2;
+
+    for (var i = 0; i < array_length(global.lista_amigos); i++) {
+        var yy = 180 + scroll_y + (i * (80 + 15)); // Misma fórmula del Draw
+        var _bx = cx + 500/2 - 25; // La misma X del botón borrar
+
+        // Detectamos el clic en el círculo de la X
+        if (point_distance(mx, my, _bx, yy) < 15)
+		{
+            var _amigo_nombre = global.lista_amigos[i].nombre;
             
-            // Si el seleccionado se sale de la vista, movemos el target del scroll
-            // Ajusta el -95 según necesites para que siempre se vea el seleccionado
-            if (friend_selected > 3) {
-                scroll_target = -(friend_selected - 3) * 95; 
-            } else {
-                scroll_target = 0;
+            // Mensaje de confirmación
+            if (show_question("¿Eliminar a " + _amigo_nombre + " de tus amigos?")) {
+                var _tag_a_borrar = global.lista_amigos[i].tag;
+                
+                // 1. Borrar de la lista local
+                array_delete(global.lista_amigos, i, 1);
+                
+                // 2. Guardar cambio localmente
+                scr_save_to_local();
+                
+                // 3. (Opcional) Avisar a Rocket si tienes una tabla de relaciones
+                 DeleteSimpleData("amigos", _tag_a_borrar);
+                
+				#region --- PREPARAR GUARDADO EN LA NUBE ---
+				save_state = "prepare";
+				save_timer = room_speed; // 1 segundo de espera para no chocar con el input
+				#endregion
+				
+                mensaje_texto = "Amigo eliminado.";
+                mensaje_alpha = 2;
+                break;
             }
         }
-
-
-        // --- ACCIÓN: VER PERFIL (Consulta a Rocket/Nube) ---
-if (keyboard_check_pressed(ord("P"))) {
-    var _tag_objetivo = global.lista_amigos[friend_selected].tag;
-    
-    // Iniciamos la carga de datos del amigo
-    estado_busqueda = "buscando";
-    request_datos_rival = ReadSimpleData("perfiles", _tag_objetivo);
-    
-    // ESTADO NUEVO para que no te mande a "añadir"
-    friends_state = "perfil_amigo"; 
-    input_activo = false;
-}
     }
 }
 
-if (friends_state == "perfil_amigo") {
-    if (keyboard_check_pressed(vk_escape)) {
-        friends_state = "lista";
+
+
+if (mouse_check_button_pressed(mb_left)) {
+    var mx = device_mouse_x_to_gui(0);
+    var my = device_mouse_y_to_gui(0);
+    var cx = display_get_gui_width() / 2;
+
+    // Recorremos la lista para ver si el clic cayó en algún botón de duelo
+    for (var i = 0; i < array_length(global.lista_amigos); i++) {
+        
+        // Calculamos la posición exacta que tiene este amigo en la pantalla
+        // USAMOS LA MISMA FÓRMULA QUE EN TU DRAW
+        var item_yy = 180 + scroll_y + (i * (80 + 15)); 
+        var btn_duelo_x = cx + 500/2 - 110; // Ajusta el -110 según donde dibujaste el icono
+
+        // ¿El clic está sobre el botón de duelo de este amigo específico?
+        if (point_distance(mx, my, btn_duelo_x, item_yy) < 15) {
+            
+// --- CLIC EN BOTÓN DE DUELO ---
+var _su_tag = global.lista_amigos[i].tag;
+
+SetSimpleData("duelo_pendiente", string(_su_tag), {
+    retador_nombre: global.myName,
+    retador_id: global.clientId, // Le damos nuestro ID para que nos responda directo
+    es_duelo: true 
+});
+
+oMenu.mensaje_texto = "Esperando respuesta del rival...";
+oMenu.mensaje_alpha = 2;
+// NO llamamos a ChangeRoom aquí.
+        }
+    }
+}
+
+//Guardado en la nube
+// --- PROCESADOR DE GUARDADO INVISIBLE ---
+if (save_state == "prepare") {
+    save_timer--;
+    if (save_timer <= 0) {
+        save_state = "sending";
+    }
+}
+
+if (save_state == "sending") {
+    // Solo entramos aquí UNA VEZ para disparar el proceso
+    if (!variable_instance_exists(id, "nube_guardada") || nube_guardada == false) {
+        nube_guardada = true; // Marcamos que ya empezamos
+        
+		//GUARDAR PERFIL EN LA NUBE 
+		scr_sincronizar_nube();
+		
+        alarm[1] = 60;
+        show_debug_message(">>> Guardando en la nube... Alarma 1 iniciada.");
+        
+        save_state = "waiting"; 
+    }
+}
+
+if (room == rm_menu) {
+    // Solo ejecutamos si el clientId ya existe y no es -1 (o el valor inicial)
+    if (variable_global_exists("clientId") && global.clientId != -1) {
+        
+        if (current_time % 60 == 0) { 
+            ReadSimpleData("confirmaciones", string(global.miFriendTag));
+        }
+        
+    }
+}
+
+
+
+if(menu_state == "main")
+{	
+	if (estado_busqueda != "idle") {
         estado_busqueda = "idle";
+        datos_busqueda_resultado = -1; // <--- Limpia el "fantasma" del amigo anterior
+        ultimo_intento_busqueda = "";  // Limpia el buscador
+        show_debug_message(">>> SISTEMA: Estado de búsqueda reseteado por seguridad.");
     }
-    
-    // Aquí puedes añadir la lógica de invitar [I] si tienes sistema de mensajes
 }

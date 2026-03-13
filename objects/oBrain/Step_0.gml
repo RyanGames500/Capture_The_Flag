@@ -74,7 +74,7 @@ if (global.game_over == true) {
             }
         } else {
             // En Offline usamos el índice de Reintentar/Salir
-            var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+            var move = keyboard_check_pressed(vk_left) - keyboard_check_pressed(vk_right);
             victory_index = clamp(victory_index + move, 0, 1);
 
             if (keyboard_check_pressed(vk_enter)) {

@@ -1,4 +1,4 @@
-
+/*
 
 // Borramos el índice de nombre si existía
 DeleteSimpleData("perfiles", "7S7IIW");

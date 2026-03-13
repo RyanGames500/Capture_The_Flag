@@ -30,8 +30,8 @@
   "resourceVersion":"2.0",
   "solid":false,
   "spriteId":{
-    "name":"sBlue",
-    "path":"sprites/sBlue/sBlue.yy",
+    "name":"spr_base_azul",
+    "path":"sprites/spr_base_azul/spr_base_azul.yy",
   },
   "spriteMaskId":null,
   "visible":true,

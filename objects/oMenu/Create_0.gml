@@ -9,11 +9,11 @@ play_index = 0;
 
 waiting_timer = 0;
 waiting_message = "Buscando Rival";
-menu_state = "main"; // Empezamos en el menú
+menu_state = "main";		 // Empezamos en el menú
 save_state = "idle";
 save_timer = 0;
 
-texto_input = "Name"; // Lo que se ve en el cuadro
+texto_input = "Name";		 // Lo que se ve en el cuadro
 cursor_timer = 0;            // Para que la rayita del texto parpadee
 max_caracteres = 12;         // Que no se pasen de largo
 input_activo = false;        // ¿Está el jugador escribiendo?
@@ -78,7 +78,7 @@ scroll_max = (10 * 90) - 450;
 ach_surf = -1;
 //timer para copiar ids
 copiado_timer = 0;
-
+timer_latido = 0;
 //Sistema de buscar y agregar amigos
 busqueda_nombre_tecleado = ""; 
 request_buscar_id = -1;
@@ -111,9 +111,19 @@ peticion_recibida = false;
 
 // --- POSICIÓN DEL ICONO DEL BUZÓN ---
 // Estas variables ahora existen para TODO el objeto
-mail_x = (display_get_gui_width() / 2) + 220; 
-mail_y = (display_get_gui_height() / 2) - 230;
+mail_x = (display_get_gui_width() / 2) + 600; 
+mail_y = (display_get_gui_height() / 2) - 270;
 
 scroll_y = 0;
 scroll_target = 0;
 friend_selected = 0; // Para saber a quién tienes resaltado
+
+scroll_y_target = 0;       // Para que el scroll sea suave
+ventana_iconos_alto = 220; // El alto del "hueco" donde se ven los iconos
+
+// Revisar estado de amigos cada 5 segundos (60 fps * 5)
+alarm[2] = 1;
+alarm[3] = room_speed * 2;
+
+avatar_seleccionado = 0;     // El que estás viendo en la ventanita
+mostrando_selector = false;  // Controla si la ventana está abierta

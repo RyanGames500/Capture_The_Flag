@@ -188,6 +188,4 @@ ConnectToServer();
 
 //room_goto_next();
 
-alarm[4] = room_speed * 3;
-
 is_closing=false;
