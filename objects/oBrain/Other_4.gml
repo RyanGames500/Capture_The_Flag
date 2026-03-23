@@ -22,3 +22,5 @@ with(oSpawnPoint) {
     myID = i++; // El primer punto es 0, el segundo 1, etc.
 }
 
+
+

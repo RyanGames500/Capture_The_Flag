@@ -2,6 +2,10 @@ var player_name=global.myName;
 var player_ID=gmda_getPlayerid();
 var status=gmda_status();
 
+if (!variable_global_exists("revancha_pendiente")) {
+    global.revancha_pendiente = false;
+}
+
 draw_set_font(fnt_menu)
 //draw_text(100,300,"ID: "+string(is_closing));
 //draw_text(100,300+30,"Name: "+player_name);
@@ -434,14 +438,14 @@ if (global.pausa && !global.game_over) {
     }
 }
 
-// --- 4. PANTALLA DE RESULTADOS (ESTILO RETRO MEJORADO) ---
+// --- 4. PANTALLA DE RESULTADOS (SIN REVANCHA) ---
 if (global.game_over) 
 {
     var mid_x = display_get_gui_width() / 2;
     var mid_y = display_get_gui_height() / 2;
     var pulse = 1 + sin(get_timer() / 200000) * 0.05;
 
-    // Fondo oscuro detrás de todo
+    // Fondo oscuro
     draw_set_alpha(victory_alpha * 0.8); 
     draw_set_color(c_black);
     draw_rectangle(0, 0, display_get_gui_width(), display_get_gui_height(), false);
@@ -450,21 +454,18 @@ if (global.game_over)
     var p_w = 600; 
     var p_h = 520; 
     
-    // Sombra del panel
     draw_set_alpha(victory_alpha);
     draw_set_color(c_black);
     draw_roundrect_ext(mid_x - p_w/2 + 10, mid_y - p_h/2 + 10, mid_x + p_w/2 + 10, mid_y + p_h/2 + 10, 30, 30, false);
     
-    // Fondo del panel principal (Gris oscuro azulado de la imagen)
     draw_set_color(make_color_rgb(26, 26, 32));
     draw_roundrect_ext(mid_x - p_w/2, mid_y - p_h/2, mid_x + p_w/2, mid_y + p_h/2, 30, 30, false);
     
-    // Borde dinámico según el equipo ganador
     var _col_ganador = (global.winner_team == 1) ? make_color_rgb(204, 0, 0) : c_aqua;
     draw_set_color(_col_ganador);
     draw_roundrect_ext(mid_x - p_w/2, mid_y - p_h/2, mid_x + p_w/2, mid_y + p_h/2, 30, 30, true);
 
-    // Partículas mejoradas (Efecto de chispas)
+    // Partículas
     for(var p=0; p<8; p++) {
         var angle = (get_timer()/5000 + (p * 45)) % 360;
         var dist = 200 + (sin(get_timer()/100000) * 20);
@@ -476,26 +477,24 @@ if (global.game_over)
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     
-    // --- TÍTULO ---
+    // Título
     var _ganador_txt = (global.winner_team == 1) ? "VICTORIA ROJA!" : "VICTORIA AZUL!";
     draw_set_color(_col_ganador);
     draw_text_transformed(mid_x, mid_y - 190, _ganador_txt, 2.5 * pulse, 2.5 * pulse, 0);
 
-    // --- BANDERAS (Distribución de la imagen) ---
+    // Banderas
     var spacing = 90;
     var start_x = mid_x - spacing; 
     for (var i = 1; i <= 3; i++) {
         var bx = start_x + ((i-1) * spacing);
-        // Banderas Azules (Fila superior)
         if (global.puntos_azul >= i) draw_sprite_ext(spr_flag_blue, 0, bx, mid_y - 90, 1.2, 1.2, 0, c_white, victory_alpha);
         else draw_sprite_ext(spr_flagvacia, 0, bx, mid_y - 90, 1.0, 1.0, 0, c_white, victory_alpha * 0.2);
         
-        // Banderas Rojas (Fila inferior)
         if (global.puntos_rojo >= i) draw_sprite_ext(spr_flag_red, 0, bx, mid_y - 10, 1.2, 1.2, 0, c_white, victory_alpha);
         else draw_sprite_ext(spr_flagvacia, 0, bx, mid_y - 10, 1.0, 1.0, 0, c_white, victory_alpha * 0.2);
     }
 
-    // --- RECOMPENSAS ---
+    // Recompensas
     if (global.ONLINE && victory_alpha > 0.8) 
     {
         var mi_equipo = (global.myTeam == "ROJO") ? 1 : 2;
@@ -503,9 +502,9 @@ if (global.game_over)
         var recompensas_y = mid_y + 90; 
 
         if (gane) {
-            draw_set_color(make_color_rgb(255, 235, 59)); // Amarillo brillante
+            draw_set_color(make_color_rgb(255, 235, 59));
             draw_text_transformed(mid_x, recompensas_y, "+25 TROFEOS", 1.2 * pulse, 1.2 * pulse, 0);
-            draw_set_color(make_color_rgb(76, 175, 80)); // Verde XP
+            draw_set_color(make_color_rgb(76, 175, 80));
             draw_text(mid_x, recompensas_y + 40, "+50 XP");
         } else {
             draw_set_color(c_red);
@@ -515,35 +514,37 @@ if (global.game_over)
         }
     }
 
-    // --- BOTONES ESTILO CAJA (Igual a la imagen) ---
+    // --- BOTONES ACTUALIZADOS (SIN REVANCHA) ---
     if (victory_alpha >= 0.9) {
-        var opciones_vic = (global.ONLINE) ? ["REVANCHA", "EXIT", "ENV. SOLICT"] : ["RESTART", "EXIT"];
-        var btn_w = 150;
+        // Quitamos "REVANCHA" del array
+        var opciones_vic = (global.ONLINE) ? ["ENV. SOLICT", "EXIT"] : ["RESTART", "EXIT"];
+        
+        var btn_w = 200; // Un poco más anchos para que luzcan mejor
         var btn_h = 50;
         var total_btns = array_length(opciones_vic);
-        var total_w = (total_btns * btn_w) + ((total_btns - 1) * 20);
+        var separation = 30;
+        var total_w = (total_btns * btn_w) + ((total_btns - 1) * separation);
         var btn_start_x = mid_x - total_w / 2;
 
         for (var i = 0; i < total_btns; i++) {
-            var bx = btn_start_x + (i * (btn_w + 20));
+            var bx = btn_start_x + (i * (btn_w + separation));
             var by = mid_y + 180;
             
-            // Si el mouse o la selección está encima
             var is_selected = (victory_index == i);
             var b_col_border = is_selected ? c_yellow : _col_ganador;
             var b_col_text = is_selected ? c_yellow : c_white;
             var b_scale = is_selected ? 1.05 : 1.0;
 
             // Caja del botón
-            draw_set_color(make_color_rgb(20, 20, 25)); // Fondo botón
+            draw_set_color(make_color_rgb(20, 20, 25)); 
             draw_roundrect_ext(bx, by, bx + btn_w, by + btn_h, 10, 10, false);
             draw_set_color(b_col_border);
             draw_roundrect_ext(bx, by, bx + btn_w, by + btn_h, 10, 10, true);
 
-            // Texto del botón
+            // Texto
             var txt = opciones_vic[i];
-            if (txt == "EXIT") txt = "] EXIT ["; // Efecto decorativo de la imagen
-            
+            if (txt == "EXIT") txt = "] EXIT ["; 
+
             draw_set_color(b_col_text);
             draw_set_font(fnt_small);
             draw_text_transformed(bx + btn_w/2, by + btn_h/2, txt, b_scale, b_scale, 0);
@@ -604,5 +605,26 @@ if (!intro_disparada && room != rm_menu && global.ONLINE==true) {
         if (isAzul) countAzul++; else countRojo++;
     }
 }
+	
+	
+	
+// --- DIBUJO DE MENSAJES DE ESTADO (Ponlo al final de todo el código) ---
+if (mensaje_alpha > 0) {
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    draw_set_font(fnt_menu);
+    
+    // Sombra
+    draw_set_color(c_black);
+    draw_set_alpha(mensaje_alpha);
+    draw_text(display_get_gui_width()/2 + 2, display_get_gui_height() - 100 + 2, mensaje_texto);
+    
+    // Texto
+    draw_set_color(c_white);
+    draw_text(display_get_gui_width()/2, display_get_gui_height() - 100, mensaje_texto);
+    
+    mensaje_alpha -= 0.02; // Para que se vaya desvaneciendo
+}
+draw_set_alpha(1);
 
 

@@ -1,4 +1,4 @@
-/// @description Step oMyEntity (balas / rockets / network-safe)
+/// @description Step oMyEntity (balas / rockets / granadas / boxeo / network-safe)
 
 // ======================================================
 // 🔄 SYNC DE RED
@@ -13,56 +13,78 @@ entityProperties = {
 	_IMYS     : image_yscale,
 	_SI       : sprite_index,
 	_IR       : is_rocket,
-	_IA		  : image_angle
+	_IA		  : image_angle,
+	_IB       : is_box,
+	_XB       : (is_box) ? owner.x : x,       // <--- X del dueño
+    _YB       : (is_box) ? owner.y - 13 : y   // <--- Y del dueño
 };
 
 // ======================================================
-// ⏳ VIDA ÚTIL
+// 🥊 LÓGICA DE MOVIMIENTO (SOLO SI ES BOXEO)
 // ======================================================
-if (life > 0) {
-    life--;
-    if (life <= 0) {
-        instance_destroy();
+if (variable_instance_exists(id, "is_box") && is_box) 
+{
+    if (!instance_exists(owner)) { instance_destroy(); exit; }
+
+    // Seguir al dueño (offset y-13)
+    var x_base = owner.x;
+    var y_base = owner.y - 13;
+    image_angle = direction; 
+
+    // Lógica de estiramiento
+    distancia += velocidad * estado;
+
+    if (distancia >= distancia_max) estado = -1; // Regresar al llegar al tope
+    if (distancia <= 0 && estado == -1) { instance_destroy(); exit; }
+
+    // Posición física del puño
+    x = x_base + lengthdir_x(distancia, image_angle);
+    y = y_base + lengthdir_y(distancia, image_angle);
+}
+
+// ======================================================
+// ⏳ VIDA ÚTIL (Balas y Rockets normales)
+// ======================================================
+if (!variable_instance_exists(id, "is_box") || !is_box) {
+    if (life > 0) {
+        life--;
+        if (life <= 0) instance_destroy();
     }
 }
 
 // ======================================================
-// 🧱 COLISIÓN CON PAREDES / PLATAFORMAS (BALAS Y MISILES)
+// 🧱 COLISIÓN CON PAREDES / PLATAFORMAS
 // ======================================================
 if (place_meeting(x, y, obj_wall) || place_meeting(x, y, oPlataformaPasable))
 {
-    if (is_rocket && !exploded)
-    {
-        exploded = true;
+    // Si es puño, rebota
+    if (variable_instance_exists(id, "is_box") && is_box) {
+        if (estado == 1) { 
+            estado = -1; 
+            if (global.sfx) audio_play_sound(snd_empy, 10, false, 0.5);
+        }
+    } 
+    else {
+        // Lógica original de Rocket
+        if (is_rocket && !exploded) {
+            exploded = true;
+            instance_create_layer(x, y, "Weapons", oExplosionFX);
+            if (global.sfx) audio_play_sound(snd_pearl_explodes, 10, false);
+            scrCamShake(15);
 
-        // FX LOCAL inmediato
-        instance_create_layer(x, y, "Weapons", oExplosionFX);
-        if (global.sfx) audio_play_sound(snd_pearl_explodes, 10, false);
-        scrCamShake(15);
-
-        if (global.ONLINE)
-        {
-            if (oBrain.AmIPseudoHost)
-            {
-                // EL HOST LE AVISA A TODOS LOS DEMÁS
-                with(oOtherPlayer) {
-                    SendEventToClient(clientId, "fx_pearl_explosion", { ex: other.x, ey: other.y, isNade: false });
-                }
-            }
-            else
-            {
-                // EL CLIENTE LE PIDE AL HOST QUE REPLIQUE LA EXPLOSIÓN
-                var _targetHost = -1;
-                with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
-                if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
-
-                if (_targetHost != -1) {
-                    SendEventToClient(_targetHost, "request_rocket_explosion", { ex: x, ey: y });
+            if (global.ONLINE) {
+                if (oBrain.AmIPseudoHost) {
+                    with(oOtherPlayer) { SendEventToClient(clientId, "fx_pearl_explosion", { ex: other.x, ey: other.y, isNade: false }); }
+                } else {
+                    var _targetHost = -1;
+                    with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
+                    if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
+                    if (_targetHost != -1) SendEventToClient(_targetHost, "request_rocket_explosion", { ex: x, ey: y });
                 }
             }
         }
+        instance_destroy();
     }
-    instance_destroy();
 }
 
 // ======================================================
@@ -72,56 +94,52 @@ var target_enemy = instance_place(x, y, oOtherPlayer);
 
 if (target_enemy != noone)
 {
-    // Solo procesamos si NO es de nuestro equipo (Filtro Brawl Stars)
     if (variable_instance_exists(target_enemy, "team") && target_enemy.team != global.myTeam) 
     {
+        // Evitar múltiples hits si es puño
+        if (variable_instance_exists(id, "is_box") && is_box) {
+            if (ds_list_find_index(hit_list, target_enemy) != -1) exit;
+        }
 
+        // --- SISTEMA DE ESCUDO ---
 		if (target_enemy.has_shield) 
 		{
-		    // 1. Efecto local (para el que dispara)
 		    instance_create_layer(x, y, "Instances", oShieldSparkFX);
 		    if (global.sfx) audio_play_sound(snd_shield_impact, 20, false, 2.0);
-
-		    // 2. AVISAR A LOS DEMÁS (Sincronización)
 		    if (global.ONLINE) {
-		        // Enviamos un evento simple con la posición del choque
-		        with(oOtherPlayer) {
-		            SendEventToClient(clientId, "fx_shield_hit", { ex: other.x, ey: other.y });
-		        }
+		        with(oOtherPlayer) { SendEventToClient(clientId, "fx_shield_hit", { ex: other.x, ey: other.y }); }
 		    }
-
-		    instance_destroy();
-		    exit;
+            
+            if (variable_instance_exists(id, "is_box") && is_box) {
+                estado = -1; exit;
+            } else {
+		        instance_destroy(); exit;
+            }
 		}
 		
         if (target_enemy.invulnerable) exit;
 
-        // PREDICCIÓN VISUAL LOCAL
-        with (target_enemy)
-        {
-            if (state != PLAYERSTATE.DEAD)
-            {
-                hit_bloqueo_timer = 10;
+        // --- EFECTO VISUAL Y EMPUJE ---
+        with (target_enemy) {
+            if (state != PLAYERSTATE.DEAD) {
+                hit_bloqueo_timer = (variable_instance_exists(other, "is_box") && other.is_box) ? 20 : 10;
                 state = PLAYERSTATE.HIT;
                 image_index = 0;
+                
+                if (variable_instance_exists(other, "is_box") && other.is_box) {
+                    push_h = lengthdir_x(25, other.image_angle);
+                    vsp = -7;
+                }
             }
         }
 
-        // SI ES ROCKET, EXPLOTA
-        if (is_rocket)
-        {
+        // --- LÓGICA DE EXPLOSIÓN ROCKET ---
+        if (is_rocket) {
             scrCreateRocketExplosion(x, y, false);
-
-            if (global.ONLINE)
-            {
-                if (oBrain.AmIPseudoHost)
-                {
-                    with(oOtherPlayer) { 
-                        SendEventToClient(clientId, "fx_pearl_explosion", { ex: other.x, ey: other.y, isNade: false }); 
-                    }
-                }
-                else
-                {
+            if (global.ONLINE) {
+                if (oBrain.AmIPseudoHost) {
+                    with(oOtherPlayer) { SendEventToClient(clientId, "fx_pearl_explosion", { ex: other.x, ey: other.y, isNade: false }); }
+                } else {
                     var _targetHost = -1;
                     with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
                     if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
@@ -132,45 +150,38 @@ if (target_enemy != noone)
 
         if (global.sfx) audio_play_sound(snd_hit, 20, false, 1.1);
 
-        // DAÑO AUTORITATIVO
-        if (global.ONLINE)
-        {
-            if (oBrain.AmIPseudoHost)
-            {
-                SendEventToClient(target_enemy.clientId, "hit", {
-                    damage: damage,
-                    killer: global.myName,
-                    reason: "pvp"
-                });
-            }
-            else
-            {
+        // --- DAÑO AUTORITATIVO ---
+        if (global.ONLINE) {
+            var _reason = (variable_instance_exists(id, "is_box") && is_box) ? "boxeo" : "pvp";
+			
+			var _dir_golpe = point_direction(x, y, target_enemy.x, target_enemy.y);
+            
+            if (oBrain.AmIPseudoHost) {
+                SendEventToClient(target_enemy.clientId, "hit", { damage: damage, killer: global.myName, reason: _reason });
+            } else {
                 var _targetHost = -1;
                 with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
                 if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
-                
                 if (_targetHost != -1) {
-                    SendEventToClient(_targetHost, "request_hit", {
-                        victimId: target_enemy.clientId,
-                        damage: damage,
-                        killer: global.myName,
-                        reason: "pvp"
-                    });
+                    SendEventToClient(_targetHost, "request_hit", { victimId: target_enemy.clientId, damage: damage, killer: global.myName, reason: _reason, angle: _dir_golpe });
                 }
             }
         }
 
-        instance_destroy();
+        if (variable_instance_exists(id, "is_box") && is_box) {
+            ds_list_add(hit_list, target_enemy);
+            estado = -1; 
+        } else {
+            instance_destroy();
+        }
     }
 }
 
 // ======================================================
 // 🚀 COMPORTAMIENTO VISUAL (SMOKE TRAIL)
 // ======================================================
-if (is_rocket)
-{
-    if (irandom(2) == 0)
-    {
+if (is_rocket) {
+    if (irandom(2) == 0) {
         var sm = instance_create_layer(x, y, "Instances", oSmokeTrail);
         sm.color = c_gray;
     }
@@ -181,60 +192,42 @@ if (is_rocket)
 // 💣 LÓGICA DE GRANADAS (MOVIMIENTO Y GRAVEDAD)
 // ======================================================
 if (variable_instance_exists(id, "is_granada") && is_granada) {
-    
-    // Evitar error de variable no definida para balas normales
     if (!variable_instance_exists(id, "vsp")) vsp = 0;
     if (!variable_instance_exists(id, "hsp")) hsp = 0;
 
-    vsp += 0.22; // Gravedad
+    vsp += 0.22;
     image_angle -= hsp * 5; 
     
-    // 1. Detección de enemigo para granada
     var target_enemy_nad = instance_place(x + hsp, y + vsp, oOtherPlayer);
     if (target_enemy_nad != noone) {
-        if (variable_instance_exists(target_enemy_nad, "team") && target_enemy_nad.team == global.myTeam) {
-            target_enemy_nad = noone; 
-        }
+        if (variable_instance_exists(target_enemy_nad, "team") && target_enemy_nad.team == global.myTeam) target_enemy_nad = noone; 
     }
     
-    // 2. Colisión física
     var hit_wall = place_meeting(x + hsp, y + vsp, obj_wall);
     var hit_platform = false;
     var platform_id = instance_place(x, y + vsp, oPlataformaPasable); 
     if (platform_id != noone && vsp > 0) hit_platform = true;
 
-    // EXPLOSIÓN DE GRANADA
     if (target_enemy_nad != noone || hit_wall || hit_platform) {
-        
         scrCreateRocketExplosion(x, y, true); 
         if (global.sfx) audio_play_sound(snd_hit, 20, false, 1.1);
 
-        // DAÑO SI ES ENEMIGO
         if (target_enemy_nad != noone && !target_enemy_nad.invulnerable) {
             if (global.ONLINE) {
                 if (oBrain.AmIPseudoHost) {
-                    SendEventToClient(target_enemy_nad.clientId, "hit", {
-                        damage: damage, killer: global.myName, reason: "granada"
-                    });
+                    SendEventToClient(target_enemy_nad.clientId, "hit", { damage: damage, killer: global.myName, reason: "granada" });
                 } else {
                     var _targetHost = -1;
                     with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
                     if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
-                    if (_targetHost != -1) {
-                        SendEventToClient(_targetHost, "request_hit", {
-                            victimId: target_enemy_nad.clientId, damage: damage, killer: global.myName, reason: "granada"
-                        });
-                    }
+                    if (_targetHost != -1) SendEventToClient(_targetHost, "request_hit", { victimId: target_enemy_nad.clientId, damage: damage, killer: global.myName, reason: "granada" });
                 }
             }
         }
 
-        // SINCRONIZACIÓN VISUAL BUM
         if (global.ONLINE) {
             if (oBrain.AmIPseudoHost) {
-                with(oOtherPlayer) { 
-                    SendEventToClient(clientId, "fx_pearl_explosion", { ex: other.x, ey: other.y, isNade: true }); 
-                }
+                with(oOtherPlayer) { SendEventToClient(clientId, "fx_pearl_explosion", { ex: other.x, ey: other.y, isNade: true }); }
             } else {
                 var _targetHost = -1;
                 with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
@@ -242,10 +235,8 @@ if (variable_instance_exists(id, "is_granada") && is_granada) {
                 if (_targetHost != -1) SendEventToClient(_targetHost, "request_fx_explosion", { ex: x, ey: y, isNade: true });
             }
         }
-
         instance_destroy(); 
     }
-    
     x += hsp;
     y += vsp;
 }

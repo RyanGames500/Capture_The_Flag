@@ -12,7 +12,8 @@ enum PLAYERSTATE2 {
     SHOT,
     HIT,
     DEAD,
-    INTRO
+    INTRO,
+	GRAPPLE
 }
 state = PLAYERSTATE2.IDLE; // Iniciamos en IDLE directamente en local
 can_sfx=false;
@@ -44,7 +45,7 @@ reload_max = 0;
 melee_cd = 0;
 melee_active = 0;
 melee_damage = 20;
-
+mi_guante = noone;
 // --- FÍSICA ---
 hsp = 0;
 vsp = 0;
@@ -105,3 +106,26 @@ is_bot = false;
 
 vida_visual = health;
 escudo_visual = shield_timer;
+
+
+// --- SISTEMA DE ARPÓN ---
+grapple_active = false;      // ¿Estamos colgados?
+grapple_x = 0;               // Punto X donde pegó el gancho
+grapple_y = 0;               // Punto Y donde pegó el gancho
+grapple_force = 1.2;         // La fuerza con la que te jala (aceleración)
+grapple_speed_max = 14;      // Velocidad máxima permitida al estar colgado
+grapple_target = noone;
+grapple_type = ""; // "PARED" o "ENEMIGO"
+grapple_pull_speed = 12; // Velocidad con la que el enemigo viene hacia ti
+grapple_timer = 0;
+grapple_anim_dist = 0;    // Qué tanto se ha extendido el cable visualmente
+grapple_hitting = false;  // ¿Ya llegó al objetivo?
+
+
+// --- NUEVAS PARA LANZAMIENTO LINEAL ---
+grapple_max_dist = 250;     // Alcance máximo del cable
+grapple_anim_dist = 0;      // Extensión actual visual
+grapple_speed_ext = 20;     // Velocidad de vuelo del gancho (¡Ajústalo!)
+grapple_hitting = false;    // ¿Ya impactó algo?
+grapple_dir = 0;            // Dirección fija del disparo
+grapple_is_returning = false; // ¿Se está devolviendo porque no pegó a nada?

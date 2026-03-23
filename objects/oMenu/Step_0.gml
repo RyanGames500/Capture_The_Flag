@@ -1,5 +1,5 @@
 var mid_x = room_width / 2-300;
-var mid_y = room_height / 2 - 280;
+var mid_y = room_height / 2 - 250;
 
 if (mouse_check_button_pressed(mb_left)) {
 	if (global.registrado == 0) {
@@ -142,7 +142,7 @@ if (!input_activo) {
 if (menu_delay > 0) {
         menu_delay--;
     } else {
-var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+var move = keyboard_check_pressed(ord("S")) - keyboard_check_pressed(ord("W"));
 
 // --- ESTADO PRINCIPAL ---
     if (menu_state == "main") {
@@ -458,6 +458,12 @@ if (keyboard_check_pressed(ord("P"))) {
 if (menu_state == "connecting") {
     waiting_timer++;
     if (waiting_timer > room_speed) waiting_timer = 0; // Reinicia cada segundo
+	
+	if(keyboard_check_released(vk_escape))
+	{
+		LeaveRoom();
+		menu_state="main";	
+	}
 }
 
 if (menu_state == "lobby_espera") {
@@ -621,14 +627,20 @@ if (mostrando_selector) {
     if (keyboard_check_pressed(vk_space)) mostrando_selector = false;
 
     if (keyboard_check_pressed(vk_enter)) {
-        if (avatar_seleccionado <= 1) { // Aquí pones tu condición de desbloqueo
-            global.avatar_id = avatar_seleccionado;
-            mostrando_selector = false;
-            scr_save_to_local();
-        } else {
-            oMenu.mensaje_texto = "Icono bloqueado!";
-            oMenu.mensaje_alpha = 2;
-        }
+// --- DENTRO DEL IF (keyboard_check_pressed(vk_enter)) ---
+if (scr_check_icon_unlocked(avatar_seleccionado)) {
+    global.avatar_id = avatar_seleccionado;
+    mostrando_selector = false;
+    scr_save_to_local(); // Guardar el nuevo icono
+    
+    oMenu.mensaje_texto = "ICONO ACTUALIZADO!";
+    oMenu.mensaje_alpha = 2;
+} else {
+    // Feedback de que está bloqueado
+    oMenu.mensaje_texto = "ICONO BLOQUEADO!";
+    oMenu.mensaje_alpha = 2;
+    // audio_play_sound(snd_error, 1, false); 
+}
     }
 }
 
@@ -797,22 +809,48 @@ if (mouse_check_button_pressed(mb_left)) {
         // ¿El clic está sobre el botón de duelo de este amigo específico?
         if (point_distance(mx, my, btn_duelo_x, item_yy) < 15) {
             
-// --- CLIC EN BOTÓN DE DUELO ---
-var _su_tag = global.lista_amigos[i].tag;
+		// --- CLIC EN BOTÓN DE DUELO ---
+		var _su_tag = global.lista_amigos[i].tag;
 
-SetSimpleData("duelo_pendiente", string(_su_tag), {
-    retador_nombre: global.myName,
-    retador_id: global.clientId, // Le damos nuestro ID para que nos responda directo
-    es_duelo: true 
-});
+		SetSimpleData("duelo_pendiente", string(_su_tag), {
+		    retador_nombre: global.myName,
+		    retador_id: global.clientId, // Le damos nuestro ID para que nos responda directo
+		    es_duelo: true 
+		});
 
-oMenu.mensaje_texto = "Esperando respuesta del rival...";
-oMenu.mensaje_alpha = 2;
-// NO llamamos a ChangeRoom aquí.
+		oMenu.mensaje_texto = "Esperando respuesta del rival...";
+		oMenu.mensaje_alpha = 2;
+		// NO llamamos a ChangeRoom aquí.
         }
     }
 }
 
+//dibujar venta de reto
+if (mostrando_reto) {
+    reto_timer--;
+    
+    // Si presiona ENTER (Aceptar)
+    if (keyboard_check_pressed(vk_enter)) {
+        var _id_retador = datos_reto.retador_id;
+        
+        // Avisar al retador
+        SendEventToClient(_id_retador, "ENTRA_AL_DUELO", {
+            sala_destino: "duelo_" + string(_id_retador)
+        });
+
+        // Limpiar y movernos
+        DeleteSimpleData("duelo_pendiente", global.miFriendTag);
+        mostrando_reto = false;
+        ChangeRoom("duelo_" + string(_id_retador));
+    }
+    
+    // Si presiona ESC o se acaba el tiempo (Rechazar)
+    if (keyboard_check_pressed(vk_escape) || reto_timer <= 0) {
+        DeleteSimpleData("duelo_pendiente", global.miFriendTag);
+        mostrando_reto = false;
+        datos_reto = -1;
+    }
+}
 //Guardado en la nube
 // --- PROCESADOR DE GUARDADO INVISIBLE ---
 if (save_state == "prepare") {

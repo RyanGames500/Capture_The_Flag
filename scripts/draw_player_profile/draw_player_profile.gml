@@ -108,7 +108,6 @@ function draw_player_profile(px, py) {
     draw_text(cx, cy + 295, "[ESC] VOLVER");
 
 if (oMenu.mostrando_selector) {
-        // ... (Fondo oscuro y ventana igual que antes) ...
         draw_set_color(c_black); draw_set_alpha(0.85);
         draw_rectangle(0, 0, display_get_gui_width(), display_get_gui_height(), false);
         
@@ -149,7 +148,17 @@ if (oMenu.mostrando_selector) {
                 var icon_x = (col * separacion) + 70;
                 var icon_y = (fila * separacion) + 60 - oMenu.scroll_y;
                 
-                var lock = (i > 1);
+                // --- DENTRO DEL BUCLE FOR EN EL SELECTOR ---
+				var lock = !scr_check_icon_unlocked(i); // Bloquea si NO cumple el requisito
+
+				var _c = lock ? c_black : c_white;
+				var _a = lock ? 0.3 : 1;
+				draw_sprite_ext(spr_player_icon, i, icon_x, icon_y, 4, 4, 0, _c, _a);
+
+				if (lock) {
+				    draw_set_color(c_red);
+					draw_set_font(fnt_menu);
+				}
                 
                 // Solo dibujamos si está dentro del rango visible (optimización)
                 if (icon_y > -100 && icon_y < area_h + 100) {
@@ -165,7 +174,8 @@ if (oMenu.mostrando_selector) {
                     
                     if (lock) {
                         draw_set_color(c_red);
-                        draw_text_transformed(icon_x, icon_y + 35, "LOCK", 0.4, 0.4, 0);
+						draw_set_font(fnt_menu);
+                        draw_text_transformed(icon_x, icon_y + 35, "LOCK", 0.6, 0.6, 0);
                     }
                 }
             }
@@ -174,6 +184,17 @@ if (oMenu.mostrando_selector) {
             draw_surface(surf, area_x, area_y);
             surface_free(surf);
         }
+
+		var info_reto = "REQUISITO: ";
+		switch(avatar_seleccionado) {
+		    case 0: case 1: info_reto += "INICIAL"; break;
+		    case 2: info_reto += "CONSIGUE 100 KILLS"; break;
+		    case 3: info_reto += "GANA 10 PARTIDAS"; break;
+		    default: info_reto += "LOGRO SECRETO"; break;
+		}
+		draw_set_color(c_yellow);
+		draw_set_font(fnt_menu);
+		draw_text_transformed(vx, vy + 145, info_reto, 0.6, 0.6, 0);
 
         // Botones abajo (Ya no los tapan los iconos)
         draw_set_color(c_lime);

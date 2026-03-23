@@ -1,5 +1,26 @@
 function callback_ReceivedEvent(eventName, theMessageStruct, senderClientId) {
     switch(eventName) {
+
+
+case "pedir_revancha":
+    // El rival ve que quieres revancha
+    global.revancha_rival = true; 
+    scrAddKillFeed(theMessageStruct.nombre + " QUIERE REVANCHA!");
+break;
+
+case "aceptar_revancha":
+    // ¡Aquí ocurre la magia! Ambos ejecutan el reset al mismo tiempo
+    scr_reset_game_data();
+break;
+
+case "identificar_rival":
+	var tag_rival = theMessageStruct.rival_tag;
+	var name_rival = theMessageStruct.rival_nombre;
+	
+    global.ultimo_rival_tag = string(tag_rival);
+    global.ultimo_rival_nombre = string(name_rival);
+    show_debug_message("!!! RIVAL IDENTIFICADO DESDE LA DB/HOST: " + global.ultimo_rival_tag);
+break;
 // --- DENTRO DE TU SWITCH DE EVENTOS DE RED (callback_ReceivedEvent) ---
 case "ENTRA_AL_DUELO":
     var _sala = theMessageStruct.sala_destino;
@@ -659,80 +680,108 @@ break;
 		}	
 		break;
 
-		case "request_hit":
-		{
-		    // Solo el Host procesa peticiones de daño
-		    if (oBrain.AmIPseudoHost) 
-		    {
-		        var victimId = theMessageStruct.victimId;
-		        var dmg      = theMessageStruct.damage;
-		        var killer   = string(theMessageStruct.killer);
-		        var reason   = string(theMessageStruct.reason);
+case "request_hit":
+{
+    if (oBrain.AmIPseudoHost) 
+    {
+        var victimId = theMessageStruct.victimId;
+        var dmg      = theMessageStruct.damage;
+        var killer   = string(theMessageStruct.killer);
+        var reason   = string(theMessageStruct.reason);
+        
+        // Recibimos el ángulo del atacante (Asegúrate de mandarlo desde el guante)
+        var ang = variable_struct_exists(theMessageStruct, "angle") ? theMessageStruct.angle : 0;
 
-		        // El Host le ordena a la víctima que reciba el golpe
-		        // (Esto disparará el caso "hit" en la pantalla de la víctima)
-		        SendEventToClient(victimId, "hit", {
-		            damage: dmg,
-		            killer: killer,
-		            reason: reason
-		        });
-        
-		        // Opcional: El Host también podría avisarle al atacante que el golpe fue válido
-		        // SendEventToClient(senderClientId, "hit_confirmed", {});
-		    }
-		}
-		break;
+        SendEventToClient(victimId, "hit", {
+            damage: dmg,
+            killer: killer,
+            reason: reason,
+            angle: ang 
+        });
+    }
+}
+break;
 
-		case "hit":
-		{
-		    if (!instance_exists(oPlayer)) exit;
+case "hit":
+{
+    if (!instance_exists(oPlayer)) exit;
 
-		    with (oPlayer)
-		    {
-		        if (isDead || invulnerable) exit;
+    with (oPlayer)
+    {
+        if (isDead || invulnerable) exit;
 
-		        var dmg = real(theMessageStruct.damage);
+        var dmg = real(theMessageStruct.damage);
 
-		        // --- 1. LÓGICA DEL ESCUDO (El "Freno") ---
-		        if (has_shield) {
-		            has_shield = false; // El escudo se rompe
-		            shield_timer = 0;   // Reseteamos el timer para que desaparezca la UI
+        // --- 1. LÓGICA DEL ESCUDO ---
+        if (has_shield) {
+            has_shield = false; 
+            shield_timer = 0;   
+            impact_alpha = 0.6;
+            impact_color = c_aqua; 
+            scrCamShake(12); 
+            if (global.sfx) audio_play_sound(snd_hit, 20, false, 1.5); 
+            exit; 
+        }
+
+        // --- 2. LÓGICA DE DAÑO NORMAL ---
+        if (is_string(theMessageStruct.killer)) last_killer = theMessageStruct.killer;
+        if (is_string(theMessageStruct.reason)) death_reason = theMessageStruct.reason;
+        else death_reason = "pvp";
+
+        damage_alpha = 0.4; 
+        health -= dmg;
+
+        // --- 🥊 LÓGICA DE BOXEO (Empuje y Bandera) ---
+        if (theMessageStruct.reason == "boxeo") {
             
-		            // Efecto visual de escudo (Impacto azul claro en lugar de rojo)
-		            impact_alpha = 0.6;
-		            impact_color = c_aqua; 
-		            scrCamShake(12); // Sacudida de impacto de escudo
+            // Recibimos el ángulo dinámico
+            var _ang = variable_struct_exists(theMessageStruct, "angle") ? theMessageStruct.angle : 0;
             
-		            if (global.sfx) audio_play_sound(snd_hit, 20, false, 1.5); // Sonido más agudo para el escudo
+            state = PLAYERSTATE.HIT;
+            hit_bloqueo_timer = 20;
             
-		            exit; // <--- IMPORTANTE: Aquí cortamos el código. 
-		                  // No se resta vida, no hay flash rojo, ni estado de HIT.
-		        }
+            // Empuje lateral basado en el ángulo y salto hacia arriba
+            push_h = lengthdir_x(22, _ang); 
+            vsp = -7; 
 
-		        // --- 2. LÓGICA DE DAÑO NORMAL (Si no había escudo) ---
-		        if (is_string(theMessageStruct.killer)) last_killer = theMessageStruct.killer;
-		        if (is_string(theMessageStruct.reason)) death_reason = theMessageStruct.reason;
-		        else death_reason = "pvp";
+            if (has_flag) {
+                has_flag = false;
+                
+                // --- 🚩 EL SALTITO DE LA BANDERA ---
+                var _obj_bandera = (global.myTeam == "AZUL") ? oFlag : oFlag2;
+                with (_obj_bandera) {
+                    has_flag = false;
+                    portador_instancia = noone;
+                    x = other.x;
+                    y = other.y - 25;      // Aparece un poco más arriba
+                    velocidad_caida = -6;  // Empuje hacia arriba para que no se recoja de una vez
+                }
 
-		        damage_alpha = 0.4; // Flash rojo sexy
-		        health -= dmg;
+                // Avisamos a todos los clientes del drop con la nueva posición
+                with(oOtherPlayer){
+                    SendEventToClient(clientId, "flag_dropped", {
+                        team: global.myTeam,
+                        dropX: other.x,
+                        dropY: other.y - 25
+                    });
+                }
+            }
+        }
 
-				if(health<=0) and oPlayer.t2=0
-				{
-				oPlayer.t2=1;
-					//if global.sfx = true {audio_play_sound(sndPlayer_Dead,1,0);}
-					SendMessageToClient(senderClientId ,  "point")
-			
-				}
+        if(health <= 0) and oPlayer.t2 == 0
+        {
+            oPlayer.t2 = 1;
+            SendMessageToClient(senderClientId , "point")
+        }
 
-		        if (state != PLAYERSTATE.DEAD)
-		        {
-		            state = PLAYERSTATE.HIT;
-		            if (global.sfx) audio_play_sound(snd_hit, 20, false, .9);
-		        }
-		    }
-		}
-		break;
+        if (state != PLAYERSTATE.DEAD)
+        {
+            state = PLAYERSTATE.HIT;
+            if (global.sfx) audio_play_sound(snd_hit, 20, false, .9);
+        }
+    }
+}
+break;
 
         case "i_died":
 		{

@@ -66,7 +66,11 @@ if (melee_active > 0) {
 }
 
 // --- DIBUJAR ARMA ---
-if (guns[weapon.index] != noone && !has_flag) {
+// Solo dibujamos si tengo arma, no tengo bandera Y el guante no está volando
+var guante_volando = (instance_exists(mi_guante));
+
+if (guns[weapon.index] != noone && !has_flag && !guante_volando)
+{
     var weaponScale = (weapon.angle >= 90 && weapon.angle < 270) ? -2 : 2;
     var weaponAngle = weapon.angle + ((weapon.angle >= 90 && weapon.angle < 270) ? 180 : 0);
 

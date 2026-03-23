@@ -43,7 +43,7 @@ reload_max = 0;
 melee_cd = 0;
 melee_active = 0;
 melee_damage = 20;
-
+mi_guante = noone;
 // --- FÍSICA ---
 hsp = 0;
 vsp = 0;

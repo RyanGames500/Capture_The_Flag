@@ -102,6 +102,23 @@ weapon_struct_m4 = {
     reloadTime: room_speed * 1.5, // Recarga un poquito más lenta que la pistola
 	index: 0
 };
+
+weapon_struct_box = {
+    sprite_suelo: spr_resort_box_idle, 
+    sprite: spr_resort_box_idle,
+    object: oGun,
+    subimage: 0,
+    ammo: 999,
+    maxAmmo: 999,
+    frequency: room_speed / 2, // 0.5 segundos entre golpes
+    type2: "box",
+    damage: 15,
+    
+    ammoType: "melee",
+    clipSize: 999,
+    reloadTime: 0,
+    index: 0
+};
 #endregion
 
 //efecto fantasma
@@ -189,3 +206,4 @@ ConnectToServer();
 //room_goto_next();
 
 is_closing=false;
+mensaje_alpha=0

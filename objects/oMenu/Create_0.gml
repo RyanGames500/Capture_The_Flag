@@ -127,3 +127,10 @@ alarm[3] = room_speed * 2;
 
 avatar_seleccionado = 0;     // El que estás viendo en la ventanita
 mostrando_selector = false;  // Controla si la ventana está abierta
+
+
+
+//ventana de duelo
+mostrando_reto = false;
+datos_reto = -1;
+reto_timer = 0; // Para efectos de brillo o tiempo límite

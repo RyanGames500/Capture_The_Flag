@@ -11,8 +11,7 @@ draw_set_font(fnt_menu);
 draw_set_halign(fa_center);
 draw_set_valign(fa_middle);
 
-draw_text(200,200,string(estado_busqueda))
-draw_text(200,300,string(friends_state))
+draw_text(200,200,string(global.ultimo_rival_tag));
 
 if (global.registrado == 0) {
     if (input_activo) global.myName = texto_input;
@@ -796,3 +795,54 @@ if (mensaje_alpha > 0) {
 }
 
 
+
+if (mostrando_reto) {
+    draw_emergency_challenge(display_get_gui_width()/2, display_get_gui_height()/2);
+}
+
+if menu_state == "main"
+{
+// --- CONFIGURACIÓN DEL CUADRO ---
+var cuadro_x = 50;           // Posición X en la pantalla
+var cuadro_y = 250;          // Posición Y
+var cuadro_ancho = 300;      // Ancho del cuadro
+var cuadro_alto = 280;       // Alto del cuadro
+var padding = 20;            // Espacio interno del texto
+var color_verde = make_color_rgb(170, 255, 0); // Verde neón de tu imagen
+
+// 1. DIBUJAR EL FONDO (Semi-transparente)
+draw_set_alpha(0.2);
+draw_set_color(c_black);
+draw_roundrect(cuadro_x, cuadro_y, cuadro_x + cuadro_ancho, cuadro_y + cuadro_alto, false);
+
+// 2. DIBUJAR EL BORDE GRUESO
+draw_set_alpha(1);
+draw_set_color(color_verde);
+draw_line_width(cuadro_x, cuadro_y, cuadro_x + cuadro_ancho, cuadro_y, 4); // Arriba
+draw_line_width(cuadro_x, cuadro_y + cuadro_alto, cuadro_x + cuadro_ancho, cuadro_y + cuadro_alto, 4); // Abajo
+draw_line_width(cuadro_x, cuadro_y, cuadro_x, cuadro_y + cuadro_alto, 4); // Izquierda
+draw_line_width(cuadro_x + cuadro_ancho, cuadro_y, cuadro_x + cuadro_ancho, cuadro_y + cuadro_alto, 4); // Derecha
+
+// 3. DIBUJAR EL TÍTULO "CONTROLS"
+draw_set_font(fnt_large); // Cambia por tu fuente de títulos
+draw_set_halign(fa_left);
+draw_text_transformed(cuadro_x + padding, cuadro_y + padding, "controls", 1.5, 1.5, 0);
+
+// 4. DIBUJAR LA LISTA DE CONTROLES
+draw_set_font(fnt_small); // Tu fuente de texto normal
+var texto_y = cuadro_y + 80;
+var interlineado = 30;
+
+draw_text(cuadro_x + padding, texto_y, "A, D - MOVE");
+draw_text(cuadro_x + padding, texto_y + interlineado, "W - JUMP");
+draw_text(cuadro_x + padding, texto_y + (interlineado * 2), "MOUSE - AIM");
+draw_text(cuadro_x + padding, texto_y + (interlineado * 3), "L-CLICK - FIRE");
+draw_text(cuadro_x + padding, texto_y + (interlineado * 4), "R-CLICK - GRENADE / MELEE");
+
+// 5. ICONO DE TECLADO/MOUSE (Opcional - Dibujar un sprite si tienes uno)
+// draw_sprite_ext(spr_icon_controls, 0, cuadro_x + 240, cuadro_y + 110, 1, 1, 0, color_verde, 1);
+
+// Resetear ajustes de dibujo para no afectar a otros elementos
+draw_set_color(c_white);
+draw_set_alpha(1);
+}

@@ -19,7 +19,7 @@ function scr_enviar_solicitud_amistad(_tag_destino) {
     SetSimpleData("solicitudes", string(_tag_destino), _data);
     
     // 4. Feedback visual
-    mensaje_texto = "¡Solicitud enviada al Tag: " + string(_tag_destino) + "!";
+    mensaje_texto = "Solicitud enviada al Tag: " + string(_tag_destino) + "!";
     mensaje_alpha = 3;
     
     show_debug_message(">>> NUBE: Solicitud mandada al destino: " + string(_tag_destino));

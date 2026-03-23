@@ -1,3 +1,17 @@
+// Esto debería estar en el Step de tu objeto enemigo/jugador
+if (state == PLAYERSTATE.HIT) {
+    hsp = hsp * 0.9; // Fricción: pierde 10% de velocidad cada frame
+}
+
+// En el Step del Enemigo
+if (state == PLAYERSTATE.HIT) {
+    if (hit_bloqueo_timer > 0) {
+        hit_bloqueo_timer--;
+    } else {
+        state = PLAYERSTATE.IDLE; // Aquí recupera el control
+    }
+}
+
 // CONGELAR ACCIONES AL FINAL
 if (global.game_over) 
 {
@@ -280,6 +294,10 @@ if (state != PLAYERSTATE.DEAD) {
 }
 
 // 3. Máquina de Estados
+if (mi_clase == -1) {
+    visible = false; // Te haces invisible mientras eliges
+    exit;            // Te sales del código: NADA de abajo se ejecuta
+}
 switch (state) {
 
     case PLAYERSTATE.INTRO:
@@ -294,6 +312,7 @@ if (canShoot && melee_active <= 0)
 
 
         //hsp = 0;
+		if (abs(push_h) < 1) hsp = 0; // Solo frenar si no hay empuje
         sprite_index = anims[mi_clase].idle;
         if (key_jump && is_grounded) {is_grounded = false; vsp = jumpsp; state = PLAYERSTATE.JUMP; }
         if (key_right || key_left) state = PLAYERSTATE.WALK;
@@ -304,10 +323,13 @@ if (canShoot && melee_active <= 0)
 {
     scrPlayerWeaponUpdate();
 }
-		// Modifica la línea de hsp dentro de PLAYERSTATE.WALK:
-		var _current_speed = has_flag ? walksp * 0.7 : walksp; // 30% más lento si tiene la bandera
-		hsp = move * _current_speed;
-        move = key_right - key_left;
+	var move = key_right - key_left;
+    var _speed_final = has_flag ? walksp * 0.7 : walksp;
+
+    // SOLO camina si no está siendo empujado fuertemente
+    if (abs(push_h) < 1) { 
+        hsp = move * _speed_final;
+    }
         sprite_index = anims[mi_clase].walk;
         if (hsp != 0) image_xscale = sign(hsp) * 1.5;
         
@@ -323,8 +345,10 @@ if (canShoot && melee_active <= 0)
 }
 
 
-        move = key_right - key_left;
+	var move = key_right - key_left;
+    if (abs(push_h) < 1) {
         hsp = move * walksp;
+    }
         if (hsp != 0) image_xscale = sign(hsp) * 1.5;
         // Aquí podrías poner sprite_index de salto
         if (is_grounded) state = PLAYERSTATE.IDLE;

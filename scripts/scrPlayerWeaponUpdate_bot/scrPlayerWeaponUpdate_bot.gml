@@ -431,7 +431,27 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
 
             if (w.ammo <= 0) scrReloadWeapon();
         }
-        // si llega un type2 raro, por seguridad:
+// ==========================
+// GUANTE DE BOX (DENTRO DE TU FUNCIÓN)
+// ==========================
+else if (t2 == "box")
+{
+    if (!instance_exists(oPunch_offline_bot)) 
+    {
+        scrCamShake(2);
+        recoil_kick = 8;
+
+        var punch = instance_create_layer(x, y - 13, "Instances", oPunch_offline_bot);
+        punch.owner = id;
+        punch.damage = w.damage * damage_boost;
+        
+        // --- ESTA ES LA LÍNEA CLAVE ---
+        // Guardamos la referencia para saber que el guante está volando
+        mi_guante = punch; 
+
+    }
+    weapon.frequency = w.frequency;
+}
         else
         {
             // fallback simple: no disparar, solo cooldown

@@ -62,44 +62,92 @@ if (global.ONLINE == false && global.game_over == false) {
     }
 }
 
-// --- 4. LÓGICA PANTALLA DE VICTORIA (GAME OVER ACTIVO) ---
+// --- 4. LÓGICA PANTALLA DE VICTORIA (MODIFICADA) ---
 if (global.game_over == true) {
     if (victory_alpha < 1) victory_alpha += 0.05; 
 
     if (victory_alpha >= 0.9) {
-        if (global.ONLINE) {
-            // En Online solo esperamos Enter para salir
-            if (keyboard_check_pressed(vk_enter) || keyboard_check_pressed(vk_escape)) {
-                LeaveRoom(); // O room_goto(rm_menu)
+        
+        if (AmIPseudoHost) {
+            with(oOtherPlayer) {
+                SendEventToClient(clientId, "identificar_rival", { 
+                    rival_tag: global.miFriendTag, 
+                    rival_nombre: global.myName
+                });
+                global.ultimo_rival_tag = string(self.TAG); 
+                global.ultimo_rival_nombre = string(self.Name);
             }
-        } else {
-            // En Offline usamos el índice de Reintentar/Salir
-            var move = keyboard_check_pressed(vk_left) - keyboard_check_pressed(vk_right);
-            victory_index = clamp(victory_index + move, 0, 1);
+        }
 
-            if (keyboard_check_pressed(vk_enter)) {
+        // --- NAVEGACIÓN DE BOTONES (Ahora solo 2 opciones) ---
+        var move = keyboard_check_pressed(vk_right) - keyboard_check_pressed(vk_left);
+        
+        // El límite máximo ahora es siempre 1 (porque el índice es 0 y 1)
+        victory_index = clamp(victory_index + move, 0, 1);
+
+        // --- ACCIÓN AL PRESIONAR ENTER ---
+        if (keyboard_check_pressed(vk_enter)) {
+            
+            if (global.ONLINE) {
+                switch(victory_index) {
+                    case 0: // --- BOTÓN ENVIAR SOLICITUD (Ahora es el índice 0) ---
+                        if (global.ultimo_rival_tag != "") {
+                            ultimo_intento_busqueda = global.ultimo_rival_tag; 
+                            estado_busqueda = "encontrado";
+                            datos_busqueda_resultado = {}; 
+
+                            if (is_struct(datos_busqueda_resultado)) {
+                                var id_rival = string(ultimo_intento_busqueda); 
+                                scr_enviar_solicitud_amistad(id_rival); 
+                                
+                                // Reset de variables de búsqueda
+                                estado_busqueda = "idle";
+                                friends_search_input = "";
+                                datos_busqueda_resultado = -1; 
+                                
+                                mensaje_texto = "SOLICITUD ENVIADA!";
+                                mensaje_alpha = 3;
+                                
+                                // Movemos el foco al botón EXIT automáticamente tras enviar
+                                victory_index = 1; 
+                            }
+                        } else {
+                            mensaje_texto = "No se encontro el Tag del rival";
+                            mensaje_alpha = 2;
+                        }
+                        break;
+                        
+                    case 1: // --- EXIT ---
+                        LeaveRoom(); 
+                        break;
+                }
+            } 
+            else { // --- CASO OFFLINE (RESTART O EXIT) ---
                 if (victory_index == 0) {
-					// REINTENTAR
-					puntos_procesados = false;
+                    // REINTENTAR
+                    puntos_procesados = false;
                     global.puntos_azul = 0; 
                     global.puntos_rojo = 0;
                     global.game_over = false; 
                     room_restart();
                 } else {
-					#region Carga local
-					scr_load_from_local();
-					#endregion
-					puntos_procesados = false;
-					global.game_over = false; 
+                    // EXIT
+                    scr_load_from_local();
+                    puntos_procesados = false;
+                    global.game_over = false; 
                     global.puntos_azul = 0;
                     global.puntos_rojo = 0;
                     global.winner_team = 0;
                     victory_alpha = 0; 
-                    
                     global.regresar_a_offline = true; 
                     room_goto(rm_menu);
                 }
             }
+        }
+        
+        // Salir rápido con ESC
+        if (keyboard_check_pressed(vk_escape)) {
+            if (global.ONLINE) LeaveRoom(); else room_goto(rm_menu);
         }
     }
 }
@@ -325,11 +373,12 @@ if (oBrain.AmIPseudoHost)
                 else if (tipo_spawn == "weapon") {
                     var _struct_a_usar = arma_struct;
                     if (_struct_a_usar == noone) {
-                        var _pick = irandom(4);                                         
+                        var _pick = irandom(5);                                         
                         if (_pick == 0)      _struct_a_usar = other.weapon_struct_pistola;
                         else if (_pick == 1) _struct_a_usar = other.weapon_struct_escopeta;
                         else if (_pick == 2) _struct_a_usar = other.weapon_struct_smg;
                         else if (_pick == 3) _struct_a_usar = other.weapon_struct_bazooka;
+						else if (_pick == 4) _struct_a_usar = other.weapon_struct_box;
                         else                 _struct_a_usar = other.weapon_struct_m4;
                     }
                     

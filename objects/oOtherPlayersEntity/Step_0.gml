@@ -32,6 +32,9 @@ var target_y = EP._y;
         sprite_index = EP._SI;
 		direction = EP._A;
 		is_rocket = EP._IR;
+		is_box = EP._IB;
+		x_base_remote = real(EP._XB); // Guardamos la base
+		y_base_remote = real(EP._YB); // Guardamos la base
 }
 }catch(e){
 

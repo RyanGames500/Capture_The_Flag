@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"draw_emergency_challenge",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"draw_emergency_challenge",
+  "parent":{
+    "name":"TOOLS",
+    "path":"folders/Scripts/TOOLS.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

@@ -46,7 +46,7 @@ reload_max = 0; // duración total de la recarga (frames)
 melee_cd = 0;
 melee_active = 0;   // frames que el hitbox está activo
 melee_damage = 20;  // ajusta
-
+mi_guante = noone;
 // Física
 hsp = 0;
 vsp = 0;
@@ -146,19 +146,19 @@ switch(mi_clase) {
     case 0: // ASALTO (Equilibrado)
         walksp_base = 3;   
         health = 100; 
-        jumpsp = -13; 
+        jumpsp = -14; 
         break; 
 
     case 1: // TANQUE (Lento y pesado, salta poco)
         walksp_base = 2.5; 
         health = 200; 
-        jumpsp = -12; // Salto más bajo por el peso
+        jumpsp = -13; // Salto más bajo por el peso
         break; 
 
     case 2: // MEDICO (Ágil para rescates)
         walksp_base = 3.5; 
         health = 120; 
-        jumpsp = -12.5; // Salto ligeramente superior
+        jumpsp = -13.5; // Salto ligeramente superior
         break;
 
     case 3: // SCOUT (Muy rápido y atlético)
@@ -172,3 +172,6 @@ switch(mi_clase) {
 max_health = health;
 vida_visual = health;
 escudo_visual = shield_timer; 
+TAG=string(global.miFriendTag);
+mi_guante = noone;
+hit_bloqueo_timer=0;

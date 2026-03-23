@@ -41,4 +41,22 @@ is_rocket=false;
 exploded = false;
 net_trail_timer = 0;
 smoke_timer = 0;
+is_box = false; // <--- El interruptor maestro
 
+// --- VARIABLES DE COMBATE ---
+damage = 0;
+owner = noone;
+team = -1;
+life = 300; // Vida útil general
+
+// --- VARIABLES ESPECÍFICAS DE ROCKET ---
+exploded = false;
+
+// --- VARIABLES ESPECÍFICAS DE BOXEO (is_box) ---
+distancia = 0;
+distancia_max = 160; 
+velocidad = 15;
+estado = 1;      // 1 = Estirando, -1 = Regresando
+x_base = x; 
+y_base = y;
+hit_list = ds_list_create(); // <--- OBLIGATORIO para el guante

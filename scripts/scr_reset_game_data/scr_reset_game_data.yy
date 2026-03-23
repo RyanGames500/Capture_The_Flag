@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"scr_reset_game_data",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_reset_game_data",
+  "parent":{
+    "name":"TOOLS",
+    "path":"folders/Scripts/TOOLS.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

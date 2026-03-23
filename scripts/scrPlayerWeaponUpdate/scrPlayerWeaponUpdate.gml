@@ -419,7 +419,58 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
 
             if (w.ammo <= 0) scrReloadWeapon();
         }
-        // si llega un type2 raro, por seguridad:
+// ==========================
+// GUANTE DE BOX (Boxeo)
+// ==========================
+else if (t2 == "box")
+{
+    // Solo permitimos un puño a la vez (opcional, pero recomendado)
+    if (!instance_exists(mi_guante)) 
+    {
+        scrCamShake(2);
+        recoil_kick = 8;
+
+        // Creamos la entidad
+        var punch = instance_create_layer(x, y - 13, "Instances", oMyEntity);
+        
+        // --- VARIABLES MAESTRAS ---
+        punch.is_box = true;        // <--- ACTIVA LA LÓGICA DE PUÑO
+        punch.owner = id;           // Para que sepa de quién salir
+        punch.direction = weapon.angle;
+        punch.image_angle = weapon.angle;
+        punch.damage = w.damage * damage_boost;
+        punch.owner_team = global.myTeam;
+        
+        // --- VARIABLES DE MOVIMIENTO ---
+        punch.distancia = 0;
+        punch.distancia_max = 160; 
+        punch.velocidad = 15;
+        punch.estado = 1;           // Empieza yendo hacia adelante
+        
+        // --- REFERENCIA PARA EVITAR SPAM ---
+        mi_guante = punch; 
+
+        // FX DE SONIDO (puedes usar snd_gun o uno de "viento")
+        if (global.sfx) audio_play_sound(snd_smg, 1, false, 0.5); 
+
+        // --- RED ONLINE ---
+        if (global.ONLINE && instance_exists(oOtherPlayer)) 
+        {
+            with(oOtherPlayer) {
+                SendEventToClient(clientId, "fx_shot", {
+                    x: other.x, 
+                    y: other.y - 13, 
+                    ang: other.weapon.angle, 
+                    muzzle: "box" // Usamos el tag "box" para el remoto
+                });
+            }
+        }
+    }
+    
+    // El guante no gasta balas si es cuerpo a cuerpo (tú decides)
+    // Pero sí aplica la frecuencia/cadencia
+    weapon.frequency = w.frequency;
+}
         else
         {
             // fallback simple: no disparar, solo cooldown

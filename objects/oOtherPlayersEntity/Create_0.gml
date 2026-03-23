@@ -17,3 +17,6 @@ taken = false; // El cerrojo
 t2=0;
 temp=0;
 is_rocket=false;
+is_box=false;
+x_base_remote=0;
+y_base_remote=0;

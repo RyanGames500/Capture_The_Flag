@@ -1,3 +1,16 @@
+// Esto debería estar en el Step de tu objeto enemigo/jugador
+if (state == PLAYER2.HIT) {
+    hsp = hsp * 0.9; // Fricción: pierde 10% de velocidad cada frame
+}
+
+// En el Step del Enemigo
+if (state == PLAYER2.HIT) {
+    if (hit_bloqueo_timer > 0) {
+        hit_bloqueo_timer--;
+    } else {
+        state = PLAYER2.IDLE; // Aquí recupera el control
+    }
+}
 // ======================================================
 // ❄ CONGELAR AL FINAL
 // ======================================================
@@ -377,12 +390,14 @@ switch (state) {
 
 
 case PLAYER2.WALK:
-        var move = key_right - key_left;
 
-        // Si tiene bandera, va al 70% de su velocidad ACTUAL (con o sin powerup)
-        var _speed_final = has_flag ? walksp * 0.7 : walksp;
-        
+	var move = key_right - key_left;
+    var _speed_final = has_flag ? walksp * 0.7 : walksp;
+
+    // SOLO camina si no está siendo empujado fuertemente
+    if (abs(push_h) < 1) { 
         hsp = move * _speed_final;
+    }
         
         scrPlayerWeaponUpdate_bot();
         sprite_index = spr_player_walk;
@@ -398,8 +413,10 @@ case PLAYER2.WALK:
     break;
 
     case PLAYER2.JUMP:
-        var move = key_right - key_left;
+	var move = key_right - key_left;
+    if (abs(push_h) < 1) {
         hsp = move * walksp;
+    }
 		scrPlayerWeaponUpdate_bot();
         if (hsp != 0)
             image_xscale = sign(hsp) * 1.5;
