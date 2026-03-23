@@ -5,10 +5,8 @@ function callback_ChangeRoom(new_room_id) {
     if (string_count("duelo_", new_room_id)) {
         show_debug_message(">>> RED: Entrando a sala de duelo privada: " + new_room_id);
         room_goto(rm_stage1); // O el mapa que uses para 1vs1
-        exit; // Salimos para que no ejecute lo de abajo
     }
 
-    // --- Tu lógica de matchmaking de antes ---
     if (!string_count("auto_matchmake", new_room_id)) {
         oMenu.menu_state = "lobby_espera";
     }

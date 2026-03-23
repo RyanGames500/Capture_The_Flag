@@ -22,7 +22,7 @@ if (global.pausa) {
         if (global.ONLINE) {
             if (pause_index == 0) global.pausa = false;
             if (pause_index == 1) { 
-                var _msg = string(global.myName) + " abandonó la partida!";
+                var _msg = string(global.myName) + " Abandono la Partida!";
                 with(oOtherPlayer) { SendEventToClient(clientId, "player_left_msg", { texto: _msg }); }
                 LeaveRoom();
             }
