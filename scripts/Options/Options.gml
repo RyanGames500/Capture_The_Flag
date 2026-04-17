@@ -9,7 +9,7 @@
 * Please do not share with anyone!
 * Then there is the Game Id. To separate your games, use this feature.
 */
-global.SERVERID = "23a10cd8-4ca0-4bae-9d70-43bafa47e11e"
+global.SERVERID = "c10680a0-9ae9-4651-9d67-23338fedf6c3"
 global.gameId = "Capture The Flag"
 
 /* Normally, data packets in websockets are safe because of SSL, but your game players can see the messages sent back and forth using tools like Chrome dev tools.

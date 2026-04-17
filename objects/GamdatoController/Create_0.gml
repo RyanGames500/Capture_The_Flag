@@ -46,6 +46,7 @@ global.kills = 0; //enemigos eliminados
 global.losses = 0;
 global.copas = 0; // Tu moneda de progresión competitiva
 
+global.partida_con_bot = false;
 global.registrado = 0;
 global.myName = "Cargando...";          // Aquí se guardará el nombre final
 global.save_version=1;

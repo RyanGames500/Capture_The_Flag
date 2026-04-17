@@ -1,3 +1,5 @@
+draw_self();
+if (isDead) exit;
 // --- BARRA DE VIDA ÉPICA (LOCAL) ---
 var _x1 = x - 30;
 var _y1 = y - 45;
@@ -53,35 +55,71 @@ if (invulnerable) {
     draw_self();
 }
 
-// --- ATAQUE MELEE (Mano) ---
-if (melee_active > 0) {
-    var dir  = sign(image_xscale);
-    var sx   = 2 * dir;
-    var offx = 12 * dir;
+var dir = sign(image_xscale);
+var tiene_arma = (guns[weapon.index] != noone && !has_flag && !instance_exists(mi_guante));
 
-    var p = 1 - (melee_active / 6);
-    var a = lerp(-40, 40, p);
+// 1. Punto de giro (Hombro de Adriana)
+var hombroX = x + (2 * dir); 
+var hombroY = y - 18;
 
-    draw_sprite_ext(spr_Hand, 0, x + offx, y - 10, sx, 2, a * dir, c_white, 1);
+// 2. Calcular dónde debe estar la mano
+var handX, handY, handAngle;
+
+if (tiene_arma) {
+    var largoBrazo = 14;
+    
+    // --- APLICAR RECOIL A LA POSICIÓN DE LA MANO ---
+    // Retroceso físico (ox, oy) y rotación (recoil_angle)
+    var ox_mano = lengthdir_x(-recoil_kick * 0.6, weapon.angle);
+    var oy_mano = lengthdir_y(-recoil_kick * 0.6, weapon.angle);
+    
+    handX = hombroX + lengthdir_x(largoBrazo, weapon.angle) + ox_mano;
+    handY = hombroY + lengthdir_y(largoBrazo, weapon.angle) + oy_mano;
+    handAngle = weapon.angle + recoil_angle; 
+} else {
+    handX = x + (11 * dir); 
+    handY = y - 5;          
+    handAngle = 80 * dir; 
 }
 
-// --- DIBUJAR ARMA ---
-// Solo dibujamos si tengo arma, no tengo bandera Y el guante no está volando
-var guante_volando = (instance_exists(mi_guante));
+// 3. DIBUJAR LA MANO
+if (melee_active > 0) {
+    var sx_melee = 2 * dir;
+    var p = 1 - (melee_active / 6); 
+    var estocada_dist = sin(p * pi) * 25; 
+    
+    var punch_x = x + lengthdir_x(estocada_dist + 10, (tiene_arma ? weapon.angle : (dir == 1 ? 0 : 180)));
+    var punch_y = (y - 12) + lengthdir_y(estocada_dist + 10, (tiene_arma ? weapon.angle : (dir == 1 ? 0 : 180)));
 
-if (guns[weapon.index] != noone && !has_flag && !guante_volando)
-{
-    var weaponScale = (weapon.angle >= 90 && weapon.angle < 270) ? -2 : 2;
-    var weaponAngle = weapon.angle + ((weapon.angle >= 90 && weapon.angle < 270) ? 180 : 0);
+    draw_sprite_ext(spr_Hand, 0, punch_x, punch_y, sx_melee, 2, 0, c_white, 1);
+} 
+else {
+    var handScaleX = 2 * dir;
+    var handScaleY = (tiene_arma && handAngle > 90 && handAngle < 270) ? -2 : 2;
+    var finalHandAngle = handAngle;
+    
+    if (tiene_arma && dir == -1) finalHandAngle += 180;
 
-    var ox = lengthdir_x(-recoil_kick, weapon.angle);
-    var oy = lengthdir_y(-recoil_kick, weapon.angle);
+    draw_sprite_ext(spr_Hand, 0, handX, handY, handScaleX, handScaleY, finalHandAngle, c_white, 1);
+}
+
+// 5. DIBUJAR ARMA (Anclada a la mano con recoil)
+if (tiene_arma) {
+    var desfase_adelante = 22; 
+    var desfase_arriba = -4;   
+
+    var weaponScaleY = (handAngle > 90 && handAngle < 270) ? -2 : 2;
+    var ajuste_vertical = (weaponScaleY == -2) ? -desfase_arriba : desfase_arriba;
+    
+    // El arma usa handX y handY que ya tienen el recoil aplicado
+    var weaponX = handX + lengthdir_x(desfase_adelante, handAngle) + lengthdir_x(ajuste_vertical, handAngle - 90);
+    var weaponY = handY + lengthdir_y(desfase_adelante, handAngle) + lengthdir_y(ajuste_vertical, handAngle - 90);
 
     draw_sprite_ext(
         guns[weapon.index].sprite, 0,
-        x + ox, (y - 13) + oy,
-        weaponScale, 2,
-        weaponAngle + recoil_angle,
+        weaponX, weaponY, 
+        2, weaponScaleY, 
+        handAngle, // Ya incluye el recoil_angle de la mano
         c_white, 1
     );
 }

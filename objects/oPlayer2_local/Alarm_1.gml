@@ -1,5 +1,6 @@
 // 1. POSICIONAMIENTO
 // En local, simplemente regresamos al spawn original del mapa
+invulnerable = true;
 x = spawn_x;
 y = spawn_y;
 

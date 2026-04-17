@@ -200,6 +200,10 @@ global.mi_listo = false;
 global.rival_listo = false;
 global.pj_rival = -1;
 global.request_registro=0;
+// Arreglo con los sprites que subiste
+global.pj_portraits = [spr_pj_1, spr_pj_2, spr_pj_3, spr_pj_4]; 
+global.fondo_puntos = spr_fondo_select; // La imagen roja de puntos
+
 //Iniciar la conexion
 ConnectToServer();
 

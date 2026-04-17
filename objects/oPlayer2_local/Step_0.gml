@@ -444,9 +444,11 @@ if (abs(push_h) > 0.8) {
 
 // --- MUERTE LOCAL ---
 if (hp <= 0 && !isDead) {
+    hsp = 0;
+    depth=-9999;
     isDead = true;
     state = PLAYERSTATE2.DEAD;
-    invulnerable = true;
+    
     alarm[1] = 120; // Respawn
     
     var killerName = (last_killer != "") ? last_killer : "Alguien";

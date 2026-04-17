@@ -3,7 +3,7 @@ speed = 0
 direction = 0
 //health = 100
 playerName = global.myName; // tu nombre local
-
+is_bot=false;
 // Esperamos un milisegundo a que el equipo esté asignado
 // Estados del jugador
 enum PLAYERSTATE {
@@ -143,28 +143,28 @@ mi_clase = global.pj_selected;
 
 // Ajuste de estadísticas físicas para los 4
 switch(mi_clase) {
-    case 0: // ASALTO (Equilibrado)
+    case 0: // ASALTO 
         walksp_base = 3;   
         health = 100; 
         jumpsp = -14; 
         break; 
 
-    case 1: // TANQUE (Lento y pesado, salta poco)
+    case 1: // TANQUE 
         walksp_base = 2.5; 
         health = 200; 
         jumpsp = -13; // Salto más bajo por el peso
         break; 
 
-    case 2: // MEDICO (Ágil para rescates)
+    case 2: // MEDICO 
         walksp_base = 3.5; 
         health = 120; 
         jumpsp = -13.5; // Salto ligeramente superior
         break;
 
-    case 3: // SCOUT (Muy rápido y atlético)
+    case 3: // SCOUT 
         walksp_base = 4.0; 
         health = 80;  
-        jumpsp = -14;  // ¡Gran salto para atajos!
+        jumpsp = -14;  // Gran salto
         break; 
 }
 

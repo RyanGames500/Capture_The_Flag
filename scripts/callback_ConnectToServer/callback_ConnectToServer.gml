@@ -5,7 +5,7 @@ function callback_ConnectToServer(){
     // Le avisamos a la pantalla de carga que la conexión fue un éxito
     if (instance_exists(oLoadingScreen)) {
         oLoadingScreen.conector_listo = true;
-        oLoadingScreen.mensaje = "CONEXION EXITOSA!";
+        oLoadingScreen.mensaje = "CONEXION EXITOSA";
     }
     show_debug_message("Rocket conectado con exito.");
 	

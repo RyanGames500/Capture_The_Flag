@@ -560,48 +560,45 @@ draw_set_valign(fa_top);
 
 
 
-if (!intro_disparada && room != rm_menu && global.ONLINE==true) {
+if (!intro_disparada && room != rm_menu && global.ONLINE == true) {
     var sw = display_get_gui_width();
     var sh = display_get_gui_height();
     
-    // 1. FONDO ELEGANTE (No negro plano)
-    draw_set_alpha(0.8);
+    // 1. FONDO CON GRADIENTE
+    draw_set_alpha(0.85);
     draw_rectangle_color(0, 0, sw, sh, c_black, c_black, make_color_rgb(10, 30, 50), make_color_rgb(10, 30, 50), false);
     draw_set_alpha(1);
 
-    // 2. CRONÓMETRO CON BRILLO
+    // 2. TÍTULO Y CRONÓMETRO
     draw_set_halign(fa_center);
     var segs = ceil(timer_intro / 60);
-    var wave = sin(current_time * 0.01) * 0.1;
-    draw_text_transformed_color(sw/2, 70, "INICIO EN: " + string(segs), 1.5 + wave, 1.5 + wave, 0, c_yellow, c_yellow, c_orange, c_orange, 1);
+    draw_text_transformed_color(sw/2, 50, "SELECT YOUR WARRIOR: " + string(segs), 1.5, 1.5, 0, c_white, c_white, c_yellow, c_yellow, 1);
 
-    // --- CONTADORES PARA SLOTS ---
+    // --- VARIABLES DE POSICIONAMIENTO ---
     var countAzul = 0;
     var countRojo = 0;
-    var gapY = 180; 
-    var startY = sh * 0.25;
+    var gapY = 480;      // Espacio vertical (Aumentado mucho para slots altos)
+    var startY = sh * 0.15; // Empezamos más arriba
+    var box_w = 260;     // Ancho del slot
+    var box_h = 440;     // ALTO DEL SLOT (Aumentado para ver cuerpo completo)
 
-    // 3. DIBUJAR MI SLOT
-    var myX = (global.myTeam == "AZUL") ? sw * 0.25 : sw * 0.75;
+    // 3. MI SLOT
+    var myX = (global.myTeam == "AZUL") ? sw * 0.22 : sw * 0.78;
     var myY = startY + ((global.myTeam == "AZUL" ? countAzul : countRojo) * gapY);
     
-    // Función de dibujo mejorada (ver abajo)
-    draw_bomb_slot(myX, myY, global.pj_selected, global.myName, global.mi_listo, true, global.myTeam);
-    
+    draw_bomb_slot(myX, myY, global.pj_selected, global.myName, global.mi_listo, true, global.myTeam, box_w, box_h);
     if (global.myTeam == "AZUL") countAzul++; else countRojo++;
 
-    // 4. DIBUJAR SLOTS DE OTROS
+    // 4. SLOTS DE OTROS JUGADORES
     with(oOtherPlayer) {
         var isAzul = (team == "AZUL");
-        var drawX = isAzul ? sw * 0.25 : sw * 0.75;
+        var drawX = isAzul ? sw * 0.22 : sw * 0.78;
         var drawY = startY + ((isAzul ? countAzul : countRojo) * gapY);
         
-        // Verificamos que las variables existan para evitar errores
         var _pj = variable_instance_exists(id, "mySelectedPJ") ? mySelectedPJ : 0;
         var _rdy = variable_instance_exists(id, "isReady") ? isReady : false;
         
-        draw_bomb_slot(drawX, drawY, _pj, Name, _rdy, false, team);
-        
+        draw_bomb_slot(drawX, drawY, _pj, Name, _rdy, false, team, box_w, box_h);
         if (isAzul) countAzul++; else countRojo++;
     }
 }

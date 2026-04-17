@@ -2,7 +2,7 @@
 speed = 0;
 direction = 0;
 playerName = "BOT1"; 
-
+Name=playerName;
 // --- ESTADOS ---
 enum PLAYER2 {
     IDLE,
