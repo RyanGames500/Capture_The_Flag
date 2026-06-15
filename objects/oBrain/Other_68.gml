@@ -110,9 +110,9 @@ if(type == network_type_data){
 		
 case "state_update":
     var found = false;
-    // Guardamos el ID que viene en el paquete para comparar
     var _incomingId = real(realData.clientId);
 
+    // 1. ACTUALIZAR SI YA EXISTE
     with(oOtherPlayer){
         if(clientId == _incomingId){
             afk = realData.afk;
@@ -122,29 +122,29 @@ case "state_update":
         }
     }
 
-    // 🔥 EL FILTRO DE SEGURIDAD:
-    // Si no lo encontramos Y el ID que viene NO es el mío... entonces lo creamos.
+    // 2. SI ES NUEVO, ASIGNAR EQUIPO POR CONTEO DE INSTANCIAS
     if(!found && _incomingId != global.clientId){
-       //if (oBrain.AmIPseudoHost) {
-       //     var _total_en_sala = instance_number(oOtherPlayer) + 1;
-            
-       //     // Si alguien entra, el Host le "Grita" cuál es el límite real
-       //     SendEventToClient(_incomingId, "SYNC_LIMIT", { max: global.max_players_allowed });
-
-       //     if (_total_en_sala >= global.max_players_allowed) {
-       //         SendEventToClient(_incomingId, "SALA_LLENA", {});
-       //     }
-       // }
         var new_enemy = instance_create_layer(0, 0, global.OtherPlayersLayerName, oOtherPlayer);
         new_enemy.clientId = _incomingId;
-        
-        new_enemy.team = (new_enemy.clientId % 2 == 0) ? "AZUL" : "ROJO";
         new_enemy.sharedProperties = realData.SP;
 
-if (oBrain.AmIPseudoHost) {
+        // --- MÉTODO DE CONTEO SIMPLE ---
+        // Contamos cuántos jugadores hay en total (otros + tú mismo)
+        var total_jugadores = instance_number(oOtherPlayer) + 1;
+        
+        // Si el total es par, es ROJO. Si es impar, es AZUL.
+        // Esto siempre los va a alternar: 1º Azul, 2º Rojo, 3º Azul, 4º Rojo...
+        if (total_jugadores % 2 == 0) {
+            new_enemy.team = "ROJO";
+        } else {
+            new_enemy.team = "AZUL";
+        }
+
+        // LÓGICA DE HOST
+        if (oBrain.AmIPseudoHost) {
             oBrain.timer_intro = 60 * 60; 
             oBrain.intro_disparada = false; 
-            global.fase_seleccion = true; // Nueva variable para bloquear el movimiento
+            global.fase_seleccion = true;
         }
     }
 break;

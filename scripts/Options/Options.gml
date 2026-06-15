@@ -9,7 +9,7 @@
 * Please do not share with anyone!
 * Then there is the Game Id. To separate your games, use this feature.
 */
-global.SERVERID = "c10680a0-9ae9-4651-9d67-23338fedf6c3"
+global.SERVERID = "a6add44f-5e6b-4018-a7a2-7c3098cc7eb8";
 global.gameId = "Capture The Flag"
 
 /* Normally, data packets in websockets are safe because of SSL, but your game players can see the messages sent back and forth using tools like Chrome dev tools.
@@ -22,6 +22,7 @@ global.useCiphering = false;
 * On which layer do you want other players to be instantiated
 */
 global.OtherPlayersLayerName = "Instances"
+
 
 /*
 * Do you want to manually connect to RNet? You can do this by copying your serverURL directy

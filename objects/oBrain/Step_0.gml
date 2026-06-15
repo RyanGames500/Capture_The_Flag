@@ -54,7 +54,8 @@ if (global.ONLINE == false && global.game_over == false) {
     if (global.puntos_rojo >= limite_off) _ganador_local = 1; 
     if (global.puntos_azul >= limite_off) _ganador_local = 2; 
 
-    if (_ganador_local != 0) {
+    if (_ganador_local != 0) 
+    {
         global.game_over = true;
         global.winner_team = _ganador_local;
         window_set_cursor(cr_arrow);

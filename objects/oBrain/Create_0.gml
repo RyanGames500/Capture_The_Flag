@@ -7,16 +7,16 @@ kf_hold= 90;   // frames visible
 kf_out = 12;   // frames salida
 
 
-// ===== ALERTAS (HUD) =====
+// alertas
 alerts = array_create(0);
 
-// config (ajusta a gusto)
+// config
 alert_in_frames  = 10;  // entrada
 alert_hold_frames = 70; // tiempo en pantalla
 alert_out_frames = 12;  // salida
 
 
-#region // --- PRESETS DE ARMAS ---
+#region // armas
 weapon_struct_pistola = {
 	sprite_suelo: spr_gun,
     sprite: spr_gun,
@@ -134,7 +134,7 @@ entitiesActive= []
 waitingForURL = false
 alarm[0]=5
 alarm[1]=5
-afk =0;
+afk = 0;
 last_got_ping = current_time
 global.clientId = -1
 
