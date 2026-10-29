@@ -29,9 +29,38 @@ your sharedProperties
 	}
 		image_xscale =real(SP._IMXS);
 		image_yscale = real(SP._IMYS);
-		enemyHealth = SP._H;
-		sprite_index = real(SP._SI);
-		if (SP._II != -1) {
+		// --- VIDA CON PREDICCIÓN ---
+		var _net = real(SP._H);
+		enemyHealth_net = _net;
+		if (pred_timer > 0) {
+		    pred_timer--;
+		    if (_net < pred_base) {
+		        pred_dmg -= (pred_base - _net);
+		        pred_base = _net;
+		        if (pred_dmg <= 0) { pred_dmg = 0; pred_timer = 0; }
+		    }
+		} else {
+		    pred_dmg = 0;
+		}
+		enemyHealth = max(0, _net - pred_dmg);
+
+		// --- SPRITE: durante el golpe mostramos su sprite de HIT local ---
+		if (hit_bloqueo_timer > 0) {
+		    var _hits = [spr_player_hit, spr_player2_hit, spr_player3_hit, spr_player4_hit];
+		    sprite_index = _hits[clamp(mySelectedPJ, 0, 3)];
+		} else {
+		    sprite_index = real(SP._SI);
+		}		
+        var _st_net = real(SP._ST);
+		var _sx_net = sign(real(SP._IMXS));
+		if (!variable_instance_exists(id, "fx_prev_st")) { fx_prev_st = _st_net; fx_prev_sx = _sx_net; }
+		if (_st_net == PLAYERSTATE.JUMP && fx_prev_st != PLAYERSTATE.JUMP) fx_dust(x, bbox_bottom, 6, 0);
+		if (fx_prev_st == PLAYERSTATE.JUMP && (_st_net == PLAYERSTATE.IDLE || _st_net == PLAYERSTATE.WALK)) fx_dust(x, bbox_bottom, 10, 0);
+		if (_st_net == PLAYERSTATE.WALK && fx_prev_sx != 0 && _sx_net != fx_prev_sx) fx_dust(x, bbox_bottom, 6, -_sx_net);
+		fx_prev_st = _st_net;
+		fx_prev_sx = _sx_net;
+    
+		if (SP._II != -1 && hit_bloqueo_timer <= 0) {
 		    image_index = real(SP._II);
 		}
 		image_speed = SP._IS;

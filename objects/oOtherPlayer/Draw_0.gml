@@ -40,76 +40,62 @@ if (invulnerable) {
     draw_self();
 }
 
-// ======================================================
-// --- NUEVA LÓGICA DE MANO Y ARMA PARA OTROS ---
-// ======================================================
-var dir = sign(image_xscale);
-var tiene_arma = (WSI != 0 && !has_flag);
+// --- BRAZO Y ARMA: no se dibujan si el personaje está muerto ---
+if (state != PLAYERSTATE.DEAD) {
 
-// 1. Punto de giro (Hombro)
-var hombroX = x + (2 * dir); 
-var hombroY = y - 18;
+    var dir = sign(image_xscale);
+    var tiene_arma = (WSI != 0 && !has_flag);
 
-var handX, handY, handAngle;
+    // 1. Punto de giro (Hombro)
+    var hombroX = x + (2 * dir); 
+    var hombroY = y - 18;
 
-if (tiene_arma) {
-    var largoBrazo = 14;
-    // Usamos weapon.angle (o como se llame la variable de angulo del rival en red)
-    var _ang = weapon.angle; 
-    
-    var ox_mano = lengthdir_x(-recoil_kick * 0.6, _ang);
-    var oy_mano = lengthdir_y(-recoil_kick * 0.6, _ang);
-    
-    handX = hombroX + lengthdir_x(largoBrazo, _ang) + ox_mano;
-    handY = hombroY + lengthdir_y(largoBrazo, _ang) + oy_mano;
-    handAngle = _ang + recoil_angle; 
-} else {
-    handX = x + (11 * dir); 
-    handY = y - 5;          
-    handAngle = 80 * dir; 
-}
+    var handX, handY, handAngle;
 
-// 2. DIBUJAR LA MANO
-if (melee_active > 0) {
-    var sx_melee = 2 * dir;
-    var p = 1 - (melee_active / 6); 
-    var estocada_dist = sin(p * pi) * 25; 
-    
-    var punch_dir = (tiene_arma ? weapon.angle : (dir == 1 ? 0 : 180));
-    var punch_x = x + lengthdir_x(estocada_dist + 10, punch_dir);
-    var punch_y = (y - 12) + lengthdir_y(estocada_dist + 10, punch_dir);
+    if (tiene_arma) {
+        var largoBrazo = 14;
+        var _ang = weapon.angle; 
+        var ox_mano = lengthdir_x(-recoil_kick * 0.6, _ang);
+        var oy_mano = lengthdir_y(-recoil_kick * 0.6, _ang);
+        handX = hombroX + lengthdir_x(largoBrazo, _ang) + ox_mano;
+        handY = hombroY + lengthdir_y(largoBrazo, _ang) + oy_mano;
+        handAngle = _ang + recoil_angle; 
+    } else {
+        handX = x + (11 * dir); 
+        handY = y - 5;          
+        handAngle = 80 * dir; 
+    }
 
-    draw_sprite_ext(spr_Hand, 0, punch_x, punch_y, sx_melee, 2, 0, c_white, 1);
-} 
-else {
-    var handScaleX = 2 * dir;
-    var handScaleY = (tiene_arma && handAngle > 90 && handAngle < 270) ? -2 : 2;
-    var finalHandAngle = handAngle;
-    
-    if (tiene_arma && dir == -1) finalHandAngle += 180;
+    // 2. DIBUJAR LA MANO
+    if (melee_active > 0) {
+        var sx_melee = 2 * dir;
+        var p = 1 - (melee_active / 6); 
+        var estocada_dist = sin(p * pi) * 25; 
+        var punch_dir = (tiene_arma ? weapon.angle : (dir == 1 ? 0 : 180));
+        var punch_x = x + lengthdir_x(estocada_dist + 10, punch_dir);
+        var punch_y = (y - 12) + lengthdir_y(estocada_dist + 10, punch_dir);
+        draw_sprite_ext(spr_Hand, 0, punch_x, punch_y, sx_melee, 2, 0, c_white, 1);
+    } 
+    else {
+        var handScaleX = 2 * dir;
+        var handScaleY = (tiene_arma && handAngle > 90 && handAngle < 270) ? -2 : 2;
+        var finalHandAngle = handAngle;
+        if (tiene_arma && dir == -1) finalHandAngle += 180;
+        draw_sprite_ext(spr_Hand, 0, handX, handY, handScaleX, handScaleY, finalHandAngle, c_white, 1);
+    }
 
-    draw_sprite_ext(spr_Hand, 0, handX, handY, handScaleX, handScaleY, finalHandAngle, c_white, 1);
-}
+    // 3. DIBUJAR ARMA (WSI)
+    if (tiene_arma) {
+        var desfase_adelante = 22; 
+        var desfase_arriba = -4;   
+        var weaponScaleY = (handAngle > 90 && handAngle < 270) ? -2 : 2;
+        var ajuste_vertical = (weaponScaleY == -2) ? -desfase_arriba : desfase_arriba;
+        var weaponX = handX + lengthdir_x(desfase_adelante, handAngle) + lengthdir_x(ajuste_vertical, handAngle - 90);
+        var weaponY = handY + lengthdir_y(desfase_adelante, handAngle) + lengthdir_y(ajuste_vertical, handAngle - 90);
+        draw_sprite_ext(WSI, 0, weaponX, weaponY, 2, weaponScaleY, handAngle, c_white, 1);
+    }
 
-// 3. DIBUJAR ARMA (WSI)
-if (tiene_arma) {
-    var desfase_adelante = 22; 
-    var desfase_arriba = -4;   
-
-    var weaponScaleY = (handAngle > 90 && handAngle < 270) ? -2 : 2;
-    var ajuste_vertical = (weaponScaleY == -2) ? -desfase_arriba : desfase_arriba;
-    
-    var weaponX = handX + lengthdir_x(desfase_adelante, handAngle) + lengthdir_x(ajuste_vertical, handAngle - 90);
-    var weaponY = handY + lengthdir_y(desfase_adelante, handAngle) + lengthdir_y(ajuste_vertical, handAngle - 90);
-
-    draw_sprite_ext(
-        WSI, 0,
-        weaponX, weaponY, 
-        2, weaponScaleY, 
-        handAngle, 
-        c_white, 1
-    );
-}
+} // fin brazo y arma
 
 // --- ESCUDO ---
 if (has_shield) {

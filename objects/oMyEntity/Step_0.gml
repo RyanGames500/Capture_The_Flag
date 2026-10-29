@@ -57,6 +57,7 @@ if (!variable_instance_exists(id, "is_box") || !is_box) {
 // ======================================================
 if (place_meeting(x, y, obj_wall) || place_meeting(x, y, oPlataformaPasable))
 {
+       if (!(variable_instance_exists(id, "is_box") && is_box) && !is_rocket) fx_sparks(x, y, direction + 180, 6, false); 
     // Si es puño, rebota
     if (variable_instance_exists(id, "is_box") && is_box) {
         if (estado == 1) { 
@@ -156,16 +157,13 @@ if (target_enemy != noone)
 			
 			var _dir_golpe = point_direction(x, y, target_enemy.x, target_enemy.y);
             
-            if (oBrain.AmIPseudoHost) {
-                SendEventToClient(target_enemy.clientId, "hit", { damage: damage, killer: global.myName, reason: _reason });
-            } else {
-                var _targetHost = -1;
-                with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
-                if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
-                if (_targetHost != -1) {
-                    SendEventToClient(_targetHost, "request_hit", { victimId: target_enemy.clientId, damage: damage, killer: global.myName, reason: _reason, angle: _dir_golpe });
-                }
-            }
+             scr_predict_hit(target_enemy, damage, (_reason == "boxeo") ? 20 : 10);
+            var _alto = target_enemy.bbox_bottom - target_enemy.bbox_top;
+            var _head = (!is_rocket && _reason == "pvp" && y < target_enemy.bbox_top + _alto * 0.28);
+            if (_head) damage = round(damage * FX_HEADSHOT_MULT);
+            fx_damage_number(target_enemy.x, target_enemy.bbox_top - 8, damage, is_rocket ? 2 : (_head ? 1 : 0));
+            fx_sparks(x, y, direction + 180, is_rocket ? 4 : 8, is_rocket);
+            SendEventToClient(target_enemy.clientId, "hit", { damage: damage, killer: global.myName, reason: _reason, angle: _dir_golpe });
         }
 
         if (variable_instance_exists(id, "is_box") && is_box) {
@@ -226,14 +224,8 @@ if (variable_instance_exists(id, "is_granada") && is_granada) {
         }
 
         if (global.ONLINE) {
-            if (oBrain.AmIPseudoHost) {
-                with(oOtherPlayer) { SendEventToClient(clientId, "fx_pearl_explosion", { ex: other.x, ey: other.y, isNade: true }); }
-            } else {
-                var _targetHost = -1;
-                with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
-                if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
-                if (_targetHost != -1) SendEventToClient(_targetHost, "request_fx_explosion", { ex: x, ey: y, isNade: true });
-            }
+                 scr_predict_hit(target_enemy_nad, damage, 10);
+                SendEventToClient(target_enemy_nad.clientId, "hit", { damage: damage, killer: global.myName, reason: "granada" });
         }
         instance_destroy(); 
     }

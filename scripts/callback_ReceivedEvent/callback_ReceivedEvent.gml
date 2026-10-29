@@ -730,7 +730,7 @@ case "hit":
 
         damage_alpha = 0.4; 
         health -= dmg;
-
+        fx_damage_number(x, bbox_top - 8, dmg, 3);
         // --- 🥊 LÓGICA DE BOXEO (Empuje y Bandera) ---
         if (theMessageStruct.reason == "boxeo") {
             
@@ -777,6 +777,8 @@ case "hit":
         if (state != PLAYERSTATE.DEAD)
         {
             state = PLAYERSTATE.HIT;
+            image_index = 0;
+            hit_bloqueo_timer = max(hit_bloqueo_timer, 10);
             if (global.sfx) audio_play_sound(snd_hit, 20, false, .9);
         }
     }

@@ -1,4 +1,5 @@
 function callback_ReadSimpleData(readId, data) {
+     if (!instance_exists(oMenu)) return;
     // --- 1. SI EL DOCUMENTO NO EXISTE (data == -1) ---
     if (data == -1) {
         if (oMenu.estado_busqueda == "buscando") {

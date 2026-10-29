@@ -77,17 +77,13 @@ empty_cd = 0; // cooldown sonido sin balas
 
 
 
-// --- LÓGICA DE EQUIPOS ESTILO BRAWL STARS ---
-// El clientId 0 es el Host, el 1 es el primer cliente, etc.
-// Dividimos: IDs pares vs IDs impares
-if (global.clientId % 2 == 0) {
-    global.myTeam = "AZUL";
-    global.enemyTeam = "ROJO";
+// Ahora el SERVIDOR reparte los equipos parejos (antes era por ID par/impar)
+if (variable_global_exists("serverTeam") && global.serverTeam != "") {
+    global.myTeam = global.serverTeam;
 } else {
-    global.myTeam = "ROJO";
-    global.enemyTeam = "AZUL";
+    global.myTeam = (global.clientId % 2 == 0) ? "AZUL" : "ROJO";
 }
-
+global.enemyTeam = (global.myTeam == "AZUL") ? "ROJO" : "AZUL";
 team = global.myTeam; // Tu equipo local
 
 spawn_x = x;
