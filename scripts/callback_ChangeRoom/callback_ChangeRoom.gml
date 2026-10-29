@@ -1,6 +1,6 @@
 function callback_ChangeRoom(new_room_id) {
     // Si entramos a una sala y ya hay alguien más ahí esperándonos
-    if (!string_count("auto_matchmake", new_room_id)) {
+        if (!string_count("auto_matchmake", new_room_id) && instance_exists(oMenu)) {
         // Si el contador de otros jugadores es mayor a 0, saltamos de una
             oMenu.menu_state = "lobby_espera";
         

@@ -24,12 +24,19 @@ global.useCiphering = false;
 global.OtherPlayersLayerName = "Instances"
 
 
-/*
-* Do you want to manually connect to RNet? You can do this by copying your serverURL directy
-* from dashboard.rocketnetworking.net
-*/
-global.manualServerURLconnection = false;
-global.manualServerURL = "rocket-networking.uc.r.appspot.com/"
+// === SERVIDOR PROPIO (ctf-server) ===
+// true = conectarse a TU servidor (el de Rocket Networking ya no se usa)
+global.manualServerURLconnection = true;
+
+// Dirección del servidor, SIN "https://" ni "wss://".
+//  - Probando en tu PC:          "127.0.0.1"   (con Secure = false y Port = 3000)
+//  - Alojado en internet:        "ctf-server-ak6x.onrender.com"
+global.manualServerURL = "ctf-server-ak6x.onrender.com"
+
+// true  = conexión segura wss (obligatorio en Render, puerto 443)
+// false = conexión normal ws (para pruebas locales, puerto 3000)
+global.manualServerSecure = true;
+global.manualServerPort = 443;
 
 
 /*
@@ -38,6 +45,3 @@ global.manualServerURL = "rocket-networking.uc.r.appspot.com/"
 */
 global.sharingFrequency = 1;    //Equivalent to alarm of 1 frame
 global.entitySharingFrequency = 1   //for entities
-
-
-//Thank you for using Rocket Networking! See you on the moon :)

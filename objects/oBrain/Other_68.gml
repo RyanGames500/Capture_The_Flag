@@ -74,11 +74,17 @@ if(type == network_type_data){
 		break;
 		
 		case "changed_room":
+		// El servidor nos dice en qué equipo quedamos en esta sala ("" = sin equipo)
+		global.serverTeam = variable_struct_exists(realData, "team") ? string(realData.team) : "";            
 		if(realData.roomId == string(global.clientId)){
 			global.roomId = realData.roomId
 			callback_LeaveRoom()
 		}else{
 			global.roomId = realData.roomId
+			// Sala nueva = selección de personaje nueva para TODOS (host y no host)
+			oBrain.intro_disparada = false;
+			oBrain.timer_intro = 60 * 60;
+			global.mi_listo = false;
 			callback_ChangeRoom(realData.roomId)
 		}
 		instance_destroy(oOtherPlayer)
@@ -127,7 +133,7 @@ case "state_update":
         var new_enemy = instance_create_layer(0, 0, global.OtherPlayersLayerName, oOtherPlayer);
         new_enemy.clientId = _incomingId;
         new_enemy.sharedProperties = realData.SP;
-
+        new_enemy.entities = realData.entities;
         // --- MÉTODO DE CONTEO SIMPLE ---
         // Contamos cuántos jugadores hay en total (otros + tú mismo)
         var total_jugadores = instance_number(oOtherPlayer) + 1;
@@ -189,7 +195,10 @@ break;
 				
 			}
 		}
-		
+		// ¿Quedo algun equipo vacio? Lo revisamos en 2 frames prro
+		if (global.ONLINE && room != rm_menu && !global.game_over) {
+			oBrain.abandono_check = 2;
+		}		
 		break;
 		
 		

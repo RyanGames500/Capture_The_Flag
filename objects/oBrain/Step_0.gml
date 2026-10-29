@@ -64,7 +64,7 @@ if (global.ONLINE == false && global.game_over == false) {
 }
 
 // --- 4. LÓGICA PANTALLA DE VICTORIA (MODIFICADA) ---
-if (global.game_over == true) {
+if (global.game_over == true && !abandono_activo) {
     if (victory_alpha < 1) victory_alpha += 0.05; 
 
     if (victory_alpha >= 0.9) {
@@ -147,13 +147,14 @@ if (global.game_over == true) {
         }
         
         // Salir rápido con ESC
-        if (keyboard_check_pressed(vk_escape)) {
+        if (keyboard_check_pressed(vk_escape) && !abandono_activo){
             if (global.ONLINE) LeaveRoom(); else room_goto(rm_menu);
         }
     }
 }
 // --- LÓGICA DE SELECCIÓN Y INTRO ---
-if (oBrain.AmIPseudoHost && !intro_disparada) {
+// Solo en el mapa: en el menú el contador no debe correr
+if (oBrain.AmIPseudoHost && !intro_disparada && room != rm_menu) {
     
     // 🔥 CAMBIO PARA MULTIJUGADOR: Verificar si ABSOLUTAMENTE TODOS están listos
     var todos_ready = global.mi_listo; // Empezamos asumiendo que yo estoy listo
@@ -554,4 +555,64 @@ if (timer_intro == 0 && !global.mi_listo) {
         });
     }
 }
+
+
+// ======================================================
+// 🚪 ABANDONO: si un equipo se queda sin jugadores, gana el otro
+// ======================================================
+if (abandono_check > 0) {
+    abandono_check--;
+    if (abandono_check == 0) {
+        abandono_check = -1;
+
+        if (global.ONLINE && room != rm_menu && !global.game_over && global.myTeam != "") {
+            var _mios = 1;      // yo
+            var _rivales = 0;
+            with (oOtherPlayer) {
+                if (team == global.myTeam) _mios++; else _rivales++;
+            }
+
+            // Solo si el equipo rival quedó VACÍO (1 vs 2 sigue siendo jugable)
+            if (_rivales == 0) {
+                var _empezada = intro_disparada; // ¿ya pasó la selección de personaje?
+
+                global.game_over = true;
+                global.pausa = false;
+                global.winner_team = (global.myTeam == "ROJO") ? 1 : 2;
+
+                abandono_gano = _empezada;
+                if (_empezada && !puntos_procesados) {
+                    puntos_procesados = true;
+                    scr_add_victory(); // mismos trofeos y XP que una victoria normal
+                }
+
+                if (_empezada) {
+                    abandono_titulo = "VICTORIA";
+                    abandono_texto  = (_mios > 1) ? "El equipo rival abandono la partida" : "Tu rival abandono la partida";
+                } else {
+                    abandono_titulo = "PARTIDA CANCELADA";
+                    abandono_texto  = "El rival se fue antes de empezar";
+                }
+
+                abandono_activo = true;
+                abandono_total  = room_speed * 5; // 5 segundos de aviso
+                abandono_timer  = abandono_total;
+                window_set_cursor(cr_arrow);
+                if (global.sfx) audio_play_sound(snd_hit, 20, false, 0.6);
+            }
+        }
+    }
+}
+
+if (abandono_activo && room != rm_menu) {
+    abandono_timer--;
+    // Enter o ESC para salir antes
+    if (abandono_timer <= 0 || keyboard_check_pressed(vk_enter) || keyboard_check_pressed(vk_escape)) {
+        abandono_activo = false;
+        LeaveRoom();
+    }
+}
+
+//efectos de paso, salto lo que sea perro
+fx_step();
 	

@@ -30,7 +30,13 @@ function callback_LeaveRoom(){
     // 5. Reset del Sistema
     window_set_cursor(cr_arrow);
     show_debug_message(">>> LOBBY LIMPIO: Selección reseteada correctamente.");
-    
+
+    // Limpiar el aviso de abandono por si se salió con ESC
+    if (instance_exists(oBrain)) {
+        oBrain.abandono_activo = false;
+        oBrain.abandono_check = -1;
+    }    
+        
     room_goto(rm_menu);
 }
 

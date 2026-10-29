@@ -4,15 +4,19 @@ function ConnectToServer(){
 	if(!global.manualServerURLconnection){
 		PreConnect()
 	}else{
-		
-		oBrain.socket = network_create_socket(network_socket_wss)
-		var PORT=443
-		var IP = global.manualServerURL
-		
-		show_debug_message("Set to "+IP+" at port "+string(PORT)+" assuming a safe wss connection.")
+		// Conexión directa a nuestro servidor: no esperamos URL por HTTP
+		// (si no, las respuestas HTTP de Gamdato se confundirían con la URL)
+		oBrain.waitingForURL = false;
 
-	
-		show_debug_message("Trying to connect to your Rocket Server")
+		if(global.manualServerSecure){
+			oBrain.socket = network_create_socket(network_socket_wss)
+		}else{
+			oBrain.socket = network_create_socket(network_socket_ws)
+		}
+		var PORT = global.manualServerPort
+		var IP = global.manualServerURL
+
+		show_debug_message("Conectando a "+IP+" en el puerto "+string(PORT)+(global.manualServerSecure ? " (wss)" : " (ws)"))
 		oBrain.connect=network_connect_raw_async(oBrain.socket, IP,PORT)
 		show_debug_message("connect is "+string(oBrain.connect))
 	}

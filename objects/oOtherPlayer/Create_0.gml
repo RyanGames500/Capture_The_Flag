@@ -4,8 +4,9 @@ updates later automatically as other players
 in this room are created 
 DO NOT TAMPER
 */
-sharedProperties = -1 
-entities = {}
+sharedProperties = -1
+entities = "{}"
+//entities = {}
 oldE = {}
 alarm[0]=10;
 
@@ -46,6 +47,10 @@ hit_bloqueo_timer = 0;
 thisPlayerTeam="";
 has_shield = false;
 max_health = enemyHealth;
+enemyHealth_net = enemyHealth;
+pred_dmg   = 0;
+pred_base  = 0;
+pred_timer = 0;
 TAG="";
 // Cuando aparece un jugador nuevo en mi pantalla...
 if (global.ONLINE) {

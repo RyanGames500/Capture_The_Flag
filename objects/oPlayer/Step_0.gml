@@ -100,7 +100,15 @@ else
 {
 	is_grounded=false;	
 }
-
+// ✨ POLVO: al saltar, al caer y al girar corriendo
+if (!variable_instance_exists(id, "fx_air")) { fx_air = 0; fx_last_s = 0; fx_prev_ground = is_grounded; }
+if (fx_prev_ground && !is_grounded && vsp < 0) fx_dust(x, bbox_bottom, 6, 0);
+if (!fx_prev_ground && is_grounded && fx_air > 8) fx_dust(x, bbox_bottom, 10, 0);
+var _fx_s = sign(hsp);
+if (is_grounded && _fx_s != 0 && fx_last_s != 0 && _fx_s != fx_last_s && abs(hsp) > 1.5) fx_dust(x, bbox_bottom, 6, -_fx_s);
+if (_fx_s != 0) fx_last_s = _fx_s;
+fx_air = is_grounded ? 0 : fx_air + 1;
+fx_prev_ground = is_grounded;
 // 1. Obtener Entradas
 key_left  = keyboard_check(ord("A")) 
 key_right = keyboard_check(ord("D")) 
@@ -218,6 +226,9 @@ if (melee_active > 0)
 
             if (global.ONLINE)
             {
+                fx_damage_number(target.x, target.bbox_top - 8, melee_damage, 0);
+                fx_sparks(target.x, target.y - 20, (image_xscale > 0) ? 180 : 0, 6, false);
+                scr_predict_hit(target, melee_damage, 10);
                 SendEventToClient(target.clientId, "hit", {
                     damage: melee_damage,
                     killer: global.myName,

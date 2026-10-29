@@ -1,6 +1,8 @@
 /// @description Entity Updater
 
-var E = json_parse(entities)
+if (!is_string(entities)) { alarm[0] = 3; exit; }
+var E;
+try { E = json_parse(entities); } catch(_e) { alarm[0] = 3; exit; }
 var oldKeys = variable_struct_get_names(oldE);
 
 var keys = variable_struct_get_names(E);
@@ -12,6 +14,10 @@ for(var i =0 ; i<array_length(oldKeys) ;i++){
 		try{
 			with(oOtherPlayersEntity){
 				if(entityId == real(oldKeys[i])){
+                    if (!is_rocket && !is_box && (collision_circle(x, y, 12, obj_wall, false, true) != noone || collision_circle(x, y, 12, oPlayer, false, true) != noone)) 
+                    {
+					    fx_sparks(x, y, direction + 180, 6, false);
+					}
 					instance_destroy(id)
 				}
 			}

@@ -22,7 +22,11 @@ function scrCreateRocketExplosion(_x, _y, _is_nade = false)
 
     if (global.sfx)
         audio_play_sound(snd_pearl_explodes, 10, false);
-
+    fx_light(_x, _y, _is_nade ? 150 : 190, make_color_rgb(255, 138, 42), 26);
+    fx_sparks(_x, _y, 0, 7, true);
+    fx_sparks(_x, _y, 90, 7, true);
+    fx_sparks(_x, _y, 180, 7, true);
+    fx_sparks(_x, _y, 270, 5, true);
     // ==========================================
     // 🧠 DAÑO EN ÁREA (SOPORTE 4 PLAYERS)
     // ==========================================

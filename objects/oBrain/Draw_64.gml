@@ -1,3 +1,5 @@
+fx_draw_gui();
+
 var player_name=global.myName;
 var player_ID=gmda_getPlayerid();
 var status=gmda_status();
@@ -439,7 +441,7 @@ if (global.pausa && !global.game_over) {
 }
 
 // --- 4. PANTALLA DE RESULTADOS (SIN REVANCHA) ---
-if (global.game_over) 
+if (global.game_over && !abandono_activo)
 {
     var mid_x = display_get_gui_width() / 2;
     var mid_y = display_get_gui_height() / 2;
@@ -603,7 +605,84 @@ if (!intro_disparada && room != rm_menu && global.ONLINE == true) {
     }
 }
 	
-	
+// ======================================================
+// 🚪 AVISO DE ABANDONO
+// ======================================================
+if (abandono_activo) {
+    var _gw = display_get_gui_width();
+    var _gh = display_get_gui_height();
+    var _cx = _gw / 2;
+    var _cy = _gh / 2;
+
+    // Entrada suave y pulso
+    var _t    = abandono_total - abandono_timer;
+    var _in   = clamp(_t / 20, 0, 1);
+    var _ease = 1 - power(1 - _in, 3);
+    var _pulse = 1 + sin(current_time * 0.006) * 0.03;
+
+    var _col = abandono_gano ? make_color_rgb(255, 205, 60) : make_color_rgb(150, 160, 175);
+    var _col_team = (global.myTeam == "ROJO") ? make_color_rgb(220, 40, 40) : c_aqua;
+
+    // Fondo oscuro
+    draw_set_alpha(0.75 * _ease);
+    draw_set_color(c_black);
+    draw_rectangle(0, 0, _gw, _gh, false);
+
+    // Tarjeta (sube un poco al aparecer)
+    var _w = 560, _h = 300;
+    var _yoff = (1 - _ease) * 40;
+    var _x1 = _cx - _w/2, _y1 = _cy - _h/2 + _yoff;
+    var _x2 = _cx + _w/2, _y2 = _cy + _h/2 + _yoff;
+
+    draw_set_alpha(_ease);
+    draw_set_color(c_black);
+    draw_roundrect_ext(_x1 + 8, _y1 + 8, _x2 + 8, _y2 + 8, 28, 28, false); // sombra
+    draw_set_color(make_color_rgb(24, 24, 30));
+    draw_roundrect_ext(_x1, _y1, _x2, _y2, 28, 28, false);
+    draw_set_color(_col_team);
+    draw_roundrect_ext(_x1, _y1, _x2, _y2, 28, 28, true);
+    draw_roundrect_ext(_x1 + 1, _y1 + 1, _x2 - 1, _y2 - 1, 27, 27, true);
+
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    draw_set_font(fnt_menu);
+
+    // Título
+    draw_set_color(c_black);
+    draw_text_transformed(_cx + 3, _y1 + 70 + 3, abandono_titulo, 2 * _pulse, 2 * _pulse, 0);
+    draw_set_color(_col);
+    draw_text_transformed(_cx, _y1 + 70, abandono_titulo, 2 * _pulse, 2 * _pulse, 0);
+
+    // Motivo
+    draw_set_color(c_white);
+    draw_text_transformed(_cx, _y1 + 135, abandono_texto, 0.9, 0.9, 0);
+
+    // Recompensa (solo si la partida ya había empezado)
+    if (abandono_gano) {
+        draw_set_color(make_color_rgb(255, 235, 59));
+        draw_text_transformed(_cx - 80, _y1 + 185, "+25 TROFEOS", 0.9, 0.9, 0);
+        draw_set_color(make_color_rgb(76, 175, 80));
+        draw_text_transformed(_cx + 110, _y1 + 185, "+50 XP", 0.9, 0.9, 0);
+    }
+
+    // Barra de cuenta regresiva
+    var _p   = clamp(abandono_timer / abandono_total, 0, 1);
+    var _bx1 = _x1 + 60, _bx2 = _x2 - 60, _by = _y2 - 55;
+    draw_set_color(make_color_rgb(50, 50, 60));
+    draw_roundrect_ext(_bx1, _by, _bx2, _by + 8, 8, 8, false);
+    draw_set_color(_col_team);
+    draw_roundrect_ext(_bx1, _by, _bx1 + (_bx2 - _bx1) * _p, _by + 8, 8, 8, false);
+
+    draw_set_font(fnt_small);
+    draw_set_color(c_ltgray);
+    draw_text(_cx, _y2 - 25, "Volviendo al menu en " + string(ceil(abandono_timer / room_speed)) + "...   [ENTER] salir ya");
+
+    // Reset
+    draw_set_alpha(1);
+    draw_set_color(c_white);
+    draw_set_halign(fa_left);
+    draw_set_valign(fa_top);
+}
 	
 // --- DIBUJO DE MENSAJES DE ESTADO (Ponlo al final de todo el código) ---
 if (mensaje_alpha > 0) {

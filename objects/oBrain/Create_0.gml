@@ -211,3 +211,12 @@ ConnectToServer();
 
 is_closing=false;
 mensaje_alpha=0
+// --- ABANDONO DE PARTIDA ---
+abandono_check  = -1;
+abandono_activo = false;
+abandono_timer  = 0;
+abandono_total  = 1;
+abandono_gano   = false;
+abandono_titulo = "";
+abandono_texto  = "";
+if (!variable_global_exists("fx_ps")) fx_init();
