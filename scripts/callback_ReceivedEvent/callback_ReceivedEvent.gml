@@ -238,8 +238,8 @@ case "spawn_powerup":
     {
         if (net_uid == uid) { exists = true; break; }
     }
-    //if (exists) break;
-
+       if (exists) break;
+    
     var p = instance_create_layer(
         theMessageStruct.x,
         theMessageStruct.y,
@@ -531,6 +531,40 @@ case "weapon_pickup_taken":
         if (net_uid == uid) { instance_destroy(); break; } 
     }
 }
+break;
+
+case "request_resync":
+{
+    // Un jugador terminó de cargar el mapa y pide todo lo que hay tirado
+    if (!oBrain.AmIPseudoHost) break;
+    var targetID = senderClientId;
+
+    with (oAmmoPack) {
+        if (!taken) SendEventToClient(targetID, "spawn_ammo_pack", {
+            uid: net_uid, x: x, y: y, amount: amount,
+            is_grenade: (variable_instance_exists(id, "is_grenade_pack") ? is_grenade_pack : false)
+        });
+    }
+    with (oGun) {
+        if (variable_instance_exists(id, "weapon") && is_struct(weapon)) {
+            SendEventToClient(targetID, "spawn_weapon_pickup", { uid: net_uid, x: x, y: y, weapon: weapon });
+        }
+    }
+    with (oPowerupPickup) {
+        SendEventToClient(targetID, "spawn_powerup", {
+            uid: net_uid, x: x, y: y, tipo: tipo, duration: duration, amount: amount,
+            spawnID: (variable_instance_exists(id, "spawn_id") ? spawn_id : -1)
+        });
+    }
+    with (oSpawnPoint) {
+        SendEventToClient(targetID, "sync_spawn_point", { pID: myID, isOcupado: ocupado });
+    }
+}
+break;
+
+case "fx_impact":
+    // Chispas de un impacto que hizo otro jugador
+    fx_sparks(theMessageStruct.x, theMessageStruct.y, theMessageStruct.d, theMessageStruct.n, theMessageStruct.h);
 break;
 
 case "request_ammo":

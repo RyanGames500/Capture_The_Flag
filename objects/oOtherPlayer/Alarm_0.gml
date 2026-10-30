@@ -14,10 +14,6 @@ for(var i =0 ; i<array_length(oldKeys) ;i++){
 		try{
 			with(oOtherPlayersEntity){
 				if(entityId == real(oldKeys[i])){
-                    if (!is_rocket && !is_box && (collision_circle(x, y, 12, obj_wall, false, true) != noone || collision_circle(x, y, 12, oPlayer, false, true) != noone)) 
-                    {
-					    fx_sparks(x, y, direction + 180, 6, false);
-					}
 					instance_destroy(id)
 				}
 			}

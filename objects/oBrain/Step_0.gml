@@ -615,4 +615,19 @@ if (abandono_activo && room != rm_menu) {
 
 //efectos de paso, salto lo que sea perro
 fx_step();
-	
+
+
+// 📦 Pedir munición/armas/power-ups al host después de cargar el mapa
+if (variable_instance_exists(id, "resync_left") && resync_left > 0 && global.ONLINE && room != rm_menu) {
+    if (AmIPseudoHost) {
+        resync_left = 0;
+    } else {
+        resync_cd--;
+        if (resync_cd <= 0) {
+            var _h = scr_get_host_id();
+            if (_h != -1) SendEventToClient(_h, "request_resync", {});
+            resync_left--;
+            resync_cd = 60;
+        }
+    }
+}

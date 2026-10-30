@@ -23,4 +23,6 @@ with(oSpawnPoint) {
 }
 
 
-
+// 📦 Pedirle al host todo lo que hay en el mapa cuando YO ya cargué (3 veces por si el host aún cargaba)
+resync_left = (global.ONLINE && room != rm_menu && !AmIPseudoHost) ? 3 : 0;
+resync_cd   = 5;

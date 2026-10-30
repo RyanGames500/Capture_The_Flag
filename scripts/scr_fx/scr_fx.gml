@@ -195,3 +195,11 @@ function fx_draw_gui() {
     draw_set_halign(fa_left);
     draw_set_valign(fa_top);
 }
+/// Chispas en MI pantalla + aviso para que los DEMÁS también las vean
+function fx_impact_net(_x, _y, _dir, _n, _hot = false) {
+    fx_sparks(_x, _y, _dir, _n, _hot);
+    if (global.ONLINE) {
+        var _m = { x: round(_x), y: round(_y), d: round(_dir), n: _n, h: _hot };
+        with (oOtherPlayer) SendEventToClient(clientId, "fx_impact", _m);
+    }
+}

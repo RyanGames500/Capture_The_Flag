@@ -210,24 +210,24 @@ if (variable_instance_exists(id, "is_granada") && is_granada) {
         scrCreateRocketExplosion(x, y, true); 
         if (global.sfx) audio_play_sound(snd_hit, 20, false, 1.1);
 
+        // Daño SOLO si le pegó a un rival (si chocó con el piso, target_enemy_nad es noone)
         if (target_enemy_nad != noone && !target_enemy_nad.invulnerable) {
             if (global.ONLINE) {
-                if (oBrain.AmIPseudoHost) {
-                    SendEventToClient(target_enemy_nad.clientId, "hit", { damage: damage, killer: global.myName, reason: "granada" });
-                } else {
-                    var _targetHost = -1;
-                    with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; }
-                    if (_targetHost == -1 && instance_exists(oOtherPlayer)) { _targetHost = instance_find(oOtherPlayer, 0).clientId; }
-                    if (_targetHost != -1) SendEventToClient(_targetHost, "request_hit", { victimId: target_enemy_nad.clientId, damage: damage, killer: global.myName, reason: "granada" });
-                }
+                fx_damage_number(target_enemy_nad.x, target_enemy_nad.bbox_top - 8, damage, 2);
+                scr_predict_hit(target_enemy_nad, damage, 10);
+                SendEventToClient(target_enemy_nad.clientId, "hit", { damage: damage, killer: global.myName, reason: "granada" });
             }
         }
 
+        // Que los demás vean la explosión de la granada
         if (global.ONLINE) {
-                 scr_predict_hit(target_enemy_nad, damage, 10);
-                SendEventToClient(target_enemy_nad.clientId, "hit", { damage: damage, killer: global.myName, reason: "granada" });
+            if (oBrain.AmIPseudoHost) {
+                with(oOtherPlayer) { SendEventToClient(clientId, "fx_pearl_explosion", { ex: other.x, ey: other.y, isNade: true }); }
+            } else {
+                var _targetHost = scr_get_host_id();
+                if (_targetHost != -1) SendEventToClient(_targetHost, "request_fx_explosion", { ex: x, ey: y, isNade: true });
+            }
         }
-        instance_destroy(); 
     }
     x += hsp;
     y += vsp;
