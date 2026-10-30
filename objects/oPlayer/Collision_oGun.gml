@@ -29,10 +29,7 @@ if (same_weapon)
             other.taken = true;
             other.visible = false; 
             
-            var _hostID = -1;
-            with(oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _hostID = clientId; }
-            if (_hostID == -1 && instance_exists(oOtherPlayer)) _hostID = instance_find(oOtherPlayer, 0).clientId;
-
+            var _hostID = scr_get_host_id();
             if (_hostID != -1) SendEventToClient(_hostID, "request_pickup_weapon", { uid: uid, mode:"stack" });
         }
         exit;

@@ -314,6 +314,7 @@
     {"id":{"name":"spr_player_hit","path":"sprites/spr_player_hit/spr_player_hit.yy",},},
     {"id":{"name":"spr_player_icon","path":"sprites/spr_player_icon/spr_player_icon.yy",},},
     {"id":{"name":"spr_player_idle","path":"sprites/spr_player_idle/spr_player_idle.yy",},},
+    {"id":{"name":"spr_player_idle1","path":"sprites/spr_player_idle1/spr_player_idle1.yy",},},
     {"id":{"name":"spr_player_shot","path":"sprites/spr_player_shot/spr_player_shot.yy",},},
     {"id":{"name":"spr_player_walk","path":"sprites/spr_player_walk/spr_player_walk.yy",},},
     {"id":{"name":"spr_player","path":"sprites/spr_player/spr_player.yy",},},

@@ -60,14 +60,7 @@ if (global.ONLINE) {
     } 
     else {
         // --- SOY CLIENTE ---
-        var _targetHost = -1;
-        with(oOtherPlayer) { 
-            if (variable_instance_exists(id, "isHost") && isHost) _targetHost = clientId; 
-        }
-        
-        if (_targetHost == -1 && instance_exists(oOtherPlayer)) { 
-            _targetHost = instance_find(oOtherPlayer, 0).clientId; 
-        }
+        var _targetHost = scr_get_host_id();
         
         if (_targetHost != -1) {
             SendEventToClient(_targetHost, "request_powerup", { uid: other.net_uid });

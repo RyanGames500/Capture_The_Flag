@@ -67,12 +67,7 @@ if (global.ONLINE)
     {
         if (instance_exists(_otherID)) instance_destroy(_otherID);
         
-        var _hID = -1;
-        with(oOtherPlayer) { 
-            if (variable_instance_exists(id, "isHost") && isHost) _hID = clientId; 
-        }
-        if (_hID == -1 && instance_exists(oOtherPlayer)) _hID = instance_find(oOtherPlayer, 0).clientId;
-
+        var _hID = scr_get_host_id();
         if (_hID != -1) {
             SendEventToClient(_hID, "request_ammo", { uid: _uid }); // Usamos _uid local
         }
