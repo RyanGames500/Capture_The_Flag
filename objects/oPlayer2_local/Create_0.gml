@@ -141,3 +141,12 @@ else {
     mi_bandera_propia = instance_find(oFlag2, 0);
     bandera_enemiga = instance_find(oFlag, 0);
 }
+
+// --- Red de caminos (scr_bot_nav) ---
+nav_path = [];
+nav_i = 0;
+nav_replan = 0;
+nav_best = 999999;
+nav_stuck = 0;
+drop_timer = 0;
+// La red se arma sola en el primer Step, cuando ya existen todas las plataformas
