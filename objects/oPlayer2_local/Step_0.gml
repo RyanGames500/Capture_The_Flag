@@ -341,27 +341,8 @@ if (state != PLAYER2.DEAD) {
 
     //if (target_x == undefined) exit;
 
-    var dx = target_x - x;
-    var dy = target_y - y;
-    var dir = sign(dx);
-
-    if (abs(dx) > 8) {
-        if (dx > 0) { key_right = true; key_left = false; } 
-        else { key_left = true; key_right = false; }
-    }
-
-    var grounded = place_meeting(x, y + 1, obj_wall) || place_meeting(x, y + 1, oPlataformaPasable);
-    var wall_ahead = place_meeting(x + dir * 12, y, obj_wall);
-
-    if (puedo_saltar_timer > 0) puedo_saltar_timer--;
-    if (!grounded) puedo_saltar_timer = 15; 
-
-    if (grounded && puedo_saltar_timer <= 0) {
-        if (wall_ahead || dy < -40 || (abs(dx) > 10 && abs(hsp) < 0.2)) {
-            key_jump = true;
-            puedo_saltar_timer = 25;
-        }
-    }
+    // --- MOVIMIENTO: sigue la red de caminos (scr_bot_nav) ---
+    scr_bot_nav_move(target_x, target_y);
 }
 
 
@@ -370,8 +351,10 @@ if (state != PLAYER2.DEAD) {
 // MAQUINA DE ESTADOS
 // ======================================================
 
-is_grounded = place_meeting(x, y + 1, obj_wall) 
-           || place_meeting(x, y + 1, oPlataformaPasable);
+// En el piso de verdad: no cuenta si va atravesando una plataforma o se está dejando caer
+if (drop_timer > 0) drop_timer--;
+is_grounded = place_meeting(x, y + 1, obj_wall)
+           || (place_meeting(x, y + 1, oPlataformaPasable) && !place_meeting(x, y, oPlataformaPasable) && drop_timer <= 0);
 
 switch (state) {
 
@@ -476,7 +459,7 @@ x += hsp;
 // ======================================================
 // COLISION PLATAFORMA PASABLE
 // ======================================================
-if (vsp > 0) {
+if (vsp > 0 && drop_timer <= 0) {
     var plat = instance_place(x, y + vsp, oPlataformaPasable);
 
     if (plat != noone && bbox_bottom <= plat.bbox_top) {

@@ -60,3 +60,17 @@ if (global.ONLINE) {
 }
 
 alarm[1] = 2;
+
+// Predicción de empuje (scr_predict_push)
+net_x = x;
+net_y = y;
+pp_start_x = 0;
+pp_start_y = 0;
+pp_dx = 0;
+pp_dy = 0;
+pp_h = 0;
+pp_vy = 0;
+pp_off_x = 0;
+pp_off_y = 0;
+pp_timer = 0;
+pp_seen_up = false;

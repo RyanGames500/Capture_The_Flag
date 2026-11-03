@@ -20,13 +20,50 @@ your sharedProperties
 // Movimiento suavizado (Lerp)
 	if(x!=0){
 		//the bullet is moving
-		x = lerp(x, target_x,0.5)
-		y = lerp(y, target_y,0.5)
+		net_x = lerp(net_x, target_x,0.5)
+		net_y = lerp(net_y, target_y,0.5)
 	}else{
 		//the bullet was just created
-		x = real(SP._x);
-		y = real(SP._y);
+		net_x = real(SP._x);
+		net_y = real(SP._y);
 	}
+
+		// --- EMPUJE CON PREDICCIÓN ---
+		if (pp_timer > 0) {
+		    pp_timer--;
+		    // 1. Simulo el mismo empuje que hace el que recibe el golpe
+		    if (abs(pp_h) > 0.8) {
+		        if (place_meeting(pp_start_x + pp_dx + pp_h, pp_start_y + pp_dy, obj_wall)) pp_h = 0;
+		        else pp_dx += pp_h;
+		        pp_h = lerp(pp_h, 0, 0.1);
+		    } else {
+		        pp_h = 0;
+		    }
+		    pp_vy += 0.5;
+		    var _sim_y = min(0, pp_dy + pp_vy);
+		    if (place_meeting(pp_start_x + pp_dx, pp_start_y + _sim_y, obj_wall)) pp_vy = 0;
+		    else pp_dy = _sim_y;
+		    if (pp_dy >= 0) pp_vy = 0;
+
+		    // 2. Lo que ya llegó de verdad por la red se lo quito a la predicción
+		    var _nx = net_x - pp_start_x;
+		    var _ny = net_y - pp_start_y;
+		    var _mx = (sign(_nx) == sign(pp_dx)) ? sign(pp_dx) * min(abs(_nx), abs(pp_dx)) : 0;
+		    if (_ny < -5) pp_seen_up = true;
+		    pp_off_x = pp_dx - _mx;
+		    pp_off_y = pp_dy - _ny;   // en vertical manda la predicción (así no salta dos veces)
+
+		    // 3. Si el empuje real ya llegó completo (subió y volvió a caer), termino
+		    if (pp_h == 0 && pp_dy >= 0 && abs(pp_off_x) < 1 && pp_seen_up && _ny >= -1) pp_timer = 0;
+		} else if (pp_off_x != 0 || pp_off_y != 0) {
+		    // Nunca llegó el empuje real (escudo, invulnerable...): lo regreso suave
+		    pp_off_x = lerp(pp_off_x, 0, 0.25);
+		    pp_off_y = lerp(pp_off_y, 0, 0.25);
+		    if (abs(pp_off_x) < 0.5 && abs(pp_off_y) < 0.5) { pp_off_x = 0; pp_off_y = 0; }
+		}
+
+		x = net_x + pp_off_x;
+		y = net_y + pp_off_y;
 		image_xscale =real(SP._IMXS);
 		image_yscale = real(SP._IMYS);
 		// --- VIDA CON PREDICCIÓN ---
@@ -64,6 +101,8 @@ your sharedProperties
 		    image_index = real(SP._II);
 		}
 		image_speed = SP._IS;
+		// Hit-stop: el que recibió el golpe también se congela en mi pantalla
+		if (variable_global_exists("hitstop") && global.hitstop > 0 && hit_bloqueo_timer > 0) image_speed = 0;
 		// Si el cronómetro de golpe está activo, ignoramos el estado de la red
 		if (hit_bloqueo_timer > 0) {
 		    hit_bloqueo_timer--;

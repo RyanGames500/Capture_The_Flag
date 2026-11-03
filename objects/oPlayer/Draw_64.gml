@@ -93,6 +93,9 @@ if (has_flag) {
 	gpu_set_blendmode(bm_normal);
 }
 
+// Hitmarker: va después del flash rojo y del brillo de la bandera para que nada lo tape
+scr_hitmarker_draw();
+
 if (state == PLAYERSTATE2.DEAD) exit;
 
 // oPlayer - Draw GUI Event (HUD PRINCIPAL)
