@@ -18,8 +18,8 @@ function scrReloadWeapon()
 
     // iniciar recarga
     reloading = true;
-    reload_timer = w.reloadTime;
-	reload_max   = w.reloadTime;
+    reload_timer = round(w.reloadTime * scr_pj_recarga_mult());   // Asalto recarga más rápido (scr_personajes)
+	reload_max   = reload_timer;
 
 
     if (global.sfx) audio_play_sound(snd_reload, 1, false);

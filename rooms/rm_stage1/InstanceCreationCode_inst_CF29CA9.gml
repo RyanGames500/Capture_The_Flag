@@ -1,1 +1,1 @@
-tipo_spawn = "ammo";
+tipo_spawn = "weapon"; nivel = 1;

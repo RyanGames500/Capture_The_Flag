@@ -1,5 +1,5 @@
-x = mouse_x;
-y = mouse_y;
+x = aim_x();
+y = aim_y();
 
 
 /*

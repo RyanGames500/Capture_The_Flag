@@ -1,38 +1,5 @@
-// --- INDICADOR DE BANDERA TIPO RADAR (Modo Local) ---
-if (state != PLAYERSTATE.DEAD) {
-    // REGLA: Si soy Azul, debo robar la Roja (oFlag). Si soy Rojo, debo robar la Azul (oFlag2).
-    var target_flag = (global.myTeam == "AZUL") ? oFlag : oFlag2; 
-
-    if (instance_exists(target_flag)) {
-        var camX = camera_get_view_x(view_camera[0]);
-        var camY = camera_get_view_y(view_camera[0]);
-        var camW = camera_get_view_width(view_camera[0]);
-        var camH = camera_get_view_height(view_camera[0]);
-
-        // Solo dibujar si la bandera enemiga está fuera de la cámara
-        if (target_flag.x < camX || target_flag.x > camX + camW || 
-            target_flag.y < camY || target_flag.y > camY + camH) {
-            
-            var dir = point_direction(camX + camW/2, camY + camH/2, target_flag.x, target_flag.y);
-            
-            // Posición en la GUI
-            var margin = 55;
-            var centerX = clamp(target_flag.x - camX, margin, display_get_gui_width() - margin);
-            var centerY = clamp(target_flag.y - camY, margin, display_get_gui_height() - margin);
-
-            // COLOR: El objetivo siempre se ve Rojo (enemigo)
-            var col = c_red; 
-
-            var dist = 25; 
-            var arrowX = centerX + lengthdir_x(dist, dir);
-            var arrowY = centerY + lengthdir_y(dist, dir);
-
-            // Dibujar flecha y bandera
-            draw_sprite_ext(sTroangle, 0, arrowX, arrowY, 1, 1, dir, col, 1);
-            draw_sprite_ext(spr_flagvacia, 0, centerX, centerY, 2, 2, 0, col, 1);
-        }
-    }
-}
+// --- OBJETIVO: que hacer ahora, flecha al objetivo y ayudas (scr_objetivo) ---
+if (state != PLAYERSTATE.DEAD) scr_draw_objetivo(id);
 
 // --- FLASH DE DAÑO (Toda la pantalla) ---
 if (damage_alpha > 0) {
@@ -95,9 +62,17 @@ if (state == PLAYERSTATE2.DEAD) exit;
 // --- CONFIGURACIÓN BASE ---
 var _escala = 4; 
 var _xx = 40; 
-var _yy = 40;
+var _yy = 56;   // un poco más abajo: arriba va tu nombre
 var _alto_barra = 12 * _escala; // Altura de cada bloque de barra
 var _offset_y = _alto_barra + (4 * _escala); // Espacio para la siguiente barra
+
+// --- TU NOMBRE (arriba, junto a tu vida) ---
+draw_set_font(fnt_menu);
+draw_set_halign(fa_left);
+draw_set_valign(fa_top);
+var _col_nom = (scr_my_team() == "AZUL") ? c_aqua : c_red;
+draw_text_transformed_color(_xx + 2, 16 + 2, string(global.myName), 0.9, 0.9, 0, c_black, c_black, c_black, c_black, 1);
+draw_text_transformed_color(_xx, 16, string(global.myName), 0.9, 0.9, 0, _col_nom, _col_nom, _col_nom, _col_nom, 1);
 
 // 1. BARRA DE VIDA (Fija)
 vida_visual = lerp(vida_visual, health, 0.2);
@@ -156,9 +131,11 @@ var _escala_hud = 4;
 var _gui_w = display_get_gui_width();
 var _gui_h = display_get_gui_height();
 
-// Posición de la esquina superior izquierda del cuadro
-var _bx = _gui_w - 150; 
-var _by = _gui_h - 150;
+// Arriba a la derecha (abajo están los joysticks en el celular).
+// En el celular se corre a la izquierda para no tapar los botones de pausa y emotes.
+var _bx = _gui_w - 135;
+var _by = 20;
+if (touch_mode()) _bx = _gui_w - 335;
 
 // Dimensiones del cuadro para centrar
 var _ancho_cuadro = sprite_get_width(spr_HUD_Box) * _escala_hud;
@@ -184,6 +161,7 @@ if (w != noone && is_struct(w)) {
     var _res_val = reserve[$ w.ammoType];
     var _res_texto = (_res_val == undefined) ? "0" : string(_res_val);
     var _ammo_text = string(w.ammo) + " / " + _res_texto;
+    if (w.ammoType == "") _ammo_text = "x" + string(w.ammo);   // railgun y mina: solo las cargas que quedan
     
     var _col_ammo = (w.ammo == 0) ? c_red : c_white;
     draw_text_transformed_color(_centro_x, _by + _alto_cuadro + 10, _ammo_text, 1, 1, 0, _col_ammo, _col_ammo, _col_ammo, _col_ammo, 1);

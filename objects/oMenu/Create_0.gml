@@ -24,11 +24,13 @@ p_index = 0; // El índice para el menú privado
 global.myRoomCode = ""; // Aquí guardaremos el código de 4 letras
 
 // --- CONFIGURACIÓN DE LA SALA ---
-setup_options = ["MODO: 1 VS 1", "MAPA: BOSQUE", "CONFIRMAR Y CREAR"];
+setup_options = ["MODO: 1 VS 1", "MAPA: NIVEL 1", "CONFIRMAR Y CREAR"];
 s_index = 0; // Índice para el menú de setup
 
 global.setup_modo = 0; // 0 = 1vs1, 1 = 2vs2, 2 = 4vs4
-global.setup_mapa = 0; // 0 = Bosque, 1 = Arena 2 = Lagos
+global.setup_mapa = 0; // 0 = NIVEL 1, 1 = NIVEL 2, 2 = NIVEL 3
+lobby_sel = 0;      // ajuste elegido en la sala de espera (0 tiempo, 1 mapa, 2 banderas)
+lobby_sync_cd = 0;  // cada cuánto el líder manda los ajustes
 global.max_players_allowed = 8; // Por defecto
 global.max_players = 2; 
 global.current_players = 1;
@@ -134,3 +136,6 @@ mostrando_selector = false;  // Controla si la ventana está abierta
 mostrando_reto = false;
 datos_reto = -1;
 reto_timer = 0; // Para efectos de brillo o tiempo límite
+
+// Controles táctiles en el celular (en PC no hace nada)
+touch_ensure();

@@ -22,8 +22,10 @@ if (rival != noone && ds_list_find_index(hit_list, rival) == -1) {
     
     // Cambiamos 'rival.owner_team' por 'rival.team' que es la que usa tu bot
     if (rival.team != global.myTeam) {
-        
-        rival.hp -= damage;
+        ds_list_add(hit_list, rival);
+        estado = -1;
+        // Si estaba muerto, invulnerable o con escudo, no lo empuja ni le quita la bandera
+        if (!scr_dano_bot(rival, damage, global.myName)) exit;
         
         // --- EL TRUCO DEL EMPUJE ---
         // Usamos push_h que tu bot ya maneja al final de su Step

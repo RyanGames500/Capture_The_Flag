@@ -38,10 +38,10 @@ var _emote_to_send = -1;
 
 if (emote_cd <= 0)
 {
-	if (keyboard_check_pressed(ord("1"))) _emote_to_send = 0;
-	if (keyboard_check_pressed(ord("2"))) _emote_to_send = 1;
-	if (keyboard_check_pressed(ord("3"))) _emote_to_send = 2;
-	if (keyboard_check_pressed(ord("4"))) _emote_to_send = 3;
+	if (vkey_pressed(ord("1"))) _emote_to_send = 0;
+	if (vkey_pressed(ord("2"))) _emote_to_send = 1;
+	if (vkey_pressed(ord("3"))) _emote_to_send = 2;
+	if (vkey_pressed(ord("4"))) _emote_to_send = 3;
 
 	if (_emote_to_send != -1)
 	{
@@ -103,10 +103,13 @@ if (_fx_s != 0) fx_last_s = _fx_s;
 fx_air = is_grounded ? 0 : fx_air + 1;
 fx_prev_ground = is_grounded;
 
-key_left  = keyboard_check(ord("A"));
-key_right = keyboard_check(ord("D"));
-key_jump  = keyboard_check_pressed(ord("W"));
-key_melee = mouse_check_button_pressed(mb_right);
+key_left  = vkey(ord("A"));
+key_right = vkey(ord("D"));
+key_jump  = vkey_pressed(ord("W"));
+key_melee = vmouse_pressed(mb_right);
+
+// Habilidad (Q) y pasivas de tu personaje (scr_personajes)
+scr_hab_step();
 
 if (melee_cd > 0) melee_cd--;
 if (melee_active > 0) melee_active--;
@@ -124,8 +127,10 @@ else
 }
 
 walksp = walksp_base * walksp_mult;
+walksp *= scr_arma_peso_mult();   // la Thompson pesa (scr_armas)
+walksp *= scr_hab_vel_mult();     // la coraza del Tanque pesa (scr_personajes)
 
-if (!mouse_check_button(mb_left)) {
+if (!vmouse(mb_left)) {
 	ak_recoil = max(0, ak_recoil - 0.6);
 }
 
@@ -219,14 +224,14 @@ if (melee_active > 0)
 	}
 }
 
-if (mouse_check_button_pressed(mb_right))
+if (vmouse_pressed(mb_right))
 {
 	if (granadas > 0) {
 		granadas -= 1;
 		melee_cd = room_speed div 3;
 		melee_active = 6;
 
-		var dir = point_direction(x, y - 16, mouse_x, mouse_y);
+		var dir = point_direction(x, y - 16, aim_x(), aim_y());
 		var fuerza = 8;
 
 		var gx = x + lengthdir_x(15, dir);
@@ -272,6 +277,11 @@ if (mi_clase == -1) {
 	exit;
 }
 
+// --- PLATAFORMA DE SALTO (scr_jugabilidad): saltar encima de ella te lanza alto ---
+if (key_jump && is_grounded && (state == PLAYERSTATE.IDLE || state == PLAYERSTATE.WALK || state == PLAYERSTATE.JUMP)) {
+	if (scr_salto_usar()) { is_grounded = false; key_jump = false; state = PLAYERSTATE.JUMP; }
+}
+
 switch (state) {
 
 	case PLAYERSTATE.INTRO:
@@ -297,7 +307,7 @@ switch (state) {
 		}
 
 		var move = key_right - key_left;
-		var _speed_final = has_flag ? walksp * 0.7 : walksp;
+		var _speed_final = has_flag ? walksp * scr_pj_mult_bandera() : walksp;   // cada personaje carga la bandera distinto
 
 		if (abs(push_h) < 1) {
 			hsp = move * _speed_final;
@@ -317,7 +327,8 @@ switch (state) {
 
 		var move = key_right - key_left;
 		if (abs(push_h) < 1) {
-			hsp = move * walksp;
+			// Con la bandera también en el aire (antes saltando ibas a velocidad completa)
+			hsp = move * (has_flag ? walksp * scr_pj_mult_bandera() : walksp);
 		}
 		if (hsp != 0) image_xscale = sign(hsp) * 1.5;
 		if (is_grounded) state = PLAYERSTATE.IDLE;
@@ -365,6 +376,9 @@ if (abs(push_h) > 0.8) {
 } else {
 	push_h = 0;
 }
+
+// Gancho de la Exploradora: el jalón usa los mismos choques de abajo (scr_personajes)
+scr_hab_mov();
 
 var plat = instance_place(x, y + 1, oMovingPlatform);
 if (plat != noone && vsp >= 0)
@@ -655,7 +669,7 @@ global.sharedProperties = {
 	_KILLS: kills,
 	_VIS: visible,
 	_HF: has_flag,
-	_INV: invulnerable,
+	_INV: invulnerable || scr_hab_esquivando(),   // en el impulso las balas tampoco le pegan
 	_NAME: playerName,
 	_ANG: weapon.angle,
 	_WSI: (guns[weapon.index] != noone) ? guns[weapon.index].sprite : 0,
@@ -667,7 +681,13 @@ global.sharedProperties = {
 	_MELEE: melee_active,
 	_TEAM: team,
 	_SH: has_shield,
-	_MH: max_health
+	_MH: max_health,
+	// Habilidad para que los demás la vean (scr_personajes)
+	_HCO: (hab_cor_t > 0),
+	_HDA: (hab_dash_vis > 0),
+	_HGF: hab_g_fase,
+	_HGX: round(hab_g_x),
+	_HGY: round(hab_g_y)
 };
 
 if (global.xp >= 100)

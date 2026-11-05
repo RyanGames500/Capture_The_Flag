@@ -73,7 +73,7 @@ if (mouse_check_button_pressed(mb_left)) {
 // --- 1. LÓGICA DEL INPUT DE TEXTO ---
 if (input_activo) {
 // --- LÓGICA PARA PEGAR TEXTO (CTRL + V) ---
-    if (keyboard_check(vk_control) && keyboard_check_pressed(ord("V"))) {
+    if (vkey(vk_control) && vkey_pressed(ord("V"))) {
         if (clipboard_has_text()) {
             var texto_pegado = clipboard_get_text();
             // Limpiamos un poco el texto pegado (quitar saltos de línea por si acaso)
@@ -91,7 +91,7 @@ if (menu_state == "friends_menu" && friends_state == "anadir") {
         friends_search_input = keyboard_string;
     }
         
-    if (keyboard_check_pressed(vk_enter) && estado_busqueda == "idle") {
+    if (vkey_pressed(vk_enter) && estado_busqueda == "idle") {
         if (friends_search_input != "") {
             // LIMPIEZA TOTAL DE ESPACIOS
             var _val = string_trim(friends_search_input); 
@@ -121,7 +121,7 @@ if (menu_state == "friends_menu" && friends_state == "anadir") {
             keyboard_string = texto_input;
         }
 
-        if (keyboard_check_pressed(vk_enter)) {
+        if (vkey_pressed(vk_enter)) {
             // Lógica original de guardar nombre
             global.myName = (texto_input == "") ? "Jugador" : texto_input;
             gmda_setNewname(global.myName);
@@ -142,13 +142,13 @@ if (!input_activo) {
 if (menu_delay > 0) {
         menu_delay--;
     } else {
-var move = keyboard_check_pressed(ord("S")) - keyboard_check_pressed(ord("W"));
+var move = vkey_pressed(ord("S")) - vkey_pressed(ord("W"));
 
 // --- ESTADO PRINCIPAL ---
     if (menu_state == "main") {
         index = clamp(index + move, 0, array_length(menu_options) - 1);
 
-        if (keyboard_check_pressed(vk_enter)) {
+        if (vkey_pressed(vk_enter)) {
             switch(index) {
                 case 0: // Ahora PLAY abre el submenú de modos
                     menu_state = "play_selection";
@@ -208,7 +208,7 @@ var move = keyboard_check_pressed(ord("S")) - keyboard_check_pressed(ord("W"));
 		
 
 // Entrar por tecla
-    if (keyboard_check_pressed(ord("M"))) {
+    if (vkey_pressed(ord("M"))) {
         menu_state = "mailbox";
     }
     
@@ -224,7 +224,7 @@ var move = keyboard_check_pressed(ord("S")) - keyboard_check_pressed(ord("W"));
 
 // Salir del buzón
 if (menu_state == "mailbox") {
-    if (keyboard_check_pressed(vk_escape)) {
+    if (vkey_pressed(vk_escape)) {
         menu_state = "main";
     }
 
@@ -236,7 +236,7 @@ else if (menu_state == "private") {
     }
         p_index = clamp(p_index + move, 0, array_length(private_options) - 1);
 
-        if (keyboard_check_pressed(vk_enter)) {
+        if (vkey_pressed(vk_enter)) {
             switch(p_index) {
 				
 				case 0: // CREATE ROOM
@@ -267,10 +267,10 @@ else if (menu_state == "private") {
         }
     }
 else if (menu_state == "setup_room") {
-    var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+    var move = vkey_pressed(vk_down) - vkey_pressed(vk_up);
     s_index = clamp(s_index + move, 0, array_length(setup_options) - 1);
 
-    var side_move = keyboard_check_pressed(vk_right) - keyboard_check_pressed(vk_left);
+    var side_move = vkey_pressed(vk_right) - vkey_pressed(vk_left);
     
     // --- CAMBIAR MODO ---
     if (s_index == 0 && side_move != 0) { 
@@ -286,13 +286,12 @@ else if (menu_state == "setup_room") {
     if (global.setup_modo == 2) global.max_players_allowed = 6; // 3vs3
     if (global.setup_modo == 3) global.max_players_allowed = 8; // 4vs4
 
-    if (s_index == 1 && side_move != 0) { // Cambiar MAPA
-        global.setup_mapa = (global.setup_mapa + side_move + 2) % 2;
-        var map_text = ["BOSQUE", "ARENA"];
-        setup_options[1] = "MAPA: " + map_text[global.setup_mapa];
+    if (s_index == 1 && side_move != 0) { // Cambiar MAPA (se puede volver a cambiar en la sala de espera)
+        global.setup_mapa = (global.setup_mapa + side_move + 3) % 3;
+        setup_options[1] = "MAPA: NIVEL " + string(global.setup_mapa + 1);
     }
 
-    if (keyboard_check_pressed(vk_enter) && s_index == 2) { // CONFIRMAR
+    if (vkey_pressed(vk_enter) && s_index == 2) { // CONFIRMAR
 		
 		// si el input estaba activo o el texto cambió, actualizamos YA
     if (texto_input != "Escribe tu nombre..." && texto_input != "") {
@@ -300,6 +299,7 @@ else if (menu_state == "setup_room") {
     }
 		
         // Ahora sí, global.max_players_allowed valdrá 2 si estás en 1vs1
+        global.match_mapa = global.setup_mapa;   // el mapa elegido aquí es con el que empieza la sala
         var _prefijo = "MAX" + string(global.max_players_allowed) + "_";
         global.myRoomCode = _prefijo + generar_codigo_sala(4); 
         
@@ -307,13 +307,13 @@ else if (menu_state == "setup_room") {
         ChangeRoom(global.myRoomCode);
     }
 
-    if (keyboard_check_pressed(vk_escape)) menu_state = "private";
+    if (vkey_pressed(vk_escape)) menu_state = "private";
 }
 else if (menu_state == "offline_setup") {
-    var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+    var move = vkey_pressed(vk_down) - vkey_pressed(vk_up);
     off_index = clamp(off_index + move, 0, array_length(offline_options) - 1);
 
-    var side_move = keyboard_check_pressed(vk_right) - keyboard_check_pressed(vk_left);
+    var side_move = vkey_pressed(vk_right) - vkey_pressed(vk_left);
 
     // --- Lógica de cambio con flechas laterales ---
     if (side_move != 0) {
@@ -338,7 +338,7 @@ else if (menu_state == "offline_setup") {
     }
 
     // --- Confirmar con ENTER ---
-    if (keyboard_check_pressed(vk_enter)) {
+    if (vkey_pressed(vk_enter)) {
         if (off_index == 3) { // INICIAR
             //global.ONLINE = false;
             global.puntos_azul = 0;
@@ -356,7 +356,7 @@ else if (menu_state == "offline_setup") {
 else if (menu_state == "play_selection") {
         play_index = clamp(play_index + move, 0, array_length(play_modes) - 1);
 
-        if (keyboard_check_pressed(vk_enter)) {
+        if (vkey_pressed(vk_enter)) {
             switch(play_index) {
                 case 0: // PARTIDA RÁPIDA 
                     if (global.myName == "") global.myName = "Player_" + string(irandom(999));
@@ -374,11 +374,11 @@ else if (menu_state == "play_selection") {
                 break;
             }
         }
-        if (keyboard_check_pressed(vk_escape)) menu_state = "main";
+        if (vkey_pressed(vk_escape)) menu_state = "main";
     }
 else if (menu_state == "friends_menu") {
     // --- SALIR HACIA ATRÁS ---
-    if (keyboard_check_pressed(vk_escape)) {
+    if (vkey_pressed(vk_escape)) {
         if (friends_state == "main") {
             menu_state = "main";
         } else {
@@ -391,12 +391,12 @@ else if (menu_state == "friends_menu") {
         exit; 
     }
 
-    var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+    var move = vkey_pressed(vk_down) - vkey_pressed(vk_up);
     
     if (friends_state == "main") {
         friends_index = clamp(friends_index + move, 0, array_length(friends_options) - 1);
         
-        if (keyboard_check_pressed(vk_enter)) {
+        if (vkey_pressed(vk_enter)) {
             switch(friends_index) {
                 case 0: friends_state = "lista"; break;
                 case 1: 
@@ -416,7 +416,7 @@ else if (menu_state == "friends_menu") {
     var num_amigos = array_length(global.lista_amigos);
     
     if (num_amigos > 0) {
-        var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+        var move = vkey_pressed(vk_down) - vkey_pressed(vk_up);
         
         if (move != 0) {
             friend_selected = clamp(friend_selected + move, 0, num_amigos - 1);
@@ -432,7 +432,7 @@ else if (menu_state == "friends_menu") {
 
 
 // --- ACCIÓN: VER PERFIL ---
-if (keyboard_check_pressed(ord("P"))) {
+if (vkey_pressed(ord("P"))) {
     var _tag_objetivo = global.lista_amigos[friend_selected].tag;
     
     // Iniciamos la carga de datos del amigo
@@ -447,7 +447,7 @@ if (keyboard_check_pressed(ord("P"))) {
 }
 
 	if (friends_state == "perfil_amigo") {
-	    if (keyboard_check_pressed(vk_escape)) {
+	    if (vkey_pressed(vk_escape)) {
 	        friends_state = "lista";
 	        estado_busqueda = "idle";
 	    }
@@ -526,24 +526,57 @@ if (oBrain.AmIPseudoHost) {
 }
 
 if (oBrain.AmIPseudoHost) {
-        if (keyboard_check_pressed(ord("S"))) {
+        // --- AJUSTES DE LA PARTIDA (solo el líder los cambia) ---
+        var _cambio = false;
+        var _mv = vkey_pressed(vk_down) - vkey_pressed(vk_up);
+        if (_mv != 0) lobby_sel = clamp(lobby_sel + _mv, 0, 2);
+        var _lado = vkey_pressed(vk_right) - vkey_pressed(vk_left);
+        if (_lado != 0) { scr_ajustes_cambiar(lobby_sel, _lado); _cambio = true; }
+
+        // Con clic o con el dedo sobre las flechitas < >
+        if (device_mouse_check_button_pressed(0, mb_left) && !show_kick_menu) {
+            var _gx = device_mouse_x_to_gui(0);
+            var _gy = device_mouse_y_to_gui(0);
+            var _cx = display_get_gui_width() / 2;
+            var _p0 = scr_ajustes_panel_y();
+            for (var f = 0; f < 3; f++) {
+                var _fy = _p0 + 48 + f * 34;
+                if (abs(_gy - _fy) < 16) {
+                    if (abs(_gx - (_cx + 10)) < 26)  { lobby_sel = f; scr_ajustes_cambiar(f, -1); _cambio = true; }
+                    if (abs(_gx - (_cx + 230)) < 26) { lobby_sel = f; scr_ajustes_cambiar(f, 1);  _cambio = true; }
+                }
+            }
+        }
+
+        // Se mandan al cambiar y cada 2 segundos (así el que entra tarde también los ve)
+        lobby_sync_cd -= 1;
+        if (_cambio || lobby_sync_cd <= 0) {
+            lobby_sync_cd = room_speed * 2;
+            scr_ajustes_enviar();
+        }
+
+        // Empezar: S en el teclado. En el celular, OK (ahí la flecha de abajo también cuenta como S
+        // y ahora sirve para elegir los ajustes, así que no debe arrancar la partida).
+        var _empezar = keyboard_check_pressed(ord("S")) || (touch_mode() && vkey_pressed(vk_enter));
+        if (_empezar) {
             
             // --- CONTAR SI ESTÁN TODOS ---
             var _total = 1; 
             with(oOtherPlayer) _total++; // Contamos a los invitados
             
             if (_total == global.max_players_allowed) {
+                var _aj = scr_ajustes_struct();
                 with(oOtherPlayer) {
-                    SendEventToClient(clientId, "GO_TO_BATTLE", {});
+                    SendEventToClient(clientId, "GO_TO_BATTLE", _aj);
                 }
-                room_goto(rm_stage1);
+                room_goto(scr_mapa_room(global.match_mapa));
             }
         }
     }
 }
 if (menu_state == "profile") {
     // 1. Activar edición con la tecla E
-    if (keyboard_check_pressed(ord("E"))) {
+    if (vkey_pressed(ord("E"))) {
         if (!input_activo) {
             input_activo = true;
             keyboard_string = global.myName; // Empezamos con el nombre actual
@@ -560,7 +593,7 @@ if (menu_state == "profile") {
         }
 
         // Confirmar cambio con ENTER
-        if (keyboard_check_pressed(vk_enter)) {
+        if (vkey_pressed(vk_enter)) {
             input_activo = false;
 			#region --- PREPARAR GUARDADO EN LA NUBE ---
 			save_state = "prepare";
@@ -572,11 +605,11 @@ if (menu_state == "profile") {
     }
 
     // 3. Salir si no estamos escribiendo
-    if (keyboard_check_pressed(vk_escape) && !input_activo) {
+    if (vkey_pressed(vk_escape) && !input_activo) {
         menu_state = "main";
     }
 	
-if (keyboard_check_pressed(ord("B")) && !input_activo) {
+if (vkey_pressed(ord("B")) && !input_activo) {
 	var PLAYER_ID = gmda_getPlayerid();
         var _id_buscado = get_string("Introduce el ID ÚNICO del jugador:", "");
         
@@ -591,7 +624,7 @@ if (keyboard_check_pressed(ord("B")) && !input_activo) {
 	
     
     // Abrir selector con A
-    if (keyboard_check_pressed(ord("A")) && !mostrando_selector) {
+    if (vkey_pressed(ord("A")) && !mostrando_selector) {
         mostrando_selector = true;
         avatar_seleccionado = global.avatar_id; // Empezar en el actual
     }
@@ -607,10 +640,10 @@ if (mostrando_selector) {
     var columnas = 4;
     var prev_sel = avatar_seleccionado;
 
-    if (keyboard_check_pressed(vk_right)) avatar_seleccionado = clamp(avatar_seleccionado + 1, 0, total_iconos - 1);
-    if (keyboard_check_pressed(vk_left))  avatar_seleccionado = clamp(avatar_seleccionado - 1, 0, total_iconos - 1);
-    if (keyboard_check_pressed(vk_down))  avatar_seleccionado = clamp(avatar_seleccionado + columnas, 0, total_iconos - 1);
-    if (keyboard_check_pressed(vk_up))    avatar_seleccionado = clamp(avatar_seleccionado - columnas, 0, total_iconos - 1);
+    if (vkey_pressed(vk_right)) avatar_seleccionado = clamp(avatar_seleccionado + 1, 0, total_iconos - 1);
+    if (vkey_pressed(vk_left))  avatar_seleccionado = clamp(avatar_seleccionado - 1, 0, total_iconos - 1);
+    if (vkey_pressed(vk_down))  avatar_seleccionado = clamp(avatar_seleccionado + columnas, 0, total_iconos - 1);
+    if (vkey_pressed(vk_up))    avatar_seleccionado = clamp(avatar_seleccionado - columnas, 0, total_iconos - 1);
 
     // AUTO-SCROLL: Si el seleccionado se sale por abajo o por arriba, movemos el scroll
     var fila_actual = floor(avatar_seleccionado / columnas);
@@ -624,10 +657,10 @@ if (mostrando_selector) {
     var max_scroll = max(0, (filas_totales * 120) - 240);
     scroll_y_target = clamp(scroll_y_target, 0, max_scroll);
 
-    if (keyboard_check_pressed(vk_space)) mostrando_selector = false;
+    if (vkey_pressed(vk_space)) mostrando_selector = false;
 
-    if (keyboard_check_pressed(vk_enter)) {
-// --- DENTRO DEL IF (keyboard_check_pressed(vk_enter)) ---
+    if (vkey_pressed(vk_enter)) {
+// --- DENTRO DEL IF (vkey_pressed(vk_enter)) ---
 if (scr_check_icon_unlocked(avatar_seleccionado)) {
     global.avatar_id = avatar_seleccionado;
     mostrando_selector = false;
@@ -686,7 +719,7 @@ if (estado_busqueda == "error" && mensaje_alpha <= 0) {
 }
 
 if (menu_state == "achievements") {
-    if (keyboard_check_pressed(vk_escape)) {
+    if (vkey_pressed(vk_escape)) {
         menu_state = "main";
     }
 	
@@ -699,7 +732,7 @@ if (menu_state == "achievements") {
 
 
 
-if (estado_busqueda == "encontrado" && keyboard_check_pressed(ord("F"))) {
+if (estado_busqueda == "encontrado" && vkey_pressed(ord("F"))) {
     if (is_struct(datos_busqueda_resultado)) {
         var id_rival = string(ultimo_intento_busqueda); 
         var mi_id = string(gmda_getPlayerid());
@@ -726,21 +759,21 @@ if (estado_busqueda == "encontrado" && keyboard_check_pressed(ord("F"))) {
 	if (menu_state == "mailbox") {
     if (hay_solicitud_pendiente) {
         // ACEPTAR
-        if (keyboard_check_pressed(ord("Y"))) {
+        if (vkey_pressed(ord("Y"))) {
             scr_aceptar_solicitud();
             mensaje_texto = "Ahora eres amigo de " + string(global.nombre_ultimo_amigo) + "!";
             mensaje_alpha = 3;
         }
         
         // RECHAZAR
-        if (keyboard_check_pressed(ord("N"))) {
+        if (vkey_pressed(ord("N"))) {
             DeleteSimpleData("solicitudes", string(global.miFriendTag));
             hay_solicitud_pendiente = false;
             show_debug_message(">>> Solicitud rechazada.");
         }
     }
     
-    if (keyboard_check_pressed(vk_escape)) {
+    if (vkey_pressed(vk_escape)) {
         menu_state = "main";
     }
 }
@@ -830,7 +863,7 @@ if (mostrando_reto) {
     reto_timer--;
     
     // Si presiona ENTER (Aceptar)
-    if (keyboard_check_pressed(vk_enter)) {
+    if (vkey_pressed(vk_enter)) {
         var _id_retador = datos_reto.retador_id;
         
         // Avisar al retador
@@ -845,7 +878,7 @@ if (mostrando_reto) {
     }
     
     // Si presiona ESC o se acaba el tiempo (Rechazar)
-    if (keyboard_check_pressed(vk_escape) || reto_timer <= 0) {
+    if (vkey_pressed(vk_escape) || reto_timer <= 0) {
         DeleteSimpleData("duelo_pendiente", global.miFriendTag);
         mostrando_reto = false;
         datos_reto = -1;

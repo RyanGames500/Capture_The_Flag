@@ -19,3 +19,6 @@ shake = 0;
 shake_x = 0;
 shake_y = 0;
 shake_decay = 0.80;
+
+// Controles táctiles en el celular (en PC no hace nada)
+touch_ensure();

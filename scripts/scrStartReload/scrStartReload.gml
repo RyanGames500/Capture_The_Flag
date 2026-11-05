@@ -23,6 +23,7 @@ function scrStartReload(_player)
         if (w.ammo >= w.maxAmmo) return;
 
         reloading = true;
-        reload_timer = w.reloadTime;
+        reload_timer = round(w.reloadTime * scr_pj_recarga_mult());   // Asalto recarga más rápido (scr_personajes)
+        if (variable_instance_exists(id, "reload_max")) reload_max = reload_timer;
     }
 }

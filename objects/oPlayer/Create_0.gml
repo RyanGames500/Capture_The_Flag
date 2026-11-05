@@ -130,39 +130,15 @@ emote_cd = 0; // Timer para el cooldown de emotes
 anims[0] = { idle: spr_player_idle, walk: spr_player_walk, jump: spr_player_walk, dead: spr_player_dead, hit: spr_player_hit };
 anims[1] = { idle: spr_player2_idle, walk: spr_player2_walk, jump: spr_player2_walk, dead: spr_player2_dead, hit: spr_player2_hit };
 anims[2] = { idle: spr_player3_idle, walk: spr_player3_walk, jump: spr_player3_walk, dead: spr_player3_dead, hit: spr_player3_hit };
-anims[3] = { idle: spr_player4_idle,  walk: spr_player4_walk,  jump: spr_player4_walk,  dead: spr_player4_dead, hit: spr_player4_hit }; // <-- EL CUARTO
+anims[3] = { idle: spr_sargento_idle, walk: spr_sargento_walk, jump: spr_sargento_walk, dead: spr_sargento_dead, hit: spr_sargento_hit }; // Sargento (Alejandro nuevo). Los viejos son spr_player4_*
 
 // Usamos la variable global que viene de la pantalla de selección
 mi_clase = global.pj_selected; 
 
 
 
-// Ajuste de estadísticas físicas para los 4
-switch(mi_clase) {
-    case 0: // ASALTO 
-        walksp_base = 3;   
-        health = 100; 
-        jumpsp = -14; 
-        break; 
-
-    case 1: // TANQUE 
-        walksp_base = 2.5; 
-        health = 200; 
-        jumpsp = -13; // Salto más bajo por el peso
-        break; 
-
-    case 2: // MEDICO 
-        walksp_base = 3.5; 
-        health = 120; 
-        jumpsp = -13.5; // Salto ligeramente superior
-        break;
-
-    case 3: // SCOUT 
-        walksp_base = 4.0; 
-        health = 80;  
-        jumpsp = -14;  // Gran salto
-        break; 
-}
+// Stats, pasiva y habilidad de cada personaje (scr_personajes)
+scr_pj_aplicar();
 
 // Inicializar la vida máxima según lo que se asignó arriba
 max_health = health;

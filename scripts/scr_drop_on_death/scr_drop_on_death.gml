@@ -17,7 +17,7 @@ function scr_drop_on_death(_weapon_struct, _x, _y) {
 
     // Avisar a todos los clientes (incluyendo al que murió para que vea su arma en el suelo)
     with(oOtherPlayer) {
-        SendEventToClient(oOtherPlayer.clientId, "spawn_weapon_pickup", {
+        SendEventToClient(clientId, "spawn_weapon_pickup", {
             uid: drop.net_uid,
             x: _x,
             y: _y,

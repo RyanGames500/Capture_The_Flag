@@ -31,6 +31,9 @@ if (variable_instance_exists(id, "is_box") && is_box)
 	y = y_base + lengthdir_y(distancia, image_angle);
 }
 
+// Cohete del RPG: sale lento y acelera (scr_armas)
+if (variable_instance_exists(id, "acel") && acel > 0) speed = min(speed * acel, vel_max);
+
 if (!variable_instance_exists(id, "is_box") || !is_box) {
 	if (life > 0) {
 		life--;
@@ -38,7 +41,12 @@ if (!variable_instance_exists(id, "is_box") || !is_box) {
 	}
 }
 
-if (place_meeting(x, y, obj_wall) || place_meeting(x, y, oPlataformaPasable))
+// Balas rápidas: reviso también el tramo que van a recorrer este frame,
+// así no atraviesan un muro, una plataforma o a un rival sin pegar (scr_mira)
+var _barrido = (speed > 0) && !(variable_instance_exists(id, "is_box") && is_box) && !(variable_instance_exists(id, "is_granada") && is_granada);
+var _cruza_muro = _barrido && scr_bala_cruza_muro(x, y, x + hspeed, y + vspeed);
+
+if (place_meeting(x, y, obj_wall) || place_meeting(x, y, oPlataformaPasable) || _cruza_muro)
 {
 	if (!(variable_instance_exists(id, "is_box") && is_box) && !is_rocket) fx_impact_net(x, y, direction + 180, 6, false);
 
@@ -69,6 +77,7 @@ if (place_meeting(x, y, obj_wall) || place_meeting(x, y, oPlataformaPasable))
 }
 
 var target_enemy = instance_place(x, y, oOtherPlayer);
+if (target_enemy == noone && _barrido && !_cruza_muro) target_enemy = scr_bala_rival_en_tramo(x, y, x + hspeed, y + vspeed);
 
 if (target_enemy != noone)
 {
@@ -77,6 +86,8 @@ if (target_enemy != noone)
 		if (variable_instance_exists(id, "is_box") && is_box) {
 			if (ds_list_find_index(hit_list, target_enemy) != -1) exit;
 		}
+		// Bala que atraviesa (antimaterial): no le pega dos veces al mismo
+		if (variable_instance_exists(id, "atraviesa") && ds_list_find_index(hit_list, target_enemy) != -1) exit;
 
 		if (target_enemy.has_shield)
 		{
@@ -130,10 +141,12 @@ if (target_enemy != noone)
 			var _head = (!is_rocket && _reason == "pvp" && y < target_enemy.bbox_top + _alto * 0.28);
 			if (_head) damage = round(damage * FX_HEADSHOT_MULT);
 
-			fx_damage_number(target_enemy.x, target_enemy.bbox_top - 8, damage, is_rocket ? 2 : (_head ? 1 : 0));
+			// Con coraza el que recibe solo pierde la mitad: así lo muestro yo también (scr_personajes)
+			var _dmg_ver = (variable_instance_exists(target_enemy, "hab_co") && target_enemy.hab_co) ? round(damage * HAB_CORAZA_DANO) : damage;
+			fx_damage_number(target_enemy.x, target_enemy.bbox_top - 8, _dmg_ver, is_rocket ? 2 : (_head ? 1 : 0));
 			fx_impact_net(x, y, direction + 180, is_rocket ? 4 : 8, is_rocket);
 
-			scr_predict_hit(target_enemy, damage, (_reason == "boxeo") ? 20 : 10);
+			scr_predict_hit(target_enemy, _dmg_ver, (_reason == "boxeo") ? 20 : 10);
 			if (_reason == "boxeo") scr_predict_push(target_enemy, _dir_golpe);
 			scr_hit_confirm(target_enemy, _head, _reason == "boxeo");
 			SendEventToClient(target_enemy.clientId, "hit", { damage: damage, killer: global.myName, reason: _reason, angle: _dir_golpe });
@@ -142,6 +155,9 @@ if (target_enemy != noone)
 		if (variable_instance_exists(id, "is_box") && is_box) {
 			ds_list_add(hit_list, target_enemy);
 			estado = -1;
+		} else if (variable_instance_exists(id, "atraviesa") && atraviesa > 1) {
+			atraviesa -= 1;              // sigue de largo al siguiente rival
+			ds_list_add(hit_list, target_enemy);
 		} else {
 			instance_destroy();
 		}

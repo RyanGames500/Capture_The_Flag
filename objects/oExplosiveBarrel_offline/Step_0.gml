@@ -31,7 +31,7 @@ if (hp <= 0 && !exploded) {
     // A. Daño al Jugador
     if (instance_exists(oPlayer_offline)) {
         if (point_distance(x, y, oPlayer_offline.x, oPlayer_offline.y) < radius) {
-            health -= dmg_to_apply; 
+            scr_dano_jugador_local(dmg_to_apply, "Un barril");
         }
     }
     
@@ -39,8 +39,7 @@ if (hp <= 0 && !exploded) {
     if (instance_exists(oPlayer2_local)) { 
         with(oPlayer2_local) {
             if (point_distance(other.x, other.y, x, y) < radius) {
-                hp -= dmg_to_apply;
-                // Si el barril le quita mucha vida, el bot entrará en modo huida automáticamente
+                scr_dano_bot(id, dmg_to_apply, "Un barril");
             }
         }
     }

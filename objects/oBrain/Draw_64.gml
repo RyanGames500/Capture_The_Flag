@@ -47,7 +47,8 @@ gmda_draw_table(25,330,globalscores,player_name)//y=590
 
 if (global.game_over == false) 
 {
-#region --- TARJETA JUGADOR LOCAL ---
+#region --- TARJETA JUGADOR LOCAL (solo en el menú; en la partida tu nombre va arriba, con tu vida) ---
+if (room == rm_menu) {
 var gw = display_get_gui_width();
 var gh = display_get_gui_height();
 
@@ -63,33 +64,11 @@ draw_set_alpha(1);
 draw_set_color(global.myTeam == "AZUL" ? c_aqua : c_red);
 draw_set_halign(fa_left);
 draw_text_transformed(40, gh - 65, global.myName, 1.2, 1.2, 0); // Tu nombre
+}
 #endregion
 
-#region // PING HUD
-if(global.ONLINE){
-    var pad = 10;
-    var gw = display_get_gui_width();
-    var xx2 = gw - pad;
-    var yy2 = pad;
-
-    if (sprite_exists(spr_ping))
-    {
-        draw_sprite_ext(spr_ping, 0, xx2 - 100, yy2 + 10, 1, 1, 0, c_white, 1);
-    }
-
-    var col_ping = c_lime;
-    if (global.ping > 120) col_ping = c_yellow;
-    if (global.ping > 200) col_ping = c_red;
-
-    draw_set_font(fnt_killfeed);
-    draw_set_halign(fa_right);
-    draw_set_valign(fa_top);
-    draw_set_color(c_black);
-    draw_text_transformed(xx2 + 1, yy2 + 1, string(global.ping) + " ms",0.8,0.8,0);
-    draw_set_color(col_ping);
-    draw_text_transformed(xx2, yy2, string(global.ping) + " ms",0.8,0.8,0);
-    draw_set_color(c_white);
-}
+#region // PING HUD (en la partida: chiquito abajo al centro)
+if (global.ONLINE) scr_red_draw_hud(room != rm_menu);
 #endregion
 }
 if (room == rm_menu) exit;
@@ -269,19 +248,21 @@ draw_set_alpha(1);
 draw_set_color(c_white);
 #endregion
 
-#region // Textos de kill
+#region // Textos de kill (a la derecha, debajo del arma: arriba a la izquierda van tu nombre y tu vida)
 draw_set_valign(fa_top);
-draw_set_halign(fa_left);
+draw_set_halign(fa_right);
 
 var line_h = 22;                  
 var line_step = line_h * scale; 
+var _kf_x = display_get_gui_width() - 20;
+var _kf_y = 200;
 
 for (var i = 0; i < array_length(kill_feed); i++)
 {
     var it = kill_feed[i];
 
-    var dx = xx + it.xoff;
-    var dy = yy + i * line_step + it.yoff;
+    var dx = _kf_x - it.xoff;
+    var dy = _kf_y + i * line_step + it.yoff;
 
     // sombra
     draw_set_alpha(it.a);
@@ -295,6 +276,7 @@ for (var i = 0; i < array_length(kill_feed); i++)
 
 draw_set_alpha(1);
 draw_set_color(c_white);
+draw_set_halign(fa_left);
 #endregion
 
 #region Tracer queue
@@ -313,47 +295,9 @@ if (variable_global_exists("tracer_queue"))
 }
 #endregion
 
-#region // --- TARJETA RIVAL (Lado Derecho) ---
-if (instance_exists(oOtherPlayer)) 
-{
-    var gw = display_get_gui_width();
-    var gh = display_get_gui_height();
-
-    // 1. FONDO (Rectángulo negro traslúcido)
-    draw_set_alpha(0.8);
-    draw_set_color(c_black);
-    draw_roundrect_ext(gw - 270, gh - 80, gw - 20, gh - 20, 10, 10, false);
-
-    // 2. TEXTO DEL NOMBRE
-    draw_set_alpha(1);
-    draw_set_color(global.myTeam == "AZUL" ? c_red : c_aqua); 
-    draw_set_halign(fa_right); // Alineado a la derecha
-    draw_set_valign(fa_middle);
-
-    var rivalName = "Oponente";
-    
-    if (oOtherPlayer.sharedProperties != -1) {
-        var SP_Data;
-        if (is_string(oOtherPlayer.sharedProperties)) {
-            SP_Data = json_parse(oOtherPlayer.sharedProperties);
-        } else {
-            SP_Data = oOtherPlayer.sharedProperties;
-        }
-
-        if (variable_struct_exists(SP_Data, "_NAME")) {
-            rivalName = string(SP_Data._NAME);
-        }
-    }
-    
-    draw_text_transformed(gw - 40, gh - 60, rivalName, 1.2, 1.2, 0);
-
-    // 3. INDICADOR DE ESTADO
-    draw_set_color(c_lime);
-    draw_set_halign(fa_right);
-    draw_text_transformed(gw - 40, gh - 35, " ONLINE", 0.8, 0.8, 0);
-    
-    draw_set_alpha(1); // Reset
-}
+#region // --- TARJETA RIVAL ---
+// Ya no se dibuja: abajo a la derecha queda debajo del joystick en el celular,
+// y solo mostraba a un rival. Los nombres ya salen encima de cada jugador.
 #endregion
 
 }
@@ -401,6 +345,9 @@ if (!global.game_over) {
     var _bounce = abs(sin(current_time * 0.01)) * 8; 
     draw_set_color(c_white);
     draw_triangle(_flecha_x - 8, _my - 48 - _bounce, _flecha_x + 8, _my - 48 - _bounce, _flecha_x, _my - 38 - _bounce, false);
+
+    // Reloj de la partida, debajo del marcador (solo en línea y con límite de tiempo)
+    if (room != rm_menu) scr_reloj_draw(_mx_base, _my_base + 52);
 }
 
 // ======================================================
@@ -484,10 +431,11 @@ if (global.game_over && !abandono_activo)
     draw_set_color(_col_ganador);
     draw_text_transformed(mid_x, mid_y - 190, _ganador_txt, 2.5 * pulse, 2.5 * pulse, 0);
 
-    // Banderas
-    var spacing = 90;
-    var start_x = mid_x - spacing; 
-    for (var i = 1; i <= 3; i++) {
+    // Banderas (tantas como las que había que ganar)
+    var _nb = clamp(scr_banderas_para_ganar(), 1, 10);
+    var spacing = (_nb > 5) ? 360 / (_nb - 1) : 90;
+    var start_x = mid_x - spacing * (_nb - 1) / 2; 
+    for (var i = 1; i <= _nb; i++) {
         var bx = start_x + ((i-1) * spacing);
         if (global.puntos_azul >= i) draw_sprite_ext(spr_flag_blue, 0, bx, mid_y - 90, 1.2, 1.2, 0, c_white, victory_alpha);
         else draw_sprite_ext(spr_flagvacia, 0, bx, mid_y - 90, 1.0, 1.0, 0, c_white, victory_alpha * 0.2);
@@ -565,44 +513,86 @@ draw_set_valign(fa_top);
 if (!intro_disparada && room != rm_menu && global.ONLINE == true) {
     var sw = display_get_gui_width();
     var sh = display_get_gui_height();
-    
+    var _yo = scr_my_team();   // mi equipo desde que entro a la sala (antes salía vacío y todo se veía rojo)
+
     // 1. FONDO CON GRADIENTE
-    draw_set_alpha(0.85);
+    draw_set_alpha(0.9);
     draw_rectangle_color(0, 0, sw, sh, c_black, c_black, make_color_rgb(10, 30, 50), make_color_rgb(10, 30, 50), false);
     draw_set_alpha(1);
 
     // 2. TÍTULO Y CRONÓMETRO
+    draw_set_font(fnt_menu);
     draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
     var segs = ceil(timer_intro / 60);
-    draw_text_transformed_color(sw/2, 50, "SELECT YOUR WARRIOR: " + string(segs), 1.5, 1.5, 0, c_white, c_white, c_yellow, c_yellow, 1);
+    draw_text_transformed_color(sw/2 + 3, 40 + 3, "ELIGE TU PERSONAJE", 1.8, 1.8, 0, c_black, c_black, c_black, c_black, 1);
+    draw_text_transformed_color(sw/2, 40, "ELIGE TU PERSONAJE", 1.8, 1.8, 0, c_white, c_white, c_white, c_white, 1);
+    draw_text_transformed_color(sw/2, 84, string(segs), 1.3, 1.3, 0, c_yellow, c_yellow, c_orange, c_orange, 1);
 
-    // --- VARIABLES DE POSICIONAMIENTO ---
-    var countAzul = 0;
-    var countRojo = 0;
-    var gapY = 480;      // Espacio vertical (Aumentado mucho para slots altos)
-    var startY = sh * 0.15; // Empezamos más arriba
-    var box_w = 260;     // Ancho del slot
-    var box_h = 440;     // ALTO DEL SLOT (Aumentado para ver cuerpo completo)
-
-    // 3. MI SLOT
-    var myX = (global.myTeam == "AZUL") ? sw * 0.22 : sw * 0.78;
-    var myY = startY + ((global.myTeam == "AZUL" ? countAzul : countRojo) * gapY);
-    
-    draw_bomb_slot(myX, myY, global.pj_selected, global.myName, global.mi_listo, true, global.myTeam, box_w, box_h);
-    if (global.myTeam == "AZUL") countAzul++; else countRojo++;
-
-    // 4. SLOTS DE OTROS JUGADORES
-    with(oOtherPlayer) {
-        var isAzul = (team == "AZUL");
-        var drawX = isAzul ? sw * 0.22 : sw * 0.78;
-        var drawY = startY + ((isAzul ? countAzul : countRojo) * gapY);
-        
-        var _pj = variable_instance_exists(id, "mySelectedPJ") ? mySelectedPJ : 0;
+    // 3. ¿QUIÉN VA EN CADA EQUIPO?
+    var _az = [];   // cada uno: [pj, nombre, listo, soy_yo]
+    var _ro = [];
+    var _mine = [global.pj_selected, global.myName, global.mi_listo, true];
+    if (_yo == "AZUL") array_push(_az, _mine); else array_push(_ro, _mine);
+    with (oOtherPlayer) {
+        var _pj  = variable_instance_exists(id, "mySelectedPJ") ? mySelectedPJ : 0;
         var _rdy = variable_instance_exists(id, "isReady") ? isReady : false;
-        
-        draw_bomb_slot(drawX, drawY, _pj, Name, _rdy, false, team, box_w, box_h);
-        if (isAzul) countAzul++; else countRojo++;
+        var _it  = [_pj, Name, _rdy, false];
+        var _tm  = (variable_instance_exists(id, "lobby_team") && lobby_team != "") ? lobby_team : team;
+        if (_tm == "AZUL") array_push(_az, _it); else array_push(_ro, _it);
     }
+
+    // 4. DOS COLUMNAS CON SU LETRERO
+    var box_w = 220;
+    var box_h = 360;
+    var _cy = 140 + 20 + box_h / 2 + 10;
+    for (var _t = 0; _t < 2; _t++) {
+        var _list = (_t == 0) ? _az : _ro;
+        var _team = (_t == 0) ? "AZUL" : "ROJO";
+        var _colx = (_t == 0) ? sw * 0.25 : sw * 0.75;
+        var _col  = scr_team_color(_team);
+
+        // letrero
+        draw_set_alpha(0.95);
+        draw_rectangle_color(_colx - 260, 102, _colx + 260, 140, _col, _col, merge_color(_col, c_black, 0.4), merge_color(_col, c_black, 0.4), false);
+        draw_set_alpha(1);
+        draw_text_transformed_color(_colx + 3, 121 + 3, "EQUIPO " + _team, 1.3, 1.3, 0, c_black, c_black, c_black, c_black, 1);
+        draw_text_transformed_color(_colx, 121, "EQUIPO " + _team, 1.3, 1.3, 0, c_white, c_white, c_white, c_white, 1);
+
+        // cuadros, uno al lado del otro
+        var _n = array_length(_list);
+        for (var k = 0; k < _n; k++) {
+            var _it2 = _list[k];
+            var _sx = _colx + (k - (_n - 1) / 2) * (box_w + 26);
+            draw_bomb_slot(_sx, _cy, _it2[0], _it2[1], _it2[2], _it2[3], _team, box_w, box_h);
+        }
+    }
+
+    // VS en el medio
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    draw_text_transformed_color(sw/2 + 4, _cy + 4, "VS", 2.6, 2.6, 0, c_black, c_black, c_black, c_black, 1);
+    draw_text_transformed_color(sw/2, _cy, "VS", 2.6, 2.6, 0, c_white, c_white, c_white, c_white, 1);
+
+    // 5. EL OBJETIVO, SIEMPRE A LA VISTA
+    var _rival = (_yo == "AZUL") ? "ROJO" : "AZUL";
+    var _gy = sh - 90;
+    draw_set_alpha(0.65);
+    draw_set_colour(c_black);
+    draw_roundrect_ext(40, _gy - 40, sw - 40, _gy + 40, 12, 12, false);
+    draw_set_alpha(1);
+    var _flag_r = (_rival == "ROJO") ? spr_flag_red_big : spr_flag_blue_big;
+    var _txt = "ROBA LA BANDERA " + _rival + "   >   LLEVALA A TU BASE " + _yo + "   >   PRIMERO EN 3 GANA";
+    draw_sprite_ext(_flag_r, 0, sw/2 - string_width(_txt) * 0.5 - 30, _gy, 2, 2, 0, c_white, 1);
+    draw_text_transformed_color(sw/2, _gy, _txt, 1, 1, 0, c_yellow, c_yellow, c_white, c_white, 1);
+
+    // ayuda de controles
+    var _ayuda = touch_mode() ? "FLECHAS: cambiar personaje   -   OK: listo" : "ARRIBA / ABAJO: cambiar personaje   -   ENTER: listo";
+    draw_text_transformed_color(sw/2, sh - 28, _ayuda, 0.7, 0.7, 0, c_ltgray, c_ltgray, c_ltgray, c_ltgray, 1);
+
+    draw_set_halign(fa_left);
+    draw_set_valign(fa_top);
+    draw_set_colour(c_white);
 }
 	
 // ======================================================
@@ -703,4 +693,5 @@ if (mensaje_alpha > 0) {
 }
 draw_set_alpha(1);
 
-
+// --- AVISO DE RED: pantalla de sin conexión y aviso de recuperada (encima de todo) ---
+scr_red_draw_overlay();

@@ -47,7 +47,8 @@ case "reto_duelo":
         // Esto los separa del resto de la gente
         ChangeRoom("duelo_" + string(_clientId_retador));
         
-        // 3. ¡A la batalla!
+        // 3. ¡A la batalla! (duelo = partida normal: 5 min, 3 banderas)
+        scr_ajustes_default();
         room_goto(rm_stage1);
         
     } else {
@@ -62,7 +63,8 @@ case "reto_aceptado":
     // Así el otro sabe exactamente a dónde entrar
     ChangeRoom("duelo_" + string(global.clientId));
     
-    // También nos vamos a la room de pelea
+    // También nos vamos a la room de pelea (duelo = partida normal)
+    scr_ajustes_default();
     room_goto(rm_stage1);
     
     show_debug_message(">>> DUELO: " + _quien + " aceptó. Iniciando sala privada.");
@@ -77,6 +79,15 @@ break;
 //case "pj_cambiando":
 //    global.pj_rival = theMessageStruct.pj; // Actualiza la cara del rival en mi pantalla
 //break;
+
+case "hammer_go":
+    // El host avisa que una prensa va a caer: empiezo el aviso ya, descontando medio ping
+    var _hid = theMessageStruct.hid;
+    var _menos = round((max(0, global.ping) / 2) / (1000 / room_speed));
+    with (oHammer) {
+        if (myHammerId == _hid) hammer_empezar(max(8, PRENSA_AVISO - _menos));
+    }
+break;
 
 case "sync_timer":
     oBrain.timer_intro = theMessageStruct.tiempo;
@@ -136,6 +147,8 @@ case "sync_lobby_name":
         if (clientId == senderClientId) {
             Name = _n;
             isHost = _soyHost;
+            // Su equipo de verdad, para la selección de personaje
+            if (variable_struct_exists(theMessageStruct, "team") && is_string(theMessageStruct.team) && theMessageStruct.team != "") lobby_team = theMessageStruct.team;
         }
     }
     
@@ -146,7 +159,8 @@ case "sync_lobby_name":
     if (oBrain.AmIPseudoHost && senderClientId != global.clientId) {
         SendEventToClient(senderClientId, "sync_lobby_name", { 
             nombre: global.myName, 
-            soyHost: true 
+            soyHost: true,
+            team: scr_my_team()
         });
     }
 break;
@@ -180,7 +194,23 @@ case "KICK_FROM_ROOM":
 break;
 
 case "GO_TO_BATTLE":
-    room_goto(rm_stage1);
+    // El líder manda los ajustes de la sala (tiempo, mapa, banderas). Si no vienen, partida normal.
+    if (is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "m")) scr_ajustes_aplicar(theMessageStruct);
+    else scr_ajustes_default();
+    room_goto(scr_mapa_room(global.match_mapa));
+break;
+
+case "sync_ajustes":
+    // Ajustes que va cambiando el líder en la sala de espera
+    if (!oBrain.AmIPseudoHost) scr_ajustes_aplicar(theMessageStruct);
+break;
+
+case "sync_reloj":
+    // Reloj de la partida: lo lleva el líder
+    if (!oBrain.AmIPseudoHost && room != rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "s") && is_numeric(theMessageStruct.s)) {
+        oBrain.reloj_seg = max(0, theMessageStruct.s);
+        oBrain.reloj_fin = (oBrain.reloj_seg <= 0);
+    }
 break;
 
 case "player_left_msg":
@@ -362,7 +392,10 @@ case "apply_powerup":
     
     // Si eres el que lo recogió, ya tienes el efecto puesto por la colisión local
     if (_is_pred) {
+        // Ya me lo puse yo al tocarlo (Collision_oPowerupPickup). Antes se aplicaba dos veces
+        // y la curación daba el doble; ahora solo se confirma.
         show_debug_message("Host confirmó mi PowerUp");
+        break;
     }
 
     // Si llegas aquí, es porque el Host te ordena aplicarlo (y no fue por colisión local)
@@ -372,7 +405,7 @@ case "apply_powerup":
 
     with (oPlayer) {
         if (_tipo == "speed") { speed_timer = _duration; walksp_mult = 1.5; } 
-        else if (_tipo == "heal") { health = min(100, health + _amount); }
+        else if (_tipo == "heal") { health = min(max_health, health + _amount); }
 		else if (_tipo == "shield") { has_shield = true; shield_timer = _duration; }
         else if (_tipo == "damage") { damage_boost = 2; damage_timer = _duration; }
         else if (_tipo == "ammo")   { infinite_ammo = true; ammo_timer = _duration; }
@@ -556,9 +589,7 @@ case "request_resync":
             spawnID: (variable_instance_exists(id, "spawn_id") ? spawn_id : -1)
         });
     }
-    with (oSpawnPoint) {
-        SendEventToClient(targetID, "sync_spawn_point", { pID: myID, isOcupado: ocupado });
-    }
+    with (oSpawnPoint) scr_spawn_point_enviar(id, targetID);
 }
 break;
 
@@ -616,17 +647,35 @@ case "ammo_taken":
 break;
 
 		case "sync_spawn_point":
-		{    var _id = theMessageStruct.pID;
-		    var _state = theMessageStruct.isOcupado;
-    
-		    with(oSpawnPoint) {
-		        if (myID == _id) {
-		            ocupado = _state;
-		            // IMPORTANTE: El cliente NO debe tocar el cooldown, 
-		            // solo esperar a que el host le mande el "spawn_ammo_pack"
-		        }
-			 }
-			}
+		{
+		    var _id = theMessageStruct.pID;
+		    var _state = theMessageStruct.isOcupado;
+		    var _t  = variable_struct_exists(theMessageStruct, "t")  ? theMessageStruct.t  : 0;
+		    var _tm = variable_struct_exists(theMessageStruct, "tm") ? theMessageStruct.tm : 0;
+		    with(oSpawnPoint) {
+		        if (myID == _id) {
+		            ocupado = _state;
+		            // El cliente NO crea nada: solo copia el reloj del host para dibujar el anillo
+		            // (lo que aparece lo manda el host con "spawn_ammo_pack" / "spawn_weapon_pickup" / "spawn_powerup")
+		            cooldown = _t;
+		            cooldown_max = _tm;
+		            primera_vez = false;
+		        }
+		    }
+		}
+		break;
+
+		case "hab_botiquin":
+		{
+		    // Botiquín del Sargento de otro jugador (scr_personajes). Cada quien se cura solo.
+		    var _bq = instance_create_layer(theMessageStruct.x, theMessageStruct.y, "Instances", oBotiquin);
+		    _bq.team = theMessageStruct.team;
+		}
+		break;
+
+		case "aviso_arma":
+		    // El host avisa que salió un arma fuerte arriba al centro
+		    if (variable_struct_exists(theMessageStruct, "txt")) scrAddAlert(theMessageStruct.txt, c_orange);
 		break;
 
 		case "point_occupied":
@@ -743,6 +792,7 @@ case "hit":
     with (oPlayer)
     {
         if (isDead || invulnerable) exit;
+        if (scr_hab_esquivando()) exit;   // Asalto en pleno impulso: la bala no le hace nada (scr_personajes)
 
         var dmg = real(theMessageStruct.damage);
 
@@ -762,6 +812,7 @@ case "hit":
         if (is_string(theMessageStruct.reason)) death_reason = theMessageStruct.reason;
         else death_reason = "pvp";
 
+        dmg = scr_hab_dano_recibido(dmg);   // coraza del Tanque: la mitad (scr_personajes)
         damage_alpha = 0.4; 
         health -= dmg;
         fx_damage_number(x, bbox_top - 8, dmg, 3);
@@ -775,8 +826,11 @@ case "hit":
             hit_bloqueo_timer = 20;
             
             // Empuje lateral basado en el ángulo y salto hacia arriba
-            push_h = lengthdir_x(22, _ang); 
-            vsp = -7; 
+            // (con la coraza del Tanque no lo mueve; la bandera sí la suelta)
+            if (!scr_hab_coraza_activa()) {
+                push_h = lengthdir_x(22, _ang); 
+                vsp = -7; 
+            }
 
             if (has_flag) {
                 has_flag = false;
@@ -1062,6 +1116,48 @@ break;
 		    LeaveRoom(); 
 			break;
 			
+// --- RAILGUN Y MINA (scr_jugabilidad) ---
+case "fx_rail_carga":
+{
+    // Línea de aviso del railgun de otro jugador
+    var _rc = instance_create_layer(theMessageStruct.x, theMessageStruct.y, "Instances", oRayo);
+    _rc.modo = "carga";
+    _rc.x1 = theMessageStruct.x; _rc.y1 = theMessageStruct.y;
+    _rc.ang = theMessageStruct.ang;
+    _rc.vida = RAIL_CARGA; _rc.vida_max = RAIL_CARGA;
+}
+break;
+
+case "fx_rail":
+{
+    var _rr = instance_create_layer(theMessageStruct.x1, theMessageStruct.y1, "Instances", oRayo);
+    _rr.x1 = theMessageStruct.x1; _rr.y1 = theMessageStruct.y1;
+    _rr.x2 = theMessageStruct.x2; _rr.y2 = theMessageStruct.y2;
+    if (global.sfx) audio_play_sound(snd_bazooka, 1, false, 0.6, 0, 1.6);
+}
+break;
+
+case "mina_poner":
+    if (scr_mina_buscar(theMessageStruct.mid) == noone) {
+        scr_mina_crear(theMessageStruct.x, theMessageStruct.y, string(theMessageStruct.team), string(theMessageStruct.owner), theMessageStruct.mid, false);
+    }
+break;
+
+case "mina_pisada":
+{
+    // Alguien la pisó en su pantalla: la mecha empieza aquí también (descontando medio ping)
+    var _menos_m = round((max(0, global.ping) / 2) / (1000 / room_speed));
+    scr_mina_encender(scr_mina_buscar(theMessageStruct.mid), _menos_m);
+}
+break;
+
+case "mina_quitar":
+{
+    var _mq = scr_mina_buscar(theMessageStruct.mid);
+    if (_mq != noone) instance_destroy(_mq);
+}
+break;
+
 case "fx_shot":
 {
     var fx_x = theMessageStruct.x;
@@ -1110,13 +1206,10 @@ break;
 			    var _hid = theMessageStruct._id;
     
 			    // Buscamos el martillo que tenga ese ID de posición
-			    with(oHammer) {
-			        if (myHammerId == _hid) {
-			            ataca = true;
-			            image_index = 0; // Reiniciamos para que empiecen igualitos
-			            image_speed = 1;
-			        }
-			    }
+			    // Por si llega de alguien con la versión vieja: empieza el aviso igual que "hammer_go"
+			    with(oHammer) {
+			        if (myHammerId == _hid) hammer_empezar(PRENSA_AVISO);
+			    }
 			break;
 
 case "kill_event":

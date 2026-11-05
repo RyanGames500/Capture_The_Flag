@@ -21,10 +21,7 @@ if (global.game_over) {
 }
 
 // --- TIMERS DE POWERUPS ---
-if (shield_timer > 0) {
-    shield_timer--;
-    if (shield_timer <= 0) has_shield = false;
-}
+// (el escudo se descuenta más abajo, una sola vez por frame)
 
 if (damage_timer > 0) {
     damage_timer--;
@@ -132,6 +129,7 @@ key_right = false;
 key_jump  = false;
 key_melee = false;
 key_shoot = false;
+nav_quiere_pad = false;   // lo pone scr_bot_nav_move cuando su camino usa la plataforma de salto
 
 
 // ======================================================
@@ -269,16 +267,12 @@ if (state != PLAYER2.DEAD) {
         var target = instance_place(hx, hy, oPlayer_offline); 
         if (target != noone && target.state != PLAYERSTATE2.DEAD) {
             
-            // FILTRO DE ESCUDO: Si el objetivo tiene escudo, no recibe daño
-            if (!target.has_shield) {
-                health -= melee_damage; 
+            // Escudo, invulnerabilidad y quién mató en un solo lugar (scr_dano_local)
+            if (scr_dano_jugador_local(melee_damage, string(Name))) {
                 with(target) { 
                     image_blend = c_red; 
                     alarm[0] = 5; 
                 } 
-            } else {
-                // Feedback de que golpeó un escudo
-                if (global.sfx) audio_play_sound(snd_shield_impact, 20, false);
             }
             melee_active = 0; 
         }
@@ -355,6 +349,12 @@ if (state != PLAYER2.DEAD) {
 if (drop_timer > 0) drop_timer--;
 is_grounded = place_meeting(x, y + 1, obj_wall)
            || (place_meeting(x, y + 1, oPlataformaPasable) && !place_meeting(x, y, oPlataformaPasable) && drop_timer <= 0);
+
+// --- PLATAFORMA DE SALTO (scr_jugabilidad): el bot también la usa ---
+// (solo si su camino lo pide: si salta normal encima de ella, no sale disparado sin querer)
+if (key_jump && is_grounded && nav_quiere_pad && (state == PLAYER2.IDLE || state == PLAYER2.WALK || state == PLAYER2.JUMP)) {
+	if (scr_salto_usar()) { is_grounded = false; key_jump = false; state = PLAYER2.JUMP; }
+}
 
 switch (state) {
 
@@ -434,8 +434,13 @@ if (hp <= 0 && !isDead) {
     
     alarm[1] = 120; // Respawn
     
-    var killerName = (last_killer != "") ? last_killer : "Alguien";
-    scrAddKillFeed(killerName + " te elimino");
+    // Mensaje del bot (antes decía "te elimino", como si hubieras muerto tú)
+    var _bot = string(Name);
+    var _msg;
+    if (last_killer == "La prensa")      _msg = _bot + " murio aplastado";
+    else if (last_killer == "Un barril") _msg = _bot + " exploto con un barril";
+    else _msg = ((last_killer != "") ? last_killer : global.myName) + " elimino a " + _bot;
+    scrAddKillFeed(_msg);
 }
 
 // ======================================================

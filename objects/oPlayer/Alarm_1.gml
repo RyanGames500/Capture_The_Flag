@@ -18,12 +18,8 @@ if (global.ONLINE) {
 for (var i = 0; i < array_length(guns); i++) {
     guns[i] = noone;
 }
-switch(mi_clase) {
-        case 0: health = 100; break;
-        case 1: health = 200; break;
-        case 2: health = 120; break;
-        case 3: health = 80;  break;
-    }
+health = max_health;   // la vida de tu personaje (scr_personajes)
+scr_hab_reset();
 isDead = false;
 state = PLAYERSTATE.IDLE;
 visible = true;

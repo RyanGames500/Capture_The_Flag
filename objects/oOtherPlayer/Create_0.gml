@@ -55,7 +55,8 @@ TAG="";
 // Cuando aparece un jugador nuevo en mi pantalla...
 if (global.ONLINE) {
     SendEventToClient(clientId, "sync_lobby_name", { 
-        nombre: global.myName // Cambiado de 'name' a 'nombre'
+        nombre: global.myName, // Cambiado de 'name' a 'nombre'
+        team: scr_my_team()
     });
 }
 
@@ -74,3 +75,11 @@ pp_off_x = 0;
 pp_off_y = 0;
 pp_timer = 0;
 pp_seen_up = false;
+lobby_team = "";   // equipo que me avisó en la selección (sync_lobby_name)
+last_sp_time = current_time;   // último dato que llegó de este jugador
+// Habilidad que manda por la red (scr_personajes)
+hab_co = false;
+hab_da = false;
+hab_gf = 0;
+hab_gx = 0;
+hab_gy = 0;

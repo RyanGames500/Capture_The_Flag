@@ -1,11 +1,17 @@
-rivalName = ""; // Ya no lo usaremos tanto, pero lo dejamos por si acaso
-aliados = "Cargando..."; 
-rivales = "Cargando...";
+/// @description Intro: equipos con su color, VS y la misión
+lista_azul = [];   // { n: nombre, pj: personaje }
+lista_rojo = [];
+txt_azul = "";
+txt_rojo = "";
+mi_equipo = "AZUL";
 
-anim = 0;
-alpha = 0;
+t = 0;              // frames desde que empezó
+T_ENTRA  = 36;      // los equipos entran
+T_SALEN  = 150;     // los equipos se van
+T_MISION = 175;     // aparece la misión
+T_FIN    = 330;     // se devuelve el control
 
-enum INTRO_STATE { ENTRADA, ESPERA, SALIDA }
-estado = INTRO_STATE.ENTRADA;
-
-timer = 120; // Lo subí a 2 segundos para que de tiempo de leer bien los nombres
+// Compatibilidad con el código viejo
+rivalName = "";
+aliados = "";
+rivales = "";

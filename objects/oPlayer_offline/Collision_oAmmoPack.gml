@@ -37,6 +37,7 @@ else
         case "smg":   maxReserve = 240; break;
         case "escop": maxReserve = 180; break;
         case "shell": maxReserve = 40;  break;
+        case "sniper": maxReserve = 15; break;   // francotiradores (scr_armas)
     }
 
     // Revisar cuánto tenemos en la reserva (el struct 'reserve')
