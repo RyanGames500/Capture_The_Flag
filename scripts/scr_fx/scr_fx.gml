@@ -68,6 +68,7 @@ function fx_dust(_x, _y, _n, _side = 0) {
 /// _kind: 0 normal, 1 headshot, 2 pesado (bazooka/granada), 3 daño que recibo yo
 function fx_damage_number(_x, _y, _dmg, _kind = 0) {
     if (!variable_global_exists("fx_nums")) return;
+    if (variable_global_exists("opt") && global.opt.danio == 0) return; // apagado en AJUSTES
     var _col = c_white, _sc = 1;
     switch (_kind) {
         case 1: _col = make_color_rgb(255, 210, 63); _sc = 1.3;  break;
@@ -202,4 +203,335 @@ function fx_impact_net(_x, _y, _dir, _n, _hot = false) {
         var _m = { x: round(_x), y: round(_y), d: round(_dir), n: _n, h: _hot };
         with (oOtherPlayer) SendEventToClient(clientId, "fx_impact", _m);
     }
+}
+
+
+// ======================================================
+// BANDERA: efectos visuales (solo dibujo, no cambia nada del juego ni de la red)
+// - Sin agarrar: FARO de luz centrado en la bandera + anillo en el piso + flota un poquito
+// - Agarrada: va en la ESPALDA del portador, ondea mas rapido al correr y deja ESTELA
+// Se llama desde el Draw de oFlag (roja) y oFlag2 (azul).
+// ======================================================
+function flag_draw_fx(_col) {
+    if (!variable_instance_exists(id, "fx_trail")) {
+        fx_trail  = [];
+        fx_prev_x = x;
+        fx_frame  = 0;
+    }
+    var _t = current_time / 1000;
+
+    if (!has_flag) {
+        // ---------- A1: FARO ----------
+        var _cx  = (bbox_left + bbox_right) / 2;   // centro real de la bandera
+        var _bot = bbox_bottom;
+        var _top = _bot - 170;
+        var _hw  = max(6, (bbox_right - bbox_left) * 0.45);
+
+        gpu_set_blendmode(bm_add);
+        // Haz ancho (se desvanece hacia arriba)
+        draw_primitive_begin(pr_trianglestrip);
+        draw_vertex_colour(_cx - _hw, _top, _col, 0);
+        draw_vertex_colour(_cx + _hw, _top, _col, 0);
+        draw_vertex_colour(_cx - _hw, _bot, _col, 0.30);
+        draw_vertex_colour(_cx + _hw, _bot, _col, 0.30);
+        draw_primitive_end();
+        // Nucleo brillante
+        draw_primitive_begin(pr_trianglestrip);
+        draw_vertex_colour(_cx - 1.5, _top, _col, 0);
+        draw_vertex_colour(_cx + 1.5, _top, _col, 0);
+        draw_vertex_colour(_cx - 1.5, _bot, _col, 0.65);
+        draw_vertex_colour(_cx + 1.5, _bot, _col, 0.65);
+        draw_primitive_end();
+        // Anillo en el piso que late
+        var _r = _hw * 2.2 + 3 * sin(_t * 3);
+        draw_set_colour(_col);
+        draw_set_alpha(0.6);
+        draw_ellipse(_cx - _r, _bot - _r * 0.25, _cx + _r, _bot + _r * 0.25, true);
+        draw_set_alpha(1);
+        gpu_set_blendmode(bm_normal);
+
+        // La bandera flota un poquito
+        var _bob = -2 - 2 * sin(_t * 2.5);
+        draw_sprite_ext(sprite_index, image_index, x, y + _bob, image_xscale, image_yscale, image_angle, image_blend, image_alpha);
+
+        fx_trail = [];
+        fx_prev_x = x;
+    }
+    else {
+        // ---------- B1: EN LA ESPALDA + ESTELA ----------
+        var _dir = sign(image_xscale);
+        if (_dir == 0) _dir = 1;
+        var _mov = abs(x - fx_prev_x);
+        fx_prev_x = x;
+
+        // Estela de chispas del color del equipo (solo cuando se mueve)
+        if (_mov > 0.5) {
+            array_push(fx_trail, { px: x - _dir * 10 + random_range(-2, 2), py: y + 4 + random_range(-5, 5), a: 1 });
+        }
+        gpu_set_blendmode(bm_add);
+        draw_set_colour(_col);
+        for (var i = array_length(fx_trail) - 1; i >= 0; i--) {
+            var _p = fx_trail[i];
+            _p.a -= 0.04;
+            if (_p.a <= 0) { array_delete(fx_trail, i, 1); continue; }
+            draw_set_alpha(_p.a * 0.85);
+            draw_rectangle(_p.px, _p.py, _p.px + 1, _p.py + 1, false);
+        }
+        draw_set_alpha(1);
+        gpu_set_blendmode(bm_normal);
+
+        // Ondea mas rapido si corre
+        fx_frame += (_mov > 0.5) ? 0.35 : 0.12;
+        var _nf = max(1, sprite_get_number(sprite_index));
+
+        // La tela queda hacia atras y el mastil pegado a la espalda
+        var _fx = x - 13 * _dir;
+        draw_sprite_ext(sprite_index, floor(fx_frame) mod _nf, _fx, y + 2, -_dir, image_yscale, 0, image_blend, image_alpha);
+    }
+}
+
+// ======================================================
+// AJUSTES DEL JUGADOR (pantalla OPTIONS del menu)
+// Se guardan en "ajustes.ini" en cada aparato (PC, Android y HTML5).
+// ======================================================
+function opt_init() {
+    if (variable_global_exists("opt")) return;
+    global.opt = {
+        vol: 80,        // volumen general 0..100
+        sfx: 1,         // efectos de sonido (1 si / 0 no)
+        musica: 1,      // musica (para cuando la agregues)
+        pantalla: 0,    // pantalla completa (PC / HTML5)
+        minimapa: 0,    // 0 esquina, 1 tira, 2 barra, 3 apagado
+        ping: 1,        // mostrar ping
+        danio: 1,       // numeros de dano
+        temblor: 0,     // 0 normal, 1 suave, 2 apagado
+        btn_tam: 0,     // botones del celular: 0 normal, 1 grande, 2 chico
+        btn_alpha: 70,  // que tanto se ven los botones del celular (70 = como antes)
+        mira: 0         // distancia de la mira en el celular: 0 normal, 1 lejos, 2 cerca
+    };
+    ini_open("ajustes.ini");
+    var _k = variable_struct_get_names(global.opt);
+    for (var i = 0; i < array_length(_k); i++) {
+        global.opt[$ _k[i]] = ini_read_real("ajustes", _k[i], global.opt[$ _k[i]]);
+    }
+    ini_close();
+}
+
+function opt_guardar() {
+    opt_init();
+    ini_open("ajustes.ini");
+    var _k = variable_struct_get_names(global.opt);
+    for (var i = 0; i < array_length(_k); i++) ini_write_real("ajustes", _k[i], global.opt[$ _k[i]]);
+    ini_close();
+}
+
+/// Aplica los ajustes al juego. _inicio = true al arrancar (en el navegador la pantalla
+/// completa solo se puede pedir cuando el jugador toca algo, por eso ahi no se aplica).
+function opt_apply(_inicio = false) {
+    opt_init();
+    audio_master_gain(global.opt.vol / 100);
+    global.sfx    = (global.opt.sfx == 1);
+    global.musica = (global.opt.musica == 1);
+    if (!touch_mode()) {
+        if (!_inicio || os_browser == browser_not_a_browser) {
+            if (window_get_fullscreen() != (global.opt.pantalla == 1)) window_set_fullscreen(global.opt.pantalla == 1);
+        }
+    }
+}
+
+/// Filas de la pantalla de ajustes (col 0 = izquierda, col 1 = derecha)
+function opt_filas() {
+    return [
+        { k: "vol",       n: "VOLUMEN GENERAL",      slider: true, sec: "SONIDO", col: 0 },
+        { k: "sfx",       n: "EFECTOS DE SONIDO",    o: ["NO", "SI"], col: 0 },
+        { k: "musica",    n: "MUSICA",               o: ["NO", "SI"], col: 0 },
+        { k: "pantalla",  n: "PANTALLA COMPLETA",    o: ["NO", "SI"], sec: "PANTALLA", col: 0 },
+        { k: "minimapa",  n: "MINI MAPA",            o: ["ESQUINA", "TIRA", "BARRA", "APAGADO"], col: 0 },
+        { k: "ping",      n: "MOSTRAR PING",         o: ["NO", "SI"], col: 0 },
+        { k: "danio",     n: "NUMEROS DE DANO",      o: ["NO", "SI"], col: 0 },
+        { k: "temblor",   n: "TEMBLOR DE PANTALLA",  o: ["NORMAL", "SUAVE", "APAGADO"], col: 0 },
+        { k: "btn_tam",   n: "TAMANO DE BOTONES",    o: ["NORMAL", "GRANDE", "CHICO"], sec: "CONTROLES DEL CELULAR", col: 1 },
+        { k: "btn_alpha", n: "VISIBILIDAD BOTONES",  slider: true, col: 1 },
+        { k: "mira",      n: "DISTANCIA DE LA MIRA", o: ["NORMAL", "LEJOS", "CERCA"], col: 1 }
+    ];
+}
+
+/// Cambia una fila (_dir = -1 o 1), lo aplica y lo guarda.
+function opt_cambiar(_i, _dir) {
+    opt_init();
+    var _f = opt_filas();
+    if (_i < 0 || _i >= array_length(_f)) return;
+    var _r = _f[_i];
+    if (_r.k == "pantalla" && touch_mode()) return; // en el celular siempre es pantalla completa
+    var _v = global.opt[$ _r.k];
+    if (variable_struct_exists(_r, "slider")) {
+        var _min = (_r.k == "btn_alpha") ? 20 : 0;
+        _v = clamp(_v + _dir * 10, _min, 100);
+    } else {
+        var _n = array_length(_r.o);
+        _v = (_v + _dir + _n) mod _n;
+    }
+    global.opt[$ _r.k] = _v;
+    opt_apply(false);
+    opt_guardar();
+}
+
+/// Texto del valor de una fila
+function opt_valor_txt(_r) {
+    if (_r.k == "pantalla" && touch_mode()) return "SIEMPRE";
+    var _v = global.opt[$ _r.k];
+    if (variable_struct_exists(_r, "slider")) return string(_v) + "%";
+    return _r.o[clamp(_v, 0, array_length(_r.o) - 1)];
+}
+
+/// Multiplicadores que usan otras partes del juego
+function opt_temblor_mult() { opt_init(); return [1, 0.5, 0][clamp(global.opt.temblor, 0, 2)]; }
+function opt_btn_escala()   { opt_init(); return [1, 1.25, 0.8][clamp(global.opt.btn_tam, 0, 2)]; }
+function opt_btn_alpha()    { opt_init(); return global.opt.btn_alpha / 70; }
+function opt_mira_mult()    { opt_init(); return [1, 1.4, 0.7][clamp(global.opt.mira, 0, 2)]; }
+
+
+// ======================================================
+// MINI MAPA (se dibuja desde el Draw GUI de oBrain, en linea y en local)
+// - ESQUINA: el mapa en su forma real. PC: abajo a la izquierda. Celular: arriba, junto al marcador.
+// - TIRA: franja ancha abajo al centro.   - BARRA: solo una linea de base a base.
+// Se ven todos los jugadores (aliados y enemigos), las bases y las banderas.
+// ======================================================
+function minimapa_draw() {
+    opt_init();
+    var _modo = global.opt.minimapa;
+    if (_modo == 3 || room == rm_menu) exit;
+
+    var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+    var _u  = clamp(_gh / 720, 0.7, 1.5);
+    var _RW = max(1, room_width), _RH = max(1, room_height);
+    var _tinta = make_color_rgb(11, 15, 26);
+    var _azul  = make_color_rgb(31, 155, 255);
+    var _rojo  = make_color_rgb(255, 42, 58);
+    var _gris  = make_color_rgb(169, 180, 208);
+    var _blink = ((current_time div 250) mod 2) == 0;
+
+    // Mi equipo (en linea y en local)
+    var _mi_team = variable_global_exists("myTeam") ? global.myTeam : "AZUL";
+    var _rival   = (_mi_team == "AZUL") ? "ROJO" : "AZUL";
+
+    // Camara
+    var _cam = view_camera[0];
+    var _cvx = camera_get_view_x(_cam), _cvy = camera_get_view_y(_cam);
+    var _cvw = camera_get_view_width(_cam), _cvh = camera_get_view_height(_cam);
+
+    // ---------- Tamano y lugar ----------
+    var _mw, _mh, _mx, _my;
+    if (_modo == 0) {
+        _mw = 230 * _u; _mh = _mw * _RH / _RW;
+        if (_mh > 110 * _u) { _mh = 110 * _u; _mw = _mh * _RW / _RH; }
+        if (!touch_mode()) {
+            _mx = 20 * _u; _my = _gh - _mh - 20 * _u;          // PC: abajo a la izquierda (esta libre)
+        } else {
+            _mx = _gw / 2 + 250 * _u; _my = 16 * _u;           // celular: a la derecha del marcador
+            if (_mx + _mw > _gw - 350 * _u) { _mx = _gw / 2 - _mw / 2; _my = 185 * _u; } // pantalla angosta: debajo del reloj
+        }
+    } else if (_modo == 1) {
+        _mw = 460 * _u; _mh = 60 * _u;
+        _mx = _gw / 2 - _mw / 2; _my = _gh - _mh - (global.ONLINE ? 64 : 22) * _u;
+    } else {
+        _mw = 500 * _u; _mh = 6 * _u;
+        _mx = _gw / 2 - _mw / 2; _my = _gh - (global.ONLINE ? 76 : 40) * _u;
+    }
+    var _kx = _mw / _RW, _ky = _mh / _RH;
+
+    // ---------- Fondo ----------
+    var _pad = (_modo == 2) ? 18 * _u : 6 * _u;
+    var _padv = (_modo == 2) ? 16 * _u : 6 * _u;
+    draw_set_alpha(0.72);
+    draw_set_colour(_tinta);
+    draw_rectangle(_mx - _pad, _my - _padv, _mx + _mw + _pad, _my + _mh + _padv, false);
+    draw_set_alpha(0.25);
+    draw_set_colour(_gris);
+    draw_rectangle(_mx - _pad, _my - _padv, _mx + _mw + _pad, _my + _mh + _padv, true);
+    draw_set_alpha(1);
+    draw_set_colour(_azul);
+    draw_rectangle(_mx - _pad, _my - _padv, _mx - _pad + 40 * _u, _my - _padv + 1, false);
+
+    // ---------- El nivel (se guarda en una superficie para no redibujarlo cada frame) ----------
+    if (_modo != 2) {
+        var _sw = max(1, ceil(_mw)), _sh = max(1, ceil(_mh));
+        if (!variable_global_exists("mm_surf")) { global.mm_surf = -1; global.mm_key = ""; }
+        var _key = string(room) + "_" + string(_sw) + "_" + string(_sh);
+        if (!surface_exists(global.mm_surf) || global.mm_key != _key) {
+            if (surface_exists(global.mm_surf)) surface_free(global.mm_surf);
+            global.mm_surf = surface_create(_sw, _sh);
+            global.mm_key = _key;
+            surface_set_target(global.mm_surf);
+            draw_clear_alpha(c_black, 0);
+            draw_set_colour(_gris);
+            draw_set_alpha(0.35);
+            with (obj_wall) {
+                var _x1 = max(0, bbox_left) * _kx, _x2 = min(_RW, bbox_right) * _kx;
+                var _y1 = max(0, bbox_top) * _ky,  _y2 = min(_RH, bbox_bottom) * _ky;
+                if (_x2 > _x1 && _y2 > _y1) draw_rectangle(_x1, _y1, max(_x1 + 1, _x2), max(_y1 + 1, _y2), false);
+            }
+            draw_set_alpha(0.65);
+            with (oPlataformaPasable) {
+                draw_rectangle(bbox_left * _kx, bbox_top * _ky, max(bbox_left * _kx + 2, bbox_right * _kx), bbox_top * _ky + 1, false);
+            }
+            draw_set_alpha(1);
+            surface_reset_target();
+        }
+        draw_surface(global.mm_surf, _mx, _my);
+    } else {
+        // BARRA: linea de color de base a base
+        draw_set_alpha(0.5);
+        draw_rectangle_colour(_mx, _my + _mh / 2 - 1, _mx + _mw, _my + _mh / 2 + 1, _azul, _rojo, _rojo, _azul, false);
+        draw_set_alpha(1);
+    }
+
+    // Convierte una posicion del mundo al mini mapa
+    var _py = function(_wy, _my, _ky, _mh, _modo) { return (_modo == 2) ? _my + _mh / 2 : _my + clamp(_wy * _ky, 0, _mh); };
+
+    // ---------- Bases ----------
+    var _bs = 4 * _u;
+    with (obj_base_blue) { draw_set_colour(_azul); var _bx = _mx + clamp(x * _kx, 0, _mw), _by = _py(y, _my, _ky, _mh, _modo); draw_rectangle(_bx - _bs, _by - _bs, _bx + _bs, _by + _bs, false); }
+    with (obj_base_red)  { draw_set_colour(_rojo); var _bx = _mx + clamp(x * _kx, 0, _mw), _by = _py(y, _my, _ky, _mh, _modo); draw_rectangle(_bx - _bs, _by - _bs, _bx + _bs, _by + _bs, false); }
+
+    // ---------- Lo que ve la camara ----------
+    draw_set_colour(c_white);
+    draw_set_alpha(0.55);
+    if (_modo == 2) draw_rectangle(_mx + _cvx * _kx, _my - 8 * _u, _mx + (_cvx + _cvw) * _kx, _my + _mh + 8 * _u, true);
+    else draw_rectangle(_mx + max(0, _cvx) * _kx, _my + max(0, _cvy) * _ky, _mx + min(_RW, _cvx + _cvw) * _kx, _my + min(_RH, _cvy + _cvh) * _ky, true);
+    draw_set_alpha(1);
+
+    // ---------- Banderas (parpadean si alguien la lleva) ----------
+    var _fsc = (12 * _u) / 17;
+    with (oFlag)  { if (!has_flag || _blink) draw_sprite_ext(spr_flag_red,  0, _mx + clamp(x * _kx, 0, _mw), (_modo == 2) ? _my - 9 * _u : _py(y, _my, _ky, _mh, _modo) - 6 * _u, _fsc, _fsc, 0, c_white, 1); }
+    with (oFlag2) { if (!has_flag || _blink) draw_sprite_ext(spr_flag_blue, 0, _mx + clamp(x * _kx, 0, _mw), (_modo == 2) ? _my - 9 * _u : _py(y, _my, _ky, _mh, _modo) - 6 * _u, _fsc, _fsc, 0, c_white, 1); }
+
+    // ---------- Jugadores (todos: aliados y enemigos) ----------
+    var _r = 3 * _u;
+    var _dibujar = function(_wx, _wy, _col, _yo, _mx, _my, _kx, _ky, _mw, _mh, _modo, _r, _py) {
+        var _px = _mx + clamp(_wx * _kx, 0, _mw);
+        var _pyy = _py(_wy, _my, _ky, _mh, _modo);
+        if (_yo) { draw_set_colour(c_white); draw_circle(_px, _pyy, _r + 1.5, false); }
+        draw_set_colour(_col);
+        draw_circle(_px, _pyy, _r, false);
+    };
+    // Otros jugadores en linea
+    with (oOtherPlayer) {
+        if (!visible || state == PLAYERSTATE.DEAD) continue;
+        var _t = variable_instance_exists(id, "team") ? string(team) : _rival;
+        _dibujar(x, (bbox_top + bbox_bottom) / 2, (_t == "AZUL") ? _azul : _rojo, false, _mx, _my, _kx, _ky, _mw, _mh, _modo, _r, _py);
+    }
+    // Rival en local (bot / jugador 2)
+    with (oPlayer2_local) {
+        if (!visible) continue;
+        var _t2 = variable_instance_exists(id, "team") ? string(team) : _rival;
+        _dibujar(x, (bbox_top + bbox_bottom) / 2, (_t2 == "AZUL") ? _azul : _rojo, false, _mx, _my, _kx, _ky, _mw, _mh, _modo, _r, _py);
+    }
+    // Yo (al final, para quedar encima)
+    var _mcol = (_mi_team == "AZUL") ? _azul : _rojo;
+    with (oPlayer)         { if (visible) _dibujar(x, (bbox_top + bbox_bottom) / 2, _mcol, true, _mx, _my, _kx, _ky, _mw, _mh, _modo, _r, _py); }
+    with (oPlayer_offline) { if (visible) _dibujar(x, (bbox_top + bbox_bottom) / 2, _mcol, true, _mx, _my, _kx, _ky, _mw, _mh, _modo, _r, _py); }
+
+    draw_set_colour(c_white);
+    draw_set_alpha(1);
 }

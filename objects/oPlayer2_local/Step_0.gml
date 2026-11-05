@@ -431,10 +431,22 @@ if (hp <= 0 && !isDead) {
     depth=-9999;
     isDead = true;
     state = PLAYERSTATE2.DEAD;
-    
+
     alarm[1] = 120; // Respawn
-    
-    // Mensaje del bot (antes decía "te elimino", como si hubieras muerto tú)
+
+    // Soltar bandera al morir (igual que oPlayer_offline)
+    if (has_flag) {
+        has_flag = false;
+        with (objetivo_bandera) {
+            has_flag = false;
+            portador_instancia = noone;
+            x = other.x; y = other.y;
+            velocidad_caida = -2;
+            sprite_index = spr_suela;
+        }
+    }
+
+    // Mensaje del bot
     var _bot = string(Name);
     var _msg;
     if (last_killer == "La prensa")      _msg = _bot + " murio aplastado";
@@ -499,6 +511,8 @@ if (place_meeting(x, y, objetivo_bandera)
         has_flag = true;
         portador_instancia = other.id;
     }
+    // El bot agarro tu bandera: alerta de robo
+    fb_banner_robada(string(Name));
 }
 
 //ANOTAR
@@ -531,9 +545,8 @@ if (place_meeting(x, y, miBase)
         portador_instancia = noone;
     }
 
-    var notif = instance_create_layer(0, 0, "Instances", oNotification);
-    notif.text  = "EL ENEMIGO ANOTO!";
-    notif.color = c_red;
+    // Feedback de anotacion del bot
+    fb_anotacion(team, string(Name));
 }
 
 //DEVOLVER SU BANDERA

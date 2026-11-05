@@ -270,3 +270,7 @@ scr_ajustes_default();  // 5 min, nivel 1, 3 banderas
 reloj_seg = -1;         // segundos que quedan (-1 = no ha empezado o sin límite)
 reloj_frames = 0;
 reloj_fin = false;      // se acabó el tiempo (si van empatados: muerte súbita)
+
+// --- AJUSTES DEL JUGADOR (volumen, efectos, pantalla completa...) ---
+opt_init();
+opt_apply(true);

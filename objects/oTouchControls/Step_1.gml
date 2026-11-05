@@ -93,6 +93,6 @@ var _p = noone;
 if (instance_exists(oPlayer)) _p = instance_find(oPlayer, 0);
 else if (instance_exists(oPlayer_offline)) _p = instance_find(oPlayer_offline, 0);
 if (_p != noone) {
-	global.tc_aim_x = _p.x + lengthdir_x(TOUCH_AIM_DIST, global.tc_aim_dir);
-	global.tc_aim_y = _p.y - 16 + lengthdir_y(TOUCH_AIM_DIST, global.tc_aim_dir);
+	global.tc_aim_x = _p.x + lengthdir_x(touch_aim_dist(), global.tc_aim_dir);
+	global.tc_aim_y = _p.y - 16 + lengthdir_y(touch_aim_dist(), global.tc_aim_dir);
 }

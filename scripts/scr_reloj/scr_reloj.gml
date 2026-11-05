@@ -166,50 +166,61 @@ function scr_ajustes_panel_y() {
 }
 
 /// Cuadro AJUSTES DE LA PARTIDA. Va en el Draw GUI de oMenu (sala de espera).
+/// (Las flechas < > quedan en las mismas posiciones que lee el Step para el clic/toque)
 function scr_ajustes_draw(_soy_lider, _sel) {
+	var _tinta = make_color_rgb(11, 15, 26);
+	var _azul  = make_color_rgb(31, 155, 255);
+	var _oro   = make_color_rgb(255, 212, 71);
+	var _gris  = make_color_rgb(169, 180, 208);
+
 	var _cx = display_get_gui_width() / 2;
 	var _y0 = scr_ajustes_panel_y();
 	var _x1 = _cx - 300, _x2 = _cx + 300;
 
-	draw_set_alpha(0.5);
-	draw_set_colour(c_black);
-	draw_roundrect_ext(_x1, _y0, _x2, _y0 + 156, 12, 12, false);
-	draw_set_alpha(1);
-	draw_set_colour(make_color_rgb(60, 70, 90));
-	draw_roundrect_ext(_x1, _y0, _x2, _y0 + 156, 12, 12, true);
+	ctf_ui_panel(_x1, _y0, _x2, _y0 + 156, _azul);
 
-	draw_set_font(fnt_menu);
+	draw_set_font(fnt_small);
 	draw_set_valign(fa_middle);
-	draw_set_halign(fa_center);
-	draw_set_colour(c_aqua);
-	draw_text_transformed(_cx, _y0 + 18, _soy_lider ? "AJUSTES DE LA PARTIDA" : "AJUSTES DE LA PARTIDA (los elige el lider)", 0.7, 0.7, 0);
+	draw_set_halign(fa_left);
+	draw_set_colour(_azul);
+	draw_rectangle(_x1 + 16, _y0 + 12, _x1 + 18, _y0 + 24, false);
+	draw_set_colour(_gris);
+	draw_set_alpha(0.7);
+	draw_text_transformed(_x1 + 28, _y0 + 18, _soy_lider ? "AJUSTES DE LA PARTIDA" : "AJUSTES DE LA PARTIDA (LOS ELIGE EL LIDER)", 0.6, 0.6, 0);
+	draw_set_alpha(1);
 
 	var _nom = ["TIEMPO", "MAPA", "BANDERAS PARA GANAR"];
 	for (var f = 0; f < 3; f++) {
 		var _fy = _y0 + 48 + f * 34;
 		var _on = _soy_lider && (_sel == f);
 		if (_on) {
-			draw_set_alpha(0.12);
-			draw_set_colour(c_white);
-			draw_roundrect_ext(_x1 + 10, _fy - 15, _x2 - 10, _fy + 15, 8, 8, false);
-			draw_set_alpha(1);
+			ctf_ui_para(_x1 + 10, _fy - 15, 580, 30, 8, _azul, 0.12, false);
+			ctf_ui_para(_x1 + 10, _fy - 15, 580, 30, 8, _azul, 0.8, true);
 		}
+		draw_set_font(fnt_small);
 		draw_set_halign(fa_left);
-		draw_set_colour(_on ? c_yellow : c_ltgray);
-		draw_text_transformed(_x1 + 24, _fy, _nom[f], 0.75, 0.75, 0);
+		draw_set_colour(_on ? _azul : _gris);
+		draw_text_transformed(_x1 + 28, _fy, _nom[f], 0.65, 0.65, 0);
 
+		draw_set_font(fnt_menu);
 		draw_set_halign(fa_center);
-		draw_set_colour(c_white);
-		draw_text_transformed(_cx + 120, _fy, scr_ajustes_texto(f), 0.8, 0.8, 0);
+		draw_set_colour(_oro);
+		draw_text_transformed(_cx + 120, _fy, scr_ajustes_texto(f), 0.7, 0.7, 0);
 		if (_soy_lider) {
-			draw_set_colour(_on ? c_yellow : c_gray);
-			draw_text_transformed(_cx + 10, _fy, "<", 0.9, 0.9, 0);
-			draw_text_transformed(_cx + 230, _fy, ">", 0.9, 0.9, 0);
+			draw_set_colour(_on ? _azul : _gris);
+			draw_set_alpha(_on ? 1 : 0.5);
+			draw_text_transformed(_cx + 10, _fy, "<", 0.8, 0.8, 0);
+			draw_text_transformed(_cx + 230, _fy, ">", 0.8, 0.8, 0);
+			draw_set_alpha(1);
 		}
 	}
 	if (_soy_lider) {
-		draw_set_colour(c_gray);
-		draw_text_transformed(_cx, _y0 + 140, "ARRIBA / ABAJO elegir  -  IZQUIERDA / DERECHA cambiar", 0.6, 0.6, 0);
+		draw_set_font(fnt_small);
+		draw_set_halign(fa_center);
+		draw_set_colour(_gris);
+		draw_set_alpha(0.5);
+		draw_text_transformed(_cx, _y0 + 140, touch_mode() ? "TOCA < > PARA CAMBIAR" : "[W/S] ELEGIR     [A/D] CAMBIAR", 0.55, 0.55, 0);
+		draw_set_alpha(1);
 	}
 
 	draw_set_colour(c_white);

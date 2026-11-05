@@ -43,7 +43,7 @@ if (!has_flag) {
             y = oPlayer_offline.y - 16;
             image_xscale = oPlayer_offline.image_xscale; // Que mire a donde mira el player
             sprite_index = spr_mano; // ¡IMPORTANTE! Cambiar al sprite de "portando"
-            depth = oPlayer_offline.depth - 1; // Que se vea por delante
+            depth = oPlayer_offline.depth + 1; // Va en la espalda (detras del personaje)
             
             // Si el jugador muere en offline, soltamos la bandera
             if (variable_instance_exists(oPlayer_offline, "isDead") && oPlayer_offline.isDead) {
@@ -65,7 +65,7 @@ else {
             y = portador_instancia.y - 16;
             image_xscale = portador_instancia.image_xscale;
             sprite_index = spr_mano;
-            depth = portador_instancia.depth - 1;
+            depth = portador_instancia.depth + 1;
         } else {
             // Seguridad por si el portador sale de la partida o muere
             has_flag = false;

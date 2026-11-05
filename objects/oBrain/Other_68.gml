@@ -239,6 +239,12 @@ break;
 		
 		case "pseudoHost":
 		var pseudoHostClientId = real(realData.pH)
+		// Aviso si el lider cambia mientras estamos en la sala de espera
+		var _lider_antes = oBrain.pseudoHostClientId
+		if (instance_exists(oMenu) && oMenu.menu_state == "lobby_espera" && _lider_antes != -1 && _lider_antes != pseudoHostClientId) {
+			oMenu.mensaje_texto = (pseudoHostClientId == global.clientId) ? "AHORA ERES EL LIDER DE LA SALA" : "EL LIDER SALIO. HAY UN NUEVO LIDER"
+			oMenu.mensaje_alpha = 2
+		}
 		oBrain.pseudoHostClientId = real(realData.pH)
 		if(pseudoHostClientId == global.clientId){
 			oBrain.AmIPseudoHost = true

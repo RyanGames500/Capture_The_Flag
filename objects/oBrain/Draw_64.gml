@@ -68,7 +68,8 @@ draw_text_transformed(40, gh - 65, global.myName, 1.2, 1.2, 0); // Tu nombre
 #endregion
 
 #region // PING HUD (en la partida: chiquito abajo al centro)
-if (global.ONLINE) scr_red_draw_hud(room != rm_menu);
+opt_init();
+if (global.ONLINE && (room == rm_menu || global.opt.ping == 1)) scr_red_draw_hud(room != rm_menu);
 #endregion
 }
 if (room == rm_menu) exit;
@@ -181,11 +182,12 @@ if (!global.game_over) {
     marcador_escala_rojo = lerp(marcador_escala_rojo, 1.6, 0.1);
     marcador_shake = lerp(marcador_shake, 0, 0.1);
 
-    if (global.ONLINE && room != rm_menu) {
-        // En línea: marcador vivo, flechas, banners, anotación y avisos (scr_feedback).
-        // El marcador de abajo queda solo para el modo local.
+    if (room != rm_menu) {
+        // Marcador vivo, flechas, banners, anotacion y avisos (scr_feedback).
+        // Ahora funciona tanto en linea como en local.
         fb_draw_marcador(_mx_base, 14);
         fb_draw_gui();
+        minimapa_draw(); // mini mapa (se apaga o cambia en AJUSTES)
     } else {
 
     var _sx = random_range(-marcador_shake, marcador_shake);
@@ -217,13 +219,13 @@ if (!global.game_over) {
     draw_text_transformed_color(_mx + _dist, _my, string(global.puntos_rojo), marcador_escala_rojo, marcador_escala_rojo, 0, c_red, c_red, c_maroon, c_maroon, 1);
 
     var _flecha_x = (global.myTeam == "AZUL") ? _mx - _dist : _mx + _dist;
-    var _bounce = abs(sin(current_time * 0.01)) * 8; 
+    var _bounce = abs(sin(current_time * 0.01)) * 8;
     draw_set_color(c_white);
     draw_triangle(_flecha_x - 8, _my - 48 - _bounce, _flecha_x + 8, _my - 48 - _bounce, _flecha_x, _my - 38 - _bounce, false);
 
     // Reloj de la partida, debajo del marcador (solo en línea y con límite de tiempo)
     if (room != rm_menu) scr_reloj_draw(_mx_base, _my_base + 52);
-    } // fin del marcador viejo (modo local)
+    } // fin del marcador viejo (solo rm_menu)
 }
 
 // ======================================================

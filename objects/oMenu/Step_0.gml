@@ -1,14 +1,60 @@
-var mid_x = room_width / 2-300;
-var mid_y = room_height / 2 - 250;
+// ======================================================
+// TOQUES / CLICS DIRECTOS EN LOS BOTONES DEL MENU
+// El Draw GUI guarda donde esta cada boton (global.ui_taps) y aqui vemos si lo tocaron.
+// ======================================================
+global.ui_tap_vk = -1;
+var _esc_usado = false; // ESC ya se uso este frame para cancelar algo
+if (device_mouse_check_button_pressed(0, mb_left) && variable_global_exists("ui_taps")) {
+    var _tpx = device_mouse_x_to_gui(0);
+    var _tpy = device_mouse_y_to_gui(0);
+    for (var _ti = array_length(global.ui_taps) - 1; _ti >= 0; _ti--) {
+        var _tp = global.ui_taps[_ti];
+        if (!point_in_rectangle(_tpx, _tpy, _tp.x1, _tp.y1, _tp.x2, _tp.y2)) continue;
+
+        var _vk = _tp.vk;
+        if (is_struct(_tp.extra)) {
+            // Tarjeta de amigo: primer toque la elige, segundo toque abre su perfil
+            if (_tp.extra.tipo == "amigo") {
+                if (friend_selected == _tp.extra.i) _vk = ord("P");
+                else { friend_selected = _tp.extra.i; _vk = -1; }
+            }
+            // Icono del selector de avatar: primer toque lo elige, segundo lo confirma
+            if (_tp.extra.tipo == "avatar") {
+                if (avatar_seleccionado == _tp.extra.i) _vk = vk_enter;
+                else { avatar_seleccionado = _tp.extra.i; _vk = -1; }
+            }
+        }
+        if (_tp.idx >= 0) {
+            switch (menu_state) {
+                case "main":           index = _tp.idx; break;
+                case "private":        p_index = _tp.idx; break;
+                case "setup_room":     s_index = _tp.idx; break;
+                case "offline_setup":  off_index = _tp.idx; break;
+                case "play_selection": play_index = _tp.idx; break;
+                case "friends_menu":   friends_index = _tp.idx; break;
+                case "options":        opt_sel = _tp.idx; break;
+            }
+        }
+        global.ui_tap_vk = _vk;
+        break;
+    }
+}
+
+// Cuadro del nombre (mismas coordenadas que el Draw GUI)
+var mid_x = display_get_gui_width() / 2;
+var mid_y = display_get_gui_height() / 2 - 150;
 
 if (mouse_check_button_pressed(mb_left)) {
 	if (global.registrado == 0) {
+    var _rmx = device_mouse_x_to_gui(0);
+    var _rmy = device_mouse_y_to_gui(0);
     // Verificamos si el mouse está dentro del cuadro
-    if (mouse_x > mid_x - 200 && mouse_x < mid_x + 200 &&
-        mouse_y > mid_y - 30 && mouse_y < mid_y + 30) {
+    if (_rmx > mid_x - 200 && _rmx < mid_x + 200 &&
+        _rmy > mid_y - 30 && _rmy < mid_y + 30) {
         
         input_activo = true;
         keyboard_string = texto_input; // Mejor que inicie con lo que ya había escrito
+        if (touch_mode()) keyboard_virtual_show(kbv_type_default, kbv_returnkey_done, kbv_autocapitalize_none, false);
     } else {
         // --- AQUÍ EL TRUCO: Si hace clic fuera y el input estaba activo, GUARDAMOS ---
         if (input_activo) {
@@ -58,6 +104,7 @@ if (mouse_check_button_pressed(mb_left)) {
             if (!es_buscando) {
                 input_activo = true;
                 keyboard_string = friends_search_input;
+                if (touch_mode()) keyboard_virtual_show(kbv_type_default, kbv_returnkey_done, kbv_autocapitalize_none, false);
                 
                 if (estado_busqueda == "error" || estado_busqueda == "encontrado") {
                     estado_busqueda = "idle";
@@ -85,7 +132,35 @@ if (input_activo) {
         }
     }
 
-if (menu_state == "friends_menu" && friends_state == "anadir") {
+// ESC mientras se escribe: cancelar y volver
+if (vkey_pressed(vk_escape)) {
+    if (menu_state == "friends_menu" && friends_state == "anadir") {
+        input_activo = false; keyboard_string = ""; friends_state = "main"; menu_delay = 5;
+    } else if (menu_state == "join_code") {
+        input_activo = false; keyboard_string = ""; menu_state = "private"; menu_delay = 5;
+    } else if (menu_state == "profile") {
+        input_activo = false; keyboard_string = ""; _esc_usado = true;
+        if (global.myName == "") global.myName = "Soldado";
+    }
+    if (touch_mode()) keyboard_virtual_hide();
+}
+
+if (!input_activo) {
+    // (se cancelo con ESC)
+}
+else if (menu_state == "join_code") {
+    // Escribir el codigo de la sala (funciona en PC, Android y HTML5)
+    join_input = string_upper(string_copy(keyboard_string, 1, 16));
+    if (vkey_pressed(vk_enter) && join_input != "") {
+        global.codigo_a_verificar = string_trim(join_input);
+        input_activo = false;
+        keyboard_string = "";
+        if (touch_mode()) keyboard_virtual_hide();
+        menu_state = "verifying";
+        ShowAllRooms();
+    }
+}
+else if (menu_state == "friends_menu" && friends_state == "anadir") {
     // Solo actualizamos mientras no hayamos disparado la búsqueda
     if (estado_busqueda == "idle" || estado_busqueda == "error") {
         friends_search_input = keyboard_string;
@@ -195,8 +270,10 @@ var move = vkey_pressed(ord("S")) - vkey_pressed(ord("W"));
 					show_debug_message(">>> ENTRANDO AL PERFIL");
 				break;
                 
-                case 5: 
-					show_message("options...");
+                case 5: // OPTIONS -> pantalla de AJUSTES
+					menu_state = "options";
+					opt_sel = 0;
+					menu_delay = 5;
                 break;
 				
                 case 6: 
@@ -243,6 +320,8 @@ else if (menu_state == "private") {
 				    if (global.myName == "") global.myName = "Player_" + string(irandom(999));
 				    menu_state = "setup_room"; // En lugar de connecting, vamos a configurar
 				    s_index = 0;
+				    global.setup_modo = 0;
+				    scr_ajustes_default();   // 5 min, nivel 1, 3 banderas (se cambian en la siguiente pantalla)
 				break;
 				//case 0: // CREATE ROOM
 				//    if (global.myName == "") global.myName = "Player_" + string(irandom(999)); // Por si acaso
@@ -251,13 +330,12 @@ else if (menu_state == "private") {
 				//    ChangeRoom(global.myRoomCode); 
 				//break;
 
-				case 1: // JOIN WITH CODE
-				    var _c = get_string("Introduce el código de la sala:", "");
-				    if (_c != "") {
-				        global.codigo_a_verificar = string_upper(_c); // Guardamos lo que escribió
-				        menu_state = "verifying"; // Un estado nuevo para que el Draw sepa que estamos cargando
-				        ShowAllRooms(); // Le pedimos la lista al servidor
-				    }
+				case 1: // JOIN WITH CODE (se escribe en el juego, sirve en celular y HTML5)
+				    menu_state = "join_code";
+				    join_input = "";
+				    input_activo = true;
+				    keyboard_string = "";
+				    if (touch_mode()) keyboard_virtual_show(kbv_type_default, kbv_returnkey_go, kbv_autocapitalize_characters, false);
 				break;
 				
                 case 2: // BACK
@@ -265,44 +343,46 @@ else if (menu_state == "private") {
                 break;
             }
         }
+        if (vkey_pressed(vk_escape)) menu_state = "play_selection";
     }
 else if (menu_state == "setup_room") {
     var move = vkey_pressed(vk_down) - vkey_pressed(vk_up);
     s_index = clamp(s_index + move, 0, array_length(setup_options) - 1);
 
+    // Cambiar valores (A/D, flechas o tocando los lados del boton)
+    // Todo va directo a los ajustes reales de la partida (los mismos de la sala de espera)
     var side_move = vkey_pressed(vk_right) - vkey_pressed(vk_left);
-    
-    // --- CAMBIAR MODO ---
-    if (s_index == 0 && side_move != 0) { 
-        global.setup_modo = (global.setup_modo + side_move + 4) % 4; 
-        
-        var mod_text = ["1 VS 1", "2 VS 2", "3 VS 3", "4 VS 4"];
-        setup_options[0] = "MODO: " + mod_text[global.setup_modo];
-    }
-    
-    // --- AQUÍ EL FIX: Forzamos el límite según el modo seleccionado ANTES de crear ---
-    if (global.setup_modo == 0) global.max_players_allowed = 2; // 1vs1
-    if (global.setup_modo == 1) global.max_players_allowed = 4; // 2vs2
-    if (global.setup_modo == 2) global.max_players_allowed = 6; // 3vs3
-    if (global.setup_modo == 3) global.max_players_allowed = 8; // 4vs4
-
-    if (s_index == 1 && side_move != 0) { // Cambiar MAPA (se puede volver a cambiar en la sala de espera)
-        global.setup_mapa = (global.setup_mapa + side_move + 3) % 3;
-        setup_options[1] = "MAPA: NIVEL " + string(global.setup_mapa + 1);
+    if (side_move != 0) {
+        switch (s_index) {
+            case 0: global.setup_modo = (global.setup_modo + side_move + 4) % 4; break; // MODO
+            case 1: scr_ajustes_cambiar(1, side_move); break;                           // MAPA
+            case 2: scr_ajustes_cambiar(0, side_move); break;                           // TIEMPO
+            case 3: scr_ajustes_cambiar(2, side_move); break;                           // BANDERAS
+        }
     }
 
-    if (vkey_pressed(vk_enter) && s_index == 2) { // CONFIRMAR
-		
-		// si el input estaba activo o el texto cambió, actualizamos YA
-    if (texto_input != "Escribe tu nombre..." && texto_input != "") {
-        global.myName = texto_input;
-    }
-		
-        // Ahora sí, global.max_players_allowed valdrá 2 si estás en 1vs1
-        global.match_mapa = global.setup_mapa;   // el mapa elegido aquí es con el que empieza la sala
+    // Cupo de la sala segun el modo: 1vs1 = 2, 2vs2 = 4, 3vs3 = 6, 4vs4 = 8
+    global.max_players_allowed = (global.setup_modo + 1) * 2;
+
+    // Textos (siempre muestran lo que de verdad se va a jugar)
+    var mod_text = ["1 VS 1", "2 VS 2", "3 VS 3", "4 VS 4"];
+    setup_options[0] = "MODO: " + mod_text[global.setup_modo];
+    setup_options[1] = "MAPA: " + scr_ajustes_texto(1);
+    setup_options[2] = "TIEMPO: " + scr_ajustes_texto(0);
+    setup_options[3] = "BANDERAS PARA GANAR: " + scr_ajustes_texto(2);
+    setup_options[4] = "CREAR SALA";
+
+    if (vkey_pressed(vk_enter) && s_index == 4) { // CREAR SALA
+
+        // si el input estaba activo o el texto cambio, actualizamos YA
+        if (texto_input != "Escribe tu nombre..." && texto_input != "") {
+            global.myName = texto_input;
+        }
+
+        global.setup_mapa = global.match_mapa;
         var _prefijo = "MAX" + string(global.max_players_allowed) + "_";
-        global.myRoomCode = _prefijo + generar_codigo_sala(4); 
-        
+        global.myRoomCode = _prefijo + generar_codigo_sala(4);
+
         menu_state = "connecting";
         ChangeRoom(global.myRoomCode);
     }
@@ -352,6 +432,7 @@ else if (menu_state == "offline_setup") {
             menu_state = "main";
         }
     }
+    if (vkey_pressed(vk_escape)) menu_state = "main";
 }
 else if (menu_state == "play_selection") {
         play_index = clamp(play_index + move, 0, array_length(play_modes) - 1);
@@ -376,6 +457,18 @@ else if (menu_state == "play_selection") {
         }
         if (vkey_pressed(vk_escape)) menu_state = "main";
     }
+else if (menu_state == "options") {
+    // --- AJUSTES: W/S elegir, A/D (o ENTER) cambiar, ESC volver. Se guarda solo. ---
+    var _ofilas = opt_filas();
+    opt_sel = clamp(opt_sel + (vkey_pressed(vk_down) - vkey_pressed(vk_up)), 0, array_length(_ofilas) - 1);
+    var _olado = vkey_pressed(vk_right) - vkey_pressed(vk_left);
+    if (vkey_pressed(vk_enter)) _olado = 1;
+    if (_olado != 0) opt_cambiar(opt_sel, _olado);
+    if (vkey_pressed(vk_escape)) {
+        opt_guardar();
+        menu_state = "main";
+    }
+}
 else if (menu_state == "friends_menu") {
     // --- SALIR HACIA ATRÁS ---
     if (vkey_pressed(vk_escape)) {
@@ -418,6 +511,13 @@ else if (menu_state == "friends_menu") {
     if (num_amigos > 0) {
         var move = vkey_pressed(vk_down) - vkey_pressed(vk_up);
         
+        // Arrastrar con el dedo / mouse
+        if (device_mouse_check_button(0, mb_left)) {
+            var _dy = device_mouse_y_to_gui(0) - drag_prev_y;
+            if (device_mouse_check_button_pressed(0, mb_left)) _dy = 0;
+            scroll_target = clamp(scroll_target + _dy, -max(0, num_amigos - 4) * 95, 0);
+        }
+
         if (move != 0) {
             friend_selected = clamp(friend_selected + move, 0, num_amigos - 1);
             
@@ -459,29 +559,101 @@ if (menu_state == "connecting") {
     waiting_timer++;
     if (waiting_timer > room_speed) waiting_timer = 0; // Reinicia cada segundo
 	
-	if(keyboard_check_released(vk_escape))
+	if(vkey_pressed(vk_escape))
 	{
 		LeaveRoom();
 		menu_state="main";	
 	}
 }
+// Verificando codigo: ESC para cancelar
+if (menu_state == "verifying" && vkey_pressed(vk_escape)) {
+    menu_state = "private";
+}
 
+// --- SALIR DE LA SALA PRIVADA (con confirmacion) ---
+var _lobby_input_ok = true;
 if (menu_state == "lobby_espera") {
+    var _sgw = display_get_gui_width();
+    var _sgh = display_get_gui_height();
+    var _su  = clamp(min(_sgw / 1280, _sgh / 720), 0.6, 1.6);
+    var _sgx = device_mouse_x_to_gui(0);
+    var _sgy = device_mouse_y_to_gui(0);
+    var _sclick = device_mouse_check_button_pressed(0, mb_left);
+
+    if (!confirmar_salida) {
+        // Abrir la ventanita: ESC o el boton SALIR de arriba a la izquierda
+        var _pedir = vkey_pressed(vk_escape);
+        if (_sclick && point_in_rectangle(_sgx, _sgy, 20 * _su, 20 * _su, 170 * _su, 64 * _su)) _pedir = true;
+        if (_pedir) {
+            confirmar_salida = true;
+            salir_sel = 1; // por defecto: NO, QUEDARME
+            show_kick_menu = false;
+            _lobby_input_ok = false;
+        }
+    } else {
+        _lobby_input_ok = false;
+
+        // Botones SI / NO (mismas medidas que en el Draw)
+        var _bw  = 200 * _su;
+        var _bh  = 48 * _su;
+        var _by  = _sgh / 2 + 40 * _su;
+        var _bx0 = _sgw / 2 - _bw - 12 * _su;
+        var _bx1 = _sgw / 2 + 12 * _su;
+
+        if (vkey_pressed(vk_left) || vkey_pressed(vk_right)) salir_sel = 1 - salir_sel;
+
+        var _elegido = -1;
+        if (point_in_rectangle(_sgx, _sgy, _bx0, _by, _bx0 + _bw, _by + _bh)) { salir_sel = 0; if (_sclick) _elegido = 0; }
+        if (point_in_rectangle(_sgx, _sgy, _bx1, _by, _bx1 + _bw, _by + _bh)) { salir_sel = 1; if (_sclick) _elegido = 1; }
+        if (vkey_pressed(vk_enter)) _elegido = salir_sel;
+        if (vkey_pressed(vk_escape)) _elegido = 1;
+
+        if (_elegido == 1) {
+            // Se queda en la sala
+            confirmar_salida = false;
+        }
+        else if (_elegido == 0) {
+            // Se sale (igual que cuando el lider expulsa a alguien)
+            confirmar_salida = false;
+            LeaveRoom();
+            global.roomId = -1;
+            global.myRoomCode = "";
+            with(oOtherPlayer) instance_destroy();
+            menu_state = "private";
+            menu_delay = 5;
+            show_debug_message(">>> SALA: el jugador salio por su cuenta.");
+        }
+    }
+}
+
+if (menu_state == "lobby_espera" && _lobby_input_ok) {
 if (oBrain.AmIPseudoHost) {
     var mx = device_mouse_x_to_gui(0);
     var my = device_mouse_y_to_gui(0);
 
     // 1. Detectar Click Derecho sobre un slot
-    if (mouse_check_button_pressed(mb_right)) {
+    // En PC: clic derecho sobre un jugador. En el celular: tocarlo.
+    var _kick_tap = touch_mode() && device_mouse_check_button_pressed(0, mb_left) && !show_kick_menu;
+    if (_kick_tap) {
+        // Si toco las flechitas de ajustes, no es un toque de expulsar
+        var _kp0 = scr_ajustes_panel_y();
+        var _kcx = display_get_gui_width() / 2;
+        for (var _kf = 0; _kf < 3; _kf++) {
+            var _kfy = _kp0 + 48 + _kf * 34;
+            if (abs(my - _kfy) < 16 && (abs(mx - (_kcx + 10)) < 26 || abs(mx - (_kcx + 230)) < 26)) _kick_tap = false;
+        }
+    }
+    if (mouse_check_button_pressed(mb_right) || _kick_tap) {
         var slot_w = 400;
         var slot_h = 60;
         var padding = 20;
         var _found = false;
+        var _mitad = max(1, global.max_players_allowed / 2);
 
-        for (var i = 1; i < 8; i++) { // Empezamos en 1 (no nos auto-kickeamos)
-            var es_derecha = (i >= 4);
+        for (var i = 1; i < global.max_players_allowed; i++) { // Empezamos en 1 (no nos auto-kickeamos)
+            var es_derecha = (i >= _mitad);
             var _x1 = es_derecha ? (display_get_gui_width() / 2) + 50 : (display_get_gui_width() / 2) - 450;
-            var _y1 = 150 + ((i % 4) * (slot_h + padding));
+            var _y1 = 200 + ((i % _mitad) * (slot_h + padding));
             
             // ¿El mouse está sobre este slot?
             if (mx > _x1 && mx < _x1 + slot_w && my > _y1 && my < _y1 + slot_h) {
@@ -503,7 +675,7 @@ if (oBrain.AmIPseudoHost) {
     }
 
     // 2. Lógica de Click Izquierdo en el botón "EXPULSAR"
-    if (show_kick_menu && mouse_check_button_pressed(mb_left)) {
+    if (show_kick_menu && mouse_check_button_pressed(mb_left) && !_kick_tap) {
         if (mx > kick_menu_x && mx < kick_menu_x + 120 && my > kick_menu_y && my < kick_menu_y + 40) {
 		if (kick_target_id != -1) {
             
@@ -557,7 +729,7 @@ if (oBrain.AmIPseudoHost) {
 
         // Empezar: S en el teclado. En el celular, OK (ahí la flecha de abajo también cuenta como S
         // y ahora sirve para elegir los ajustes, así que no debe arrancar la partida).
-        var _empezar = keyboard_check_pressed(ord("S")) || (touch_mode() && vkey_pressed(vk_enter));
+        var _empezar = vkey_pressed(vk_enter);
         if (_empezar) {
             
             // --- CONTAR SI ESTÁN TODOS ---
@@ -577,9 +749,10 @@ if (oBrain.AmIPseudoHost) {
 if (menu_state == "profile") {
     // 1. Activar edición con la tecla E
     if (vkey_pressed(ord("E"))) {
-        if (!input_activo) {
+        if (!input_activo && !mostrando_selector) {
             input_activo = true;
             keyboard_string = global.myName; // Empezamos con el nombre actual
+            if (touch_mode()) keyboard_virtual_show(kbv_type_default, kbv_returnkey_done, kbv_autocapitalize_none, false);
         }
     }
 
@@ -605,7 +778,7 @@ if (menu_state == "profile") {
     }
 
     // 3. Salir si no estamos escribiendo
-    if (vkey_pressed(vk_escape) && !input_activo) {
+    if (vkey_pressed(vk_escape) && !input_activo && !mostrando_selector && !_esc_usado) {
         menu_state = "main";
     }
 	
@@ -624,7 +797,7 @@ if (vkey_pressed(ord("B")) && !input_activo) {
 	
     
     // Abrir selector con A
-    if (vkey_pressed(ord("A")) && !mostrando_selector) {
+    if (vkey_pressed(ord("A")) && !mostrando_selector && !input_activo) {
         mostrando_selector = true;
         avatar_seleccionado = global.avatar_id; // Empezar en el actual
     }
@@ -634,6 +807,10 @@ if (mostrando_selector) {
 // Scroll con la rueda del ratón
     if (mouse_wheel_up())   scroll_y_target -= 60;
     if (mouse_wheel_down()) scroll_y_target += 60;
+    // Arrastrar con el dedo / mouse
+    if (device_mouse_check_button(0, mb_left) && !device_mouse_check_button_pressed(0, mb_left)) {
+        scroll_y_target -= device_mouse_y_to_gui(0) - drag_prev_y;
+    }
 
     // Movimiento con flechas (Mantenemos lo de antes)
     var total_iconos = sprite_get_number(spr_player_icon);
@@ -657,7 +834,7 @@ if (mostrando_selector) {
     var max_scroll = max(0, (filas_totales * 120) - 240);
     scroll_y_target = clamp(scroll_y_target, 0, max_scroll);
 
-    if (vkey_pressed(vk_space)) mostrando_selector = false;
+    if (vkey_pressed(vk_space) || vkey_pressed(vk_escape)) mostrando_selector = false;
 
     if (vkey_pressed(vk_enter)) {
 // --- DENTRO DEL IF (vkey_pressed(vk_enter)) ---
@@ -724,6 +901,10 @@ if (menu_state == "achievements") {
     }
 	
 	var move_scroll = (mouse_wheel_down() - mouse_wheel_up()) * 40;
+    move_scroll += (vkey(vk_down) - vkey(vk_up)) * 10;
+    if (device_mouse_check_button(0, mb_left) && !device_mouse_check_button_pressed(0, mb_left)) {
+        move_scroll -= device_mouse_y_to_gui(0) - drag_prev_y;
+    }
     scroll_target = clamp(scroll_target + move_scroll, 0, scroll_max);
     
     // Interpolación suave para que no sea un movimiento brusco
@@ -930,3 +1111,6 @@ if(menu_state == "main")
         show_debug_message(">>> SISTEMA: Estado de búsqueda reseteado por seguridad.");
     }
 }
+
+// Posicion del dedo / mouse de este frame (para el scroll arrastrando)
+drag_prev_y = device_mouse_y_to_gui(0);

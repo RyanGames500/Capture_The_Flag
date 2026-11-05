@@ -1,16 +1,4 @@
-// ======================================================
-// FEEDBACK DE PARTIDO (estilo Brawl Stars)
-//   B  fb_banner_robada / fb_banner_aliado / fb_banner_tienes   franja que cruza la pantalla
-//   C2 fb_anotacion(equipo, nombre)                              franja chica debajo del marcador
-//                                                                (grande solo en punto de partido)
-//   D  fb_toast(titulo, sub, color)                              avisos chicos que se apilan
-//   A  fb_draw_marcador(x, y)                                    marcador vivo: puntos, reloj y dónde está cada bandera
-//      fb_flechas()                                              flechas de objetivo (reemplazan las de scr_draw_objetivo en línea)
-//      fb_toast_muerte(texto)                                    las bajas del kill feed como tarjeta
-// Todo es SOLO dibujo en tu pantalla: no manda nada por la red.
-// oBrain lo avanza con fb_step() y lo dibuja con fb_draw_gui().
-// La fuente pixel no tiene ¡ ni tildes: los textos van sin ellos.
-// ======================================================
+
 #macro FB_AZUL  make_color_rgb(31, 155, 255)
 #macro FB_ROJO  make_color_rgb(255, 42, 58)
 #macro FB_ORO   make_color_rgb(255, 212, 71)
@@ -277,8 +265,10 @@ function fb_burbuja_bandera(_wx, _wy, _spr, _col, _label, _late) {
 
 	// Etiqueta + metros
 	var _m = _label;
-	if (instance_exists(oPlayer)) {
-		var _yo = instance_find(oPlayer, 0);
+	var _yo = noone;
+	if (instance_exists(oPlayer))              _yo = instance_find(oPlayer, 0);
+	else if (instance_exists(oPlayer_offline)) _yo = instance_find(oPlayer_offline, 0);
+	if (_yo != noone) {
 		_m += "  " + string(max(1, round(point_distance(_yo.x, _yo.y, _wx, _wy) / FB_METRO))) + " m";
 	}
 	draw_set_font(fnt_small);
@@ -310,9 +300,14 @@ function fb_aro_parte(_x, _y, _r1, _r2, _desde, _largo, _col) {
 /// Objetivos de bandera fuera de pantalla. A quien LLEVA una bandera no se le pone otra:
 /// su burbuja con cara (fb_indicadores) ya sale dorada y dice ATRAPALO / ESCOLTALO.
 function fb_flechas() {
-	if (!instance_exists(oPlayer)) return;
-	var _me = instance_find(oPlayer, 0);
-	if (_me.state == PLAYERSTATE.DEAD) return;
+	// Soporte online (oPlayer) y offline (oPlayer_offline)
+	var _me = noone;
+	if (instance_exists(oPlayer))              _me = instance_find(oPlayer, 0);
+	else if (instance_exists(oPlayer_offline)) _me = instance_find(oPlayer_offline, 0);
+	if (_me == noone) return;
+	var _online = variable_global_exists("ONLINE") && global.ONLINE;
+	if (_online  && _me.state == PLAYERSTATE.DEAD)  return;
+	if (!_online && _me.state == PLAYERSTATE2.DEAD) return;
 	var _mio = scr_my_team();
 	var _rival = fb_rival(_mio);
 	var _fEnemy = (_mio == "AZUL") ? oFlag : oFlag2;   // la que tengo que robar
@@ -346,7 +341,7 @@ function fb_estado_bandera(_obj) {
 		var _p = _f.portador_instancia;
 		var _n = "ALGUIEN";
 		if (_p != noone && instance_exists(_p)) {
-			if (_p.object_index == oPlayer) _n = global.myName;
+			if (_p.object_index == oPlayer || _p.object_index == oPlayer_offline) _n = global.myName;
 			else if (variable_instance_exists(_p, "Name")) _n = _p.Name;
 		}
 		return { e: 1, n: fb_corto(_n) };
@@ -749,6 +744,9 @@ function fb_cara_spr(_pj) {
 
 /// Va en el Draw GUI de oBrain, en lugar de las flechitas viejas.
 function fb_indicadores() {
+	var _online = variable_global_exists("ONLINE") && global.ONLINE;
+	// En offline usamos fb_indicadores_bot() para el bot
+	if (!_online) { fb_indicadores_bot(); return; }
 	if (!instance_exists(oOtherPlayer)) return;
 	var _cam = view_camera[0];
 	var _vx = camera_get_view_x(_cam), _vy = camera_get_view_y(_cam);
@@ -834,6 +832,109 @@ function fb_indicadores() {
 		// Metros
 		var _m = string(max(1, round(point_distance(_ox, _oy, x, y) / FB_METRO))) + " m";
 		if (_flag) _m = (_aliado ? "ESCOLTALO  " : "ATRAPALO  ") + _m;
+		draw_set_font(fnt_small);
+		draw_set_halign(fa_center);
+		draw_set_valign(fa_middle);
+		var _mw = string_width(_m) + 14;
+		draw_set_color(FB_TINTA);
+		draw_roundrect_ext(_bx - _mw / 2, _by + 31, _bx + _mw / 2, _by + 49, 7, 7, false);
+		draw_set_color(_punta);
+		draw_roundrect_ext(_bx - _mw / 2, _by + 31, _bx + _mw / 2, _by + 49, 7, 7, true);
+		draw_set_color(c_white);
+		draw_text(_bx, _by + 40, _m);
+	}
+
+	draw_set_alpha(1);
+	draw_set_color(c_white);
+	draw_set_halign(fa_left);
+	draw_set_valign(fa_top);
+}
+
+/// Burbuja del bot fuera de pantalla (modo local). Misma estetica que fb_indicadores pero para oPlayer2_local.
+function fb_indicadores_bot() {
+	if (!instance_exists(oPlayer2_local)) return;
+	var _cam = view_camera[0];
+	var _vx = camera_get_view_x(_cam), _vy = camera_get_view_y(_cam);
+	var _vw = camera_get_view_width(_cam), _vh = camera_get_view_height(_cam);
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	var _cx = _gw * 0.5, _cy = _gh * 0.5;
+	var _mio = scr_my_team();
+	var _ox = 0, _oy = 0;
+	if (instance_exists(oPlayer_offline)) { var _yo = instance_find(oPlayer_offline, 0); _ox = _yo.x; _oy = _yo.y; }
+	var _ymin = 160;
+	var _ymax = touch_mode() ? _gh - 330 : _gh - 90;
+	if (_ymax < _ymin) _ymax = _ymin;
+
+	with (oPlayer2_local) {
+		if (isDead || !visible) continue;
+		if (x >= _vx && x <= _vx + _vw && y >= _vy && y <= _vy + _vh) continue;
+
+		var _tx = (x - _vx) * (_gw / _vw);
+		var _ty = (y - 20 - _vy) * (_gh / _vh);
+		var _dx2 = _tx - _cx, _dy2 = _ty - _cy;
+		if (_dx2 == 0 && _dy2 == 0) continue;
+		var _pad = 56;
+		var _k = 1000000000;
+		if (_dx2 != 0) _k = min(_k, ((_dx2 > 0 ? _gw - _pad : _pad) - _cx) / _dx2);
+		if (_dy2 != 0) _k = min(_k, ((_dy2 > 0 ? _gh - _pad : _pad) - _cy) / _dy2);
+		var _bx = clamp(_cx + _dx2 * _k, _pad, _gw - _pad);
+		var _by = clamp(_cy + _dy2 * _k, _ymin, _ymax);
+		var _ang = point_direction(_cx, _cy, _tx, _ty);
+
+		var _col = FB_ROJO;   // el bot siempre es rival
+		var _flag = has_flag;
+		var _punta = _flag ? FB_ORO : _col;
+		var _hp_pct = (hp > 0) ? (hp / 100) : 0;
+		var _hpcol = (_hp_pct > 0.5) ? make_color_rgb(91, 227, 125) : make_color_rgb(255, 176, 32);
+
+		// Anillo dorado si lleva la bandera
+		if (_flag) {
+			var _pp = (current_time mod 900) / 900;
+			draw_set_alpha(0.9 * (1 - _pp));
+			draw_set_color(FB_ORO);
+			draw_circle(_bx, _by, 30 + 16 * _pp, true);
+			draw_circle(_bx, _by, 31 + 16 * _pp, true);
+			draw_circle(_bx, _by, 32 + 16 * _pp, true);
+			draw_set_alpha(1);
+		}
+
+		// Puntita
+		draw_set_color(FB_TINTA);
+		draw_triangle(_bx + lengthdir_x(44, _ang), _by + lengthdir_y(44, _ang),
+		              _bx + lengthdir_x(26, _ang + 32), _by + lengthdir_y(26, _ang + 32),
+		              _bx + lengthdir_x(26, _ang - 32), _by + lengthdir_y(26, _ang - 32), false);
+		draw_set_color(_punta);
+		draw_triangle(_bx + lengthdir_x(40, _ang), _by + lengthdir_y(40, _ang),
+		              _bx + lengthdir_x(27, _ang + 24), _by + lengthdir_y(27, _ang + 24),
+		              _bx + lengthdir_x(27, _ang - 24), _by + lengthdir_y(27, _ang - 24), false);
+
+		// Anillo de vida
+		draw_set_color(FB_TINTA);
+		draw_circle(_bx, _by, 31, false);
+		fb_aro(_bx, _by, 26, 30, 1, make_color_rgb(43, 53, 80), 1);
+		fb_aro(_bx, _by, 26, 30, _hp_pct, _hpcol, 1);
+
+		// Circulo con cara
+		draw_set_color(_flag ? FB_ORO : _col);
+		draw_circle(_bx, _by, 25, false);
+		draw_set_color(FB_TINTA);
+		draw_circle(_bx, _by, 22, false);
+		var _spr = fb_cara_spr(variable_instance_exists(id, "mySelectedPJ") ? mySelectedPJ : 0);
+		var _sc2 = 30 / max(1, sprite_get_width(_spr));
+		draw_sprite_ext(_spr, 0, _bx, _by + 2, _sc2, _sc2, 0, c_white, 1);
+
+		// Banderita si la lleva
+		if (_flag) {
+			draw_set_color(FB_TINTA);
+			draw_circle(_bx - 21, _by - 21, 12, false);
+			draw_set_color(FB_ORO);
+			draw_circle(_bx - 21, _by - 21, 10, false);
+			fb_icono("flag", _bx - 20, _by - 21);
+		}
+
+		// Metros
+		var _m = string(max(1, round(point_distance(_ox, _oy, x, y) / FB_METRO))) + " m";
+		if (_flag) _m = "ATRAPALO  " + _m;
 		draw_set_font(fnt_small);
 		draw_set_halign(fa_center);
 		draw_set_valign(fa_middle);

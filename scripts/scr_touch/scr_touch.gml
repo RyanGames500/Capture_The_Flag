@@ -38,16 +38,49 @@ function __touch_pressed(_name) {
 	return (global.tc_keys[$ _name] == true) && (global.tc_prev[$ _name] != true);
 }
 
+/// En el MENU, WASD y las flechas son lo mismo (W = arriba, S = abajo, A = izquierda, D = derecha).
+/// No aplica en el juego (ahi W es saltar) ni mientras se escribe un nombre o un codigo.
+function __menu_alias(_key) {
+	if (room != rm_menu) return -1;
+	if (instance_exists(oMenu) && oMenu.input_activo) return -1;
+	switch (_key) {
+		case vk_up:    return ord("W");
+		case vk_down:  return ord("S");
+		case vk_left:  return ord("A");
+		case vk_right: return ord("D");
+		case ord("W"): return vk_up;
+		case ord("S"): return vk_down;
+		case ord("A"): return vk_left;
+		case ord("D"): return vk_right;
+	}
+	return -1;
+}
+
 /// Igual que keyboard_check, pero también con los botones de pantalla.
 function vkey(_key) {
 	if (keyboard_check(_key)) return true;
+	var _al = __menu_alias(_key);
+	if (_al != -1 && keyboard_check(_al)) return true;
 	return __touch_held(string(_key));
 }
 
 /// Igual que keyboard_check_pressed, pero también con los botones de pantalla.
 function vkey_pressed(_key) {
 	if (keyboard_check_pressed(_key)) return true;
+	var _al = __menu_alias(_key);
+	if (_al != -1 && keyboard_check_pressed(_al)) return true;
+	// Toque directo en un boton del menu (lo pone el Step de oMenu, solo vale dentro de oMenu)
+	if (variable_global_exists("ui_tap_vk") && global.ui_tap_vk != -1 && global.ui_tap_vk == _key) {
+		if (!is_struct(self) && object_index == oMenu) return true;
+	}
 	return __touch_pressed(string(_key));
+}
+
+/// El Draw del menu registra aqui cada boton que se puede tocar o clickear.
+/// _idx = numero de opcion (o -1), _vk = tecla que "aprieta" al tocarlo (o -1).
+function ui_tap_add(_x1, _y1, _x2, _y2, _idx, _vk, _extra = undefined) {
+	if (!variable_global_exists("ui_taps")) global.ui_taps = [];
+	array_push(global.ui_taps, { x1: _x1, y1: _y1, x2: _x2, y2: _y2, idx: _idx, vk: _vk, extra: _extra });
 }
 
 /// Igual que mouse_check_button. En el celular el dedo no cuenta como clic: solo los botones de pantalla.
@@ -76,7 +109,7 @@ function aim_y() {
 
 /// Lista de botones de pantalla según el momento (juego o menú).
 /// Cada botón: posición, radio, texto y las teclas que aprieta.
-function touch_buttons(_mode, _W, _H) {
+function __touch_buttons_base(_mode, _W, _H) {
 	var _b = [];
 	var _K = function(_bx, _by, _r, _txt, _keys, _act = "") {
 		return { bx: _bx, by: _by, r: _r, txt: _txt, keys: _keys, act: _act, down: false };
@@ -134,6 +167,25 @@ function touch_buttons(_mode, _W, _H) {
 		}
 	}
 	return _b;
+}
+
+/// Botones de pantalla con el TAMANO elegido en AJUSTES (se agrandan/achican desde su esquina).
+function touch_buttons(_mode, _W, _H) {
+	var _b = __touch_buttons_base(_mode, _W, _H);
+	var _s = opt_btn_escala();
+	if (_s == 1) return _b;
+	for (var i = 0; i < array_length(_b); i++) {
+		var _t = _b[i];
+		_t.r *= _s;
+		_t.bx = (_t.bx < _W / 2) ? _t.bx * _s : _W - (_W - _t.bx) * _s;
+		_t.by = (_t.by > _H / 2) ? _H - (_H - _t.by) * _s : _t.by * _s;
+	}
+	return _b;
+}
+
+/// Distancia de la mira con el dedo (AJUSTES: normal / lejos / cerca)
+function touch_aim_dist() {
+	return TOUCH_AIM_DIST * opt_mira_mult();
 }
 
 /// Dibujito de cada botón (oTouchControls Draw GUI). _s = tamaño.
