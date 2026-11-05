@@ -13,6 +13,27 @@ function scr_my_team() {
 	return "AZUL";
 }
 
+/// Pone a tu jugador en la base de SU equipo (al nacer y al reaparecer en línea).
+/// Si la base lo deja metido en el piso, lo sube hasta que quede libre.
+function scr_spawn_en_base() {
+	var _team = scr_my_team();
+	var _base = (_team == "AZUL") ? obj_base_blue : obj_base_red;
+	if (instance_exists(_base)) {
+		x = _base.x;
+		y = _base.y;
+	} else {
+		x = (_team == "AZUL") ? 100 : room_width - 100;
+		y = 400;
+	}
+	var _n = 0;
+	while (place_meeting(x, y, obj_wall) && _n < 300) { y -= 1; _n++; }
+	if (variable_instance_exists(id, "hsp")) hsp = 0;
+	if (variable_instance_exists(id, "vsp")) vsp = 0;
+	if (variable_instance_exists(id, "push_h")) push_h = 0;
+	if (variable_instance_exists(id, "latest_x")) latest_x = x;
+	if (variable_instance_exists(id, "latest_y")) latest_y = y;
+}
+
 function scr_team_color(_team) {
 	return (_team == "AZUL") ? make_color_rgb(31, 155, 255) : make_color_rgb(255, 42, 58);
 }
@@ -73,6 +94,11 @@ function scr_draw_objetivo(_me) {
 	var _o = scr_objetivo(_me);
 	var _gw = display_get_gui_width();
 	var _gh = display_get_gui_height();
+	// En línea la pastilla y la flecha las reemplazan el marcador vivo, los banners y las flechas de scr_feedback.
+	// Aquí solo queda el globito de ayuda. En local todo sigue igual.
+	var _solo_ayuda = variable_global_exists("ONLINE") && global.ONLINE;
+	var _cy = scr_reloj_visible() ? 196 : 160;
+	if (!_solo_ayuda) {
 
 	// --- Pastilla bajo el marcador ---
 	draw_set_font(fnt_menu);
@@ -81,7 +107,7 @@ function scr_draw_objetivo(_me) {
 	var _s  = 1;
 	var _tw = string_width(_o.txt) * _s + 60;
 	var _cx = _gw / 2;
-	var _cy = scr_reloj_visible() ? 196 : 160;   // si hay reloj bajo el marcador, la pastilla baja un poco
+	_cy = scr_reloj_visible() ? 196 : 160;   // si hay reloj bajo el marcador, la pastilla baja un poco
 	var _a  = 0.75;
 	if (_o.state == "s") _a = (current_time div 300) mod 2 == 0 ? 0.9 : 0.6;   // parpadea si te robaron
 	draw_set_alpha(_a);
@@ -116,6 +142,8 @@ function scr_draw_objetivo(_me) {
 			draw_text_transformed_color(_px - lengthdir_x(30, _dir), _py - lengthdir_y(30, _dir), _o.label, 0.8, 0.8, 0, _col, _col, c_white, c_white, 1);
 		}
 	}
+
+	} // fin pastilla y flecha (solo en local)
 
 	// --- Globito de ayuda (solo la primera vez que pasa cada cosa) ---
 	if (!variable_global_exists("tips_vistos")) {

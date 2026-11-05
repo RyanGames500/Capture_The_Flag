@@ -1,5 +1,11 @@
 function scrAddKillFeed(_text)
 {
+    // En línea las bajas salen como tarjeta (scr_feedback, avisos chicos). En local, como siempre.
+    if (variable_global_exists("ONLINE") && global.ONLINE && room != rm_menu) {
+        fb_toast_muerte(_text);
+        exit;
+    }
+
     // agarrar timings desde oBrain si existe
     var tin  = 10;
     var th   = 90;

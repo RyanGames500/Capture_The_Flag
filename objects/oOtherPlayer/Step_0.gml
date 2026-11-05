@@ -81,9 +81,25 @@ your sharedProperties
 		}
 		enemyHealth = max(0, _net - pred_dmg);
 
-		// --- SPRITE: durante el golpe mostramos su sprite de HIT local ---
+		// --- ECO DEL GOLPE ---
+		// En mi pantalla el golpe se adelanta (scr_predict_hit). Cuando termina, llega por la red
+		// el golpe real del rival (con retraso) y antes se volvia a reproducir: se veia DOS veces.
+		// Ahora ese eco se queda en el ultimo cuadro del golpe hasta que la red diga que ya acabo.
+		var _st_eco = real(SP._ST);
 		if (hit_bloqueo_timer > 0) {
-		    var _hits = [spr_player_hit, spr_player2_hit, spr_player3_hit, spr_sargento_hit];
+		    if (hit_eco <= 0) hit_eco_visto = false;   // golpe nuevo
+		    hit_eco = 45;                               // espero hasta 0.75 s el eco
+		    if (_st_eco == PLAYERSTATE.HIT) hit_eco_visto = true;
+		} else if (hit_eco > 0) {
+		    hit_eco--;
+		    if (_st_eco == PLAYERSTATE.HIT) hit_eco_visto = true;
+		    else if (hit_eco_visto) hit_eco = 0;        // la red ya salio del golpe: listo
+		}
+		var _eco = (hit_bloqueo_timer <= 0 && hit_eco > 0 && _st_eco == PLAYERSTATE.HIT);
+
+		// --- SPRITE: durante el golpe mostramos su sprite de HIT local ---
+		if (hit_bloqueo_timer > 0 || _eco) {
+		    var _hits = [spr_player_hit, spr_miguel_hit, spr_marina_hit, spr_sargento_hit];
 		    sprite_index = _hits[clamp(mySelectedPJ, 0, 3)];
 		} else {
 		    sprite_index = real(SP._SI);
@@ -97,16 +113,23 @@ your sharedProperties
 		fx_prev_st = _st_net;
 		fx_prev_sx = _sx_net;
     
-		if (SP._II != -1 && hit_bloqueo_timer <= 0) {
+		if (SP._II != -1 && hit_bloqueo_timer <= 0 && !_eco) {
 		    image_index = real(SP._II);
 		}
 		image_speed = SP._IS;
+		if (_eco) {
+		    // Quieto en el ultimo cuadro del golpe (no lo repite)
+		    image_index = sprite_get_number(sprite_index) - 1;
+		    image_speed = 0;
+		}
 		// Hit-stop: el que recibió el golpe también se congela en mi pantalla
 		if (variable_global_exists("hitstop") && global.hitstop > 0 && hit_bloqueo_timer > 0) image_speed = 0;
 		// Si el cronómetro de golpe está activo, ignoramos el estado de la red
 		if (hit_bloqueo_timer > 0) {
 		    hit_bloqueo_timer--;
 		    state = PLAYERSTATE.HIT; // Forzamos el estado visual de dolor
+		} else if (_eco) {
+		    state = PLAYERSTATE.HIT;
 		} else {
 		    state = real(SP._ST);    // Si no hay golpe, seguimos a la red
 		}	

@@ -397,6 +397,7 @@ if (state == PLAYERSTATE2.DEAD && has_flag == true) {
         velocidad_caida = -2;
         sprite_index = spr_suela;
     }
+    fb_toast("SOLTASTE LA BANDERA", "Recuperala rapido", FB_ROJO, "flag");
 }
 
 // --- CAPTURA LOCAL ---
@@ -404,6 +405,7 @@ var objetivo = (global.myTeam == "AZUL") ? oFlag : oFlag2;
 if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE2.DEAD && !has_flag && !objetivo.has_flag) {
     has_flag = true;
     with(objetivo) { has_flag = true; portador_instancia = other.id; }
+    fb_banner_tienes();
 }
 
 // --- ANOTACIÓN LOCAL ---
@@ -435,19 +437,15 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending) {
         portador_instancia = noone; 
     }
 
-    // 3. NOTIFICACIÓN
-    var notif = instance_create_layer(0, 0, "Instances", oNotification);
-    notif.text = "ANOTASTE!";
-    notif.color = c_lime;
+    // 3. NOTIFICACION (feedback estilo online)
+    fb_anotacion(global.myTeam, global.myName);
 }
 
 // --- DEVOLVER MI BANDERA (Local) ---
 var miBandera = (global.myTeam == "AZUL") ? oFlag2 : oFlag;
 if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (miBandera.x != miBandera.spawnX)) {
     with(miBandera) { x = spawnX; y = spawnY; }
-    var notif = instance_create_layer(0, 0, "Instances", oNotification);
-    notif.text = "SALVASTE TU BANDERA!";
-    notif.color = c_aqua;
+    fb_toast("BANDERA DEVUELTA", "Tu bandera esta a salvo", FB_AZUL, "flag");
 }
 
 // --- INVULNERABILIDAD ---

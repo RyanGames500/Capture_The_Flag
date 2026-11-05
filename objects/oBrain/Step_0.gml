@@ -630,6 +630,9 @@ if (abandono_activo && room != rm_menu) {
 //efectos de paso, salto lo que sea perro
 fx_step();
 
+// Banners, anotación y avisos chicos (scr_feedback)
+fb_step();
+
 
 // 📦 Pedir munición/armas/power-ups al host después de cargar el mapa
 if (variable_instance_exists(id, "resync_left") && resync_left > 0 && global.ONLINE && room != rm_menu) {

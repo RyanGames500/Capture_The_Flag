@@ -68,7 +68,8 @@ draw_text_transformed(40, gh - 65, global.myName, 1.2, 1.2, 0); // Tu nombre
 #endregion
 
 #region // PING HUD (en la partida: chiquito abajo al centro)
-if (global.ONLINE) scr_red_draw_hud(room != rm_menu);
+opt_init();
+if (global.ONLINE && (room == rm_menu || global.opt.ping == 1)) scr_red_draw_hud(room != rm_menu);
 #endregion
 }
 if (room == rm_menu) exit;
@@ -111,141 +112,9 @@ var xx = 20;
 var yy = 20;
 var scale = 1.35;
 
-// ===== OFFSCREEN INDICATOR =====
-var cam = view_camera[0];
-
-// view en ROOM
-var vx = camera_get_view_x(cam);
-var vy = camera_get_view_y(cam);
-var vw = camera_get_view_width(cam);
-var vh = camera_get_view_height(cam);
-
-// GUI real
-var gw = display_get_gui_width();
-var gh = display_get_gui_height();
-
-// centro GUI
-var cx = gw * 0.5;
-var cy = gh * 0.5;
-
-// padding para que no quede pegado al borde
-var pad = 24;
-
-// targets (listo para multi: todos los proxies)
-var targets = array_create(0);
-with (oOtherPlayer) targets[array_length(targets)] = id;
-
-for (var i = 0; i < array_length(targets); i++)
-{
-    var t = targets[i];
-    if (!instance_exists(t)) continue;
-
-    if (variable_instance_exists(t, "state") && t.state == PLAYERSTATE.DEAD) continue;
-    if (variable_instance_exists(t, "visible") && !t.visible) continue;
-
-    // ¿está en pantalla? (ROOM check)
-    if (t.x >= vx && t.x <= vx + vw && t.y >= vy && t.y <= vy + vh) continue;
-
-    // ===== convertir pos objetivo ROOM -> GUI =====
-    var tx = (t.x - vx) * (gw / vw);
-    var ty = (t.y - vy) * (gh / vh);
-
-    // vector desde centro GUI hacia target
-    var dx = tx - cx;
-    var dy = ty - cy;
-
-    // ángulo para rotar flecha
-    var ang = point_direction(cx, cy, tx, ty);
-
-    if (dx == 0 && dy == 0) continue;
-
-    // ===== intersección rayo con rectángulo (pad) =====
-    var left   = pad;
-    var right  = gw - pad;
-    var top    = pad;
-    var bottom = gh - pad;
-
-    var tMin = 1000000000;
-
-    if (dx != 0)
-    {
-        var k = (left - cx) / dx;
-        if (k > 0)
-        {
-            var yhit = cy + dy * k;
-            if (yhit >= top && yhit <= bottom) tMin = min(tMin, k);
-        }
-
-        k = (right - cx) / dx;
-        if (k > 0)
-        {
-            var yhit2 = cy + dy * k;
-            if (yhit2 >= top && yhit2 <= bottom) tMin = min(tMin, k);
-        }
-    }
-
-    if (dy != 0)
-    {
-        var k2 = (top - cy) / dy;
-        if (k2 > 0)
-        {
-            var xhit = cx + dx * k2;
-            if (xhit >= left && xhit <= right) tMin = min(tMin, k2);
-        }
-
-        k2 = (bottom - cy) / dy;
-        if (k2 > 0)
-        {
-            var xhit2 = cx + dx * k2;
-            if (xhit2 >= left && xhit2 <= right) tMin = min(tMin, k2);
-        }
-    }
-
-    var guiX = cx + dx * tMin;
-    var guiY = cy + dy * tMin;
-
-    guiX -= lengthdir_x(18, ang);
-    guiY -= lengthdir_y(18, ang);
-
-    var pulse = 1 + 0.12 * sin(current_time * 0.01);
-
-    var col = (t.team == global.myTeam) ? c_blue : c_red;
-
-    var r = 10 * pulse;
-    draw_set_color(col);
-    draw_triangle(
-        guiX + lengthdir_x(r*1.4, ang),
-        guiY + lengthdir_y(r*1.4, ang),
-        guiX + lengthdir_x(r, ang + 140),
-        guiY + lengthdir_y(r, ang + 140),
-        guiX + lengthdir_x(r, ang - 140),
-        guiY + lengthdir_y(r, ang - 140),
-        false
-    );
-
-    var icon_dist = 34;
-    var ix = guiX - lengthdir_x(icon_dist, ang);
-    var iy = guiY - lengthdir_y(icon_dist, ang);
-
-    if (sprite_exists(spr_player_icon))
-    {
-        draw_set_alpha(0.35);
-        draw_set_color(c_black);
-        draw_sprite_ext(spr_player_icon, 0, ix+2, iy+2, 1, 1, 0, c_black, 1);
-
-        draw_set_alpha(1);
-        draw_set_color(c_white);
-        draw_sprite_ext(spr_player_icon, 0, ix, iy, 1, 1, 0, c_white, 1);
-
-        draw_set_color(col);
-        draw_set_alpha(0.9);
-        draw_circle(ix, iy, 14, false);
-        draw_set_alpha(1);
-    }
-}
-
-draw_set_alpha(1);
-draw_set_color(c_white);
+// Jugadores fuera de pantalla: burbuja con cara, anillo de vida y metros (scr_feedback).
+// Reemplaza las flechitas viejas.
+fb_indicadores();
 #endregion
 
 #region // Textos de kill (a la derecha, debajo del arma: arriba a la izquierda van tu nombre y tu vida)
@@ -313,6 +182,14 @@ if (!global.game_over) {
     marcador_escala_rojo = lerp(marcador_escala_rojo, 1.6, 0.1);
     marcador_shake = lerp(marcador_shake, 0, 0.1);
 
+    if (room != rm_menu) {
+        // Marcador vivo, flechas, banners, anotacion y avisos (scr_feedback).
+        // Ahora funciona tanto en linea como en local.
+        fb_draw_marcador(_mx_base, 14);
+        fb_draw_gui();
+        minimapa_draw(); // mini mapa (se apaga o cambia en AJUSTES)
+    } else {
+
     var _sx = random_range(-marcador_shake, marcador_shake);
     var _sy = random_range(-marcador_shake, marcador_shake);
     var _mx = _mx_base + _sx;
@@ -342,12 +219,13 @@ if (!global.game_over) {
     draw_text_transformed_color(_mx + _dist, _my, string(global.puntos_rojo), marcador_escala_rojo, marcador_escala_rojo, 0, c_red, c_red, c_maroon, c_maroon, 1);
 
     var _flecha_x = (global.myTeam == "AZUL") ? _mx - _dist : _mx + _dist;
-    var _bounce = abs(sin(current_time * 0.01)) * 8; 
+    var _bounce = abs(sin(current_time * 0.01)) * 8;
     draw_set_color(c_white);
     draw_triangle(_flecha_x - 8, _my - 48 - _bounce, _flecha_x + 8, _my - 48 - _bounce, _flecha_x, _my - 38 - _bounce, false);
 
     // Reloj de la partida, debajo del marcador (solo en línea y con límite de tiempo)
     if (room != rm_menu) scr_reloj_draw(_mx_base, _my_base + 52);
+    } // fin del marcador viejo (solo rm_menu)
 }
 
 // ======================================================

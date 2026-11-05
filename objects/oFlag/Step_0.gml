@@ -43,7 +43,7 @@ if (!has_flag) {
             y = oPlayer_offline.y - 16;
             image_xscale = oPlayer_offline.image_xscale; // Que mire a donde mira el player
             sprite_index = spr_mano; // ¡IMPORTANTE! Cambiar al sprite de "portando"
-            depth = oPlayer_offline.depth - 1; // Que se vea por delante
+            depth = oPlayer_offline.depth + 1; // Va en la espalda (detras del personaje)
             
             // Si el jugador muere en offline, soltamos la bandera
             if (variable_instance_exists(oPlayer_offline, "isDead") && oPlayer_offline.isDead) {
@@ -65,7 +65,7 @@ else {
             y = portador_instancia.y - 16;
             image_xscale = portador_instancia.image_xscale;
             sprite_index = spr_mano;
-            depth = portador_instancia.depth - 1;
+            depth = portador_instancia.depth + 1;
         } else {
             // Seguridad por si el portador sale de la partida o muere
             has_flag = false;
@@ -78,7 +78,10 @@ else {
         image_xscale = 1;
         depth = -y;
 
-        if (oBrain.AmIPseudoHost) {
+        // La bandera cae igual en TODAS las pantallas (antes solo en la del host, y en las
+        // demás se quedaba flotando donde la soltaron). Su posición inicial llega por los
+        // eventos "flag_dropped" y "sync_score", y desde ahí cada quien la deja caer.
+        {
         // 1. Aplicar gravedad si no hay suelo (Pared o Plataforma)
         var on_wall = place_meeting(x, y + 1, obj_wall);
         var plat = instance_place(x, y + 1, oPlataformaPasable);
@@ -106,17 +109,6 @@ else {
             }
         }
             y += velocidad_caida;
-
-            // Publicar posición para los clientes
-            global.sharedProperties._flagX = x;
-            global.sharedProperties._flagY = y;
-        } 
-        else {
-            // El Cliente copia la posición que el Host envía en el struct SP
-            if (variable_instance_exists(id, "SP")) {
-                x = SP._flagX;
-                y = SP._flagY;
-            }
         }
     }
 }

@@ -1,3 +1,5 @@
+// AJUSTES: que tanto se ven los botones (70% = como siempre)
+var tc_a = opt_btn_alpha();
 /// @description Dibujar los controles
 if (!touch_mode()) exit;
 var _W = display_get_gui_width();
@@ -15,28 +17,28 @@ if (mode == "game") {
 	// Mover (arriba = saltar)
 	var _mx = mv_on ? mv_bx : 200;
 	var _my = mv_on ? mv_by : _H - 200;
-	draw_set_alpha(0.35); draw_set_colour(make_color_rgb(10, 8, 20));
+	draw_set_alpha(min(1, tc_a * (0.35))); draw_set_colour(make_color_rgb(10, 8, 20));
 	draw_circle(_mx, _my, 110, false);
-	draw_set_alpha(0.7); draw_set_colour(c_white);
+	draw_set_alpha(min(1, tc_a * (0.7))); draw_set_colour(c_white);
 	draw_circle(_mx, _my, 110, true); draw_circle(_mx, _my, 109, true);
 	var _cu = mv_up ? _amar : c_white;
 	draw_set_colour(_cu);
 	draw_triangle(_mx, _my - 98, _mx - 14, _my - 78, _mx + 14, _my - 78, false);
-	draw_set_alpha(0.85);
+	draw_set_alpha(min(1, tc_a * (0.85)));
 	draw_text_transformed_color(_mx, _my - 128, "SALTA", 0.5, 0.5, 0, _cu, _cu, _cu, _cu, 0.85);
-	draw_set_alpha(0.75); draw_set_colour(c_white);
+	draw_set_alpha(min(1, tc_a * (0.75))); draw_set_colour(c_white);
 	draw_circle(_mx + (mv_on ? mv_ox : 0), _my + (mv_on ? mv_oy : 0), 46, false);
 
 	// Apuntar y disparar (arrastrar lejos del centro = disparar)
 	var _ax = am_on ? am_bx : _W - 230;
 	var _ay = am_on ? am_by : _H - 215;
-	draw_set_alpha(0.35); draw_set_colour(make_color_rgb(60, 10, 20));
+	draw_set_alpha(min(1, tc_a * (0.35))); draw_set_colour(make_color_rgb(60, 10, 20));
 	draw_circle(_ax, _ay, 110, false);
-	draw_set_alpha(0.9); draw_set_colour(_rojo);
+	draw_set_alpha(min(1, tc_a * (0.9))); draw_set_colour(_rojo);
 	draw_circle(_ax, _ay, 110, true); draw_circle(_ax, _ay, 109, true);
-	draw_set_alpha(0.6);
+	draw_set_alpha(min(1, tc_a * (0.6)));
 	draw_circle(_ax, _ay, 110 * 0.35, true);
-	draw_set_alpha(0.75); draw_set_colour(c_white);
+	draw_set_alpha(min(1, tc_a * (0.75))); draw_set_colour(c_white);
 	draw_circle(_ax + (am_on ? am_ox : 0), _ay + (am_on ? am_oy : 0), 46, false);
 	if (!am_on) draw_text_transformed_color(_ax, _ay + 140, "APUNTA Y DISPARA", 0.45, 0.45, 0, c_white, c_white, c_white, c_white, 0.8);
 }
@@ -47,10 +49,10 @@ for (var b = 0; b < array_length(_btns); b++) {
 	var _tiene_ico = variable_struct_exists(_bt, "ico");
 
 	// fondo oscuro y borde blanco (amarillo mientras lo aprietas)
-	draw_set_alpha(_bt.down ? 0.7 : 0.5);
+	draw_set_alpha(min(1, tc_a * (_bt.down ? 0.7 : 0.5)));
 	draw_set_colour(make_color_rgb(10, 8, 20));
 	draw_circle(_bt.bx, _bt.by, _bt.r, false);
-	draw_set_alpha(0.9);
+	draw_set_alpha(min(1, tc_a * (0.9)));
 	draw_set_colour(_bt.down ? _amar : c_white);
 	draw_circle(_bt.bx, _bt.by, _bt.r, true);
 	draw_circle(_bt.bx, _bt.by, _bt.r - 1, true);

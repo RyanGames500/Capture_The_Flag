@@ -1,7 +1,7 @@
 
 if (global.ONLINE) {
-    if (oBrain.AmIPseudoHost) x = spawn_left_x; else x = spawn_right_x;
-    y = spawn_y_fixed;
+    // Reaparece en la base de su equipo (antes: host a la izquierda y todos los demás en x=591)
+    scr_spawn_en_base();
 
     // alinear red si existe
     if (variable_instance_exists(id, "latest_x")) latest_x = x;

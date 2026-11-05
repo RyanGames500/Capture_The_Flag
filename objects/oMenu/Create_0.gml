@@ -24,10 +24,10 @@ p_index = 0; // El índice para el menú privado
 global.myRoomCode = ""; // Aquí guardaremos el código de 4 letras
 
 // --- CONFIGURACIÓN DE LA SALA ---
-setup_options = ["MODO: 1 VS 1", "MAPA: NIVEL 1", "CONFIRMAR Y CREAR"];
+setup_options = ["MODO: 1 VS 1", "MAPA: NIVEL 1", "TIEMPO: 5 MIN", "BANDERAS PARA GANAR: 3", "CREAR SALA"];
 s_index = 0; // Índice para el menú de setup
 
-global.setup_modo = 0; // 0 = 1vs1, 1 = 2vs2, 2 = 4vs4
+global.setup_modo = 0; // 0 = 1vs1, 1 = 2vs2, 2 = 3vs3, 3 = 4vs4
 global.setup_mapa = 0; // 0 = NIVEL 1, 1 = NIVEL 2, 2 = NIVEL 3
 lobby_sel = 0;      // ajuste elegido en la sala de espera (0 tiempo, 1 mapa, 2 banderas)
 lobby_sync_cd = 0;  // cada cuánto el líder manda los ajustes
@@ -80,6 +80,16 @@ scroll_max = (10 * 90) - 450;
 ach_surf = -1;
 //timer para copiar ids
 copiado_timer = 0;
+//confirmacion para salir de la sala privada
+confirmar_salida = false;
+salir_sel = 1; // 0 = SI, SALIR   1 = NO, QUEDARME
+//codigo de sala escrito en el juego y scroll arrastrando con el dedo
+join_input = "";
+drag_prev_y = 0;
+//pantalla de AJUSTES
+opt_sel = 0;
+opt_init();
+opt_apply(true);
 timer_latido = 0;
 //Sistema de buscar y agregar amigos
 busqueda_nombre_tecleado = ""; 
