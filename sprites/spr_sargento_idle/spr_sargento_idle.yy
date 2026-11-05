@@ -23,7 +23,7 @@
   ],
   "name":"spr_sargento_idle",
   "nineSlice":null,
-  "origin":9,
+  "origin":4,
   "parent":{
     "name":"pj4",
     "path":"folders/Sprites/Player/pj4.yy",
@@ -76,7 +76,7 @@
     "visibleRange":null,
     "volume":1.0,
     "xorigin":16,
-    "yorigin":23,
+    "yorigin":20,
   },
   "swatchColours":null,
   "swfPrecision":0.5,

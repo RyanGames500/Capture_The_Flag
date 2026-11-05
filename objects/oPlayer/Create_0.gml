@@ -128,8 +128,8 @@ emote_cd = 0; // Timer para el cooldown de emotes
 
 // 0: Asalto, 1: Tanque, 2: Medico, 3: (Nuevo Personaje, ej: Scout o Sniper)
 anims[0] = { idle: spr_player_idle, walk: spr_player_walk, jump: spr_player_walk, dead: spr_player_dead, hit: spr_player_hit };
-anims[1] = { idle: spr_player2_idle, walk: spr_player2_walk, jump: spr_player2_walk, dead: spr_player2_dead, hit: spr_player2_hit };
-anims[2] = { idle: spr_player3_idle, walk: spr_player3_walk, jump: spr_player3_walk, dead: spr_player3_dead, hit: spr_player3_hit };
+anims[1] = { idle: spr_miguel_idle, walk: spr_miguel_walk, jump: spr_miguel_walk, dead: spr_miguel_dead, hit: spr_miguel_hit }; // Miguel (Tanque nuevo). Los viejos son spr_player2_*
+anims[2] = { idle: spr_marina_idle, walk: spr_marina_walk, jump: spr_marina_walk, dead: spr_marina_dead, hit: spr_marina_hit }; // Marina (Medico nueva). Los viejos son spr_player3_*
 anims[3] = { idle: spr_sargento_idle, walk: spr_sargento_walk, jump: spr_sargento_walk, dead: spr_sargento_dead, hit: spr_sargento_hit }; // Sargento (Alejandro nuevo). Los viejos son spr_player4_*
 
 // Usamos la variable global que viene de la pantalla de selección

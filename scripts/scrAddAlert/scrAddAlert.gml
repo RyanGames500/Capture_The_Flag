@@ -1,6 +1,12 @@
 /// scrAddAlert(_text, _col)
 function scrAddAlert(_text, _col)
 {
+    // En línea sale como tarjeta (scr_feedback, avisos chicos). En local, como siempre.
+    if (variable_global_exists("ONLINE") && global.ONLINE && room != rm_menu) {
+        fb_toast(_text, "Arma fuerte disponible", _col, "arma");
+        exit;
+    }
+
     if (!instance_exists(oBrain)) exit;
 
     with (oBrain)

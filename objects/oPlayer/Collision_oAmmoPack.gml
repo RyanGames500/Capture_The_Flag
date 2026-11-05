@@ -18,9 +18,7 @@ if (esPackDeGranadas)
     other.visible = false;
     
     granadas += 3; 
-    var notif = instance_create_layer(x, y - 20, "Instances", oNotification);
-    notif.text = "+3 GRANADAS";
-    notif.color = c_orange;
+    fb_toast("+3 GRANADAS", "Clic derecho para lanzar", c_orange);
     if (global.sfx) audio_play_sound(snd_ammo_pickup, 1, false);
 } 
 else 

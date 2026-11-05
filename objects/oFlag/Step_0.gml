@@ -78,7 +78,10 @@ else {
         image_xscale = 1;
         depth = -y;
 
-        if (oBrain.AmIPseudoHost) {
+        // La bandera cae igual en TODAS las pantallas (antes solo en la del host, y en las
+        // demás se quedaba flotando donde la soltaron). Su posición inicial llega por los
+        // eventos "flag_dropped" y "sync_score", y desde ahí cada quien la deja caer.
+        {
         // 1. Aplicar gravedad si no hay suelo (Pared o Plataforma)
         var on_wall = place_meeting(x, y + 1, obj_wall);
         var plat = instance_place(x, y + 1, oPlataformaPasable);
@@ -106,17 +109,6 @@ else {
             }
         }
             y += velocidad_caida;
-
-            // Publicar posición para los clientes
-            global.sharedProperties._flagX = x;
-            global.sharedProperties._flagY = y;
-        } 
-        else {
-            // El Cliente copia la posición que el Host envía en el struct SP
-            if (variable_instance_exists(id, "SP")) {
-                x = SP._flagX;
-                y = SP._flagY;
-            }
         }
     }
 }

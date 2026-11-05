@@ -83,7 +83,7 @@ your sharedProperties
 
 		// --- SPRITE: durante el golpe mostramos su sprite de HIT local ---
 		if (hit_bloqueo_timer > 0) {
-		    var _hits = [spr_player_hit, spr_player2_hit, spr_player3_hit, spr_sargento_hit];
+		    var _hits = [spr_player_hit, spr_miguel_hit, spr_marina_hit, spr_sargento_hit];
 		    sprite_index = _hits[clamp(mySelectedPJ, 0, 3)];
 		} else {
 		    sprite_index = real(SP._SI);

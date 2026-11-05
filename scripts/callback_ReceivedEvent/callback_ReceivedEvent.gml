@@ -746,20 +746,9 @@ break;
 
 		case "init_pos_color":
 		{
-		    var ordered_x = theMessageStruct.x;
-		    var ordered_y = theMessageStruct.y;
-
-		    oPlayer.x = ordered_x;
-		    oPlayer.y = ordered_y;
-
-		    oPlayer.latest_x = ordered_x;
-		    oPlayer.latest_y = ordered_y;
-
-		    // opcional: si usas sharedProperties para publicar
-		    if (is_struct(global.sharedProperties)) {
-		        global.sharedProperties._x = ordered_x;
-		        global.sharedProperties._y = ordered_y;
-		    }
+		    // Ya nadie lo manda (cada uno nace en su base). Si llega de una versión vieja,
+		    // te pone en TU base en vez de la posición que traía, y no truena si aún no naciste.
+		    if (instance_exists(oPlayer)) with (oPlayer) scr_spawn_en_base();
 		}	
 		break;
 
@@ -853,6 +842,7 @@ case "hit":
                         dropY: other.y - 25
                     });
                 }
+                fb_toast("TE TUMBARON LA BANDERA", "Quedo en el suelo", FB_ORO);
             }
         }
 
@@ -905,15 +895,11 @@ break;
 		        }
 		    }
     
-		    // --- Tus notificaciones se quedan igual ---
-		    var notif = instance_create_layer(0, 0, "Instances", oNotification);
-		    if (equipoCapturador == global.myTeam) {
-		        notif.text = "¡TU EQUIPO TIENE LA BANDERA!";
-		        notif.color = c_aqua;
-		    } else {
-		        notif.text = "¡CUIDADO! ROBARON TU BANDERA";
-		        notif.color = c_red;
-		    }
+		    // B: banner de bandera (scr_feedback). Quien la tomo:
+		    var _nom_cap = "ALGUIEN";
+		    with (oOtherPlayer) { if (clientId == idDelQueCapturo && variable_instance_exists(id, "Name")) _nom_cap = Name; }
+		    if (equipoCapturador == global.myTeam) fb_banner_aliado(_nom_cap);
+		    else fb_banner_robada(_nom_cap);
 		}
 		break;
 
@@ -962,8 +948,8 @@ case "request_point":
         }
 
         // Reset físico de banderas
-        if (flagToReset == "ROJA") with (oFlag) { x=spawnX; y=spawnY; has_flag=false; portador_instancia=noone; }
-        else with (oFlag2){ x=spawnY; y=spawnY; has_flag=false; portador_instancia=noone; }
+        if (flagToReset == "ROJA") with (oFlag) { x=spawnX; y=spawnY; velocidad_caida=0; has_flag=false; portador_instancia=noone; sprite_index=spr_suela; }
+        else with (oFlag2){ x=spawnX; y=spawnY; velocidad_caida=0; has_flag=false; portador_instancia=noone; sprite_index=spr_suela; }   // antes decía x=spawnY
 
         var miObjetivoHost = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
         if (flagToReset == miObjetivoHost) {
@@ -971,16 +957,16 @@ case "request_point":
             oPlayer.score_pending = false;
         }
 
-        // Notificaciones...
-        var notif = instance_create_layer(0, 0, "Instances", oNotification);
+        // Feedback (scr_feedback). Nombre de quien lo hizo: viene en el mensaje (versión nueva) o lo busco
+        var _nom_rp = "";
+        if (variable_struct_exists(theMessageStruct, "nombre")) _nom_rp = string(theMessageStruct.nombre);
+        else with (oOtherPlayer) { if (clientId == senderClientId && variable_instance_exists(id, "Name")) _nom_rp = Name; }
         if (isSystem) {
             var miColor = (global.myTeam == "AZUL") ? "AZUL" : "ROJA";
-            if (flagToReset == miColor) { notif.text = "SALVASTE TU BANDERA!"; notif.color = c_blue; }
-            else { notif.text = "EL ENEMIGO RECUPERO SU BANDERA"; notif.color = c_gray; }
+            if (flagToReset == miColor) fb_toast("BANDERA DEVUELTA", _nom_rp + " salvo tu bandera", fb_team_col(global.myTeam));
+            else fb_toast("EL RIVAL RECUPERO SU BANDERA", _nom_rp, fb_team_col(fb_rival(global.myTeam)));
         } else {
-            notif.text = "EL ENEMIGO ANOTO!";
-            notif.color = c_red;
-            notif.target_scale = 1.5;
+            fb_anotacion((teamRequest == "AZUL") ? "AZUL" : "ROJO", _nom_rp);
         }
 
         // SYNC A TODOS LOS CLIENTES
@@ -989,7 +975,8 @@ case "request_point":
                 azul: global.puntos_azul,
                 rojo: global.puntos_rojo,
                 resetFlag: flagToReset,
-                reason: (isSystem) ? "RETORNO" : "PUNTO"
+                reason: (isSystem) ? "RETORNO" : "PUNTO",
+                nombre: _nom_rp   // opcional
             });
         }
     }
@@ -1032,15 +1019,14 @@ case "sync_score":
         with (oFlag2) { has_flag = false; portador_instancia = noone; x = spawnX; y = spawnY; velocidad_caida = 0; sprite_index = spr_suela; }
     }
 
-    // Notificaciones (lo que ya tenías)
-    var notif = instance_create_layer(0, 0, "Instances", oNotification);
+    // Feedback (scr_feedback). El nombre es opcional: si viene de una versión vieja no se muestra
+    var _nom_ss = variable_struct_exists(theMessageStruct, "nombre") ? string(theMessageStruct.nombre) : "";
     if (reason == "RETORNO") {
-        if (flag_scored == miColor) { notif.text = "SALVASTE TU BANDERA!"; notif.color = c_aqua; }
-        else { notif.text = "EL ENEMIGO RECUPERO SU BANDERA"; notif.color = c_gray; }
+        if (flag_scored == miColor) fb_toast("BANDERA DEVUELTA", (_nom_ss == "") ? "Tu bandera volvio a la base" : _nom_ss + " salvo tu bandera", fb_team_col(global.myTeam));
+        else fb_toast("EL RIVAL RECUPERO SU BANDERA", _nom_ss, fb_team_col(fb_rival(global.myTeam)));
     } else {
-        notif.target_scale = 1.5;
-        if (flag_scored == miObjetivo) { notif.text = "¡TU EQUIPO ANOTO!"; notif.color = c_lime; }
-        else { notif.text = "¡EL ENEMIGO ANOTO!"; notif.color = c_red; }
+        // "ROJA" reseteada = anoto AZUL (se llevo la roja a su base), y al reves
+        fb_anotacion((flag_scored == "ROJA") ? "AZUL" : "ROJO", _nom_ss);
     }
 }
 break;
@@ -1073,7 +1059,7 @@ case "flag_dropped":
     // Si no hacemos esto, el objeto del jugador en la pantalla de los demás
     // sigue pensando que tiene la bandera y la sigue dibujando.
     with(oOtherPlayer) {
-        if (variable_instance_exists(id, "thisPlayerTeam") && thisPlayerTeam == equipoQueLaSolto) {
+        if (team == equipoQueLaSolto) {   // antes usaba thisPlayerTeam, que nunca se llenaba
             has_flag = false;
         }
     }
@@ -1082,6 +1068,10 @@ case "flag_dropped":
     if (global.myTeam == equipoQueLaSolto) {
         oPlayer.has_flag = false;
     }
+
+    // Aviso chico (scr_feedback)
+    if (equipoQueLaSolto == global.myTeam) fb_toast("BANDERA EN EL SUELO", "Tu equipo solto la bandera rival", FB_ORO);
+    else fb_toast("TU BANDERA ESTA EN EL SUELO", "Tocala para devolverla", fb_team_col(global.myTeam));
 }
 break;
 
@@ -1218,6 +1208,13 @@ case "kill_event":
 }
 break;
 
+
+case "kill_feed":
+    // Alguien murió en su juego y nos avisa quién lo mató (antes este evento no lo recibía nadie)
+    if (is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "msg")) {
+        scrAddKillFeed(string(theMessageStruct.msg));
+    }
+break;
 
 case "player_emote":
 {

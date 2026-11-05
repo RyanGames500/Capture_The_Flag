@@ -172,8 +172,7 @@ if (global.ONLINE && spawn_lock > 0)
 {
 	spawn_lock--;
 
-	if (oBrain.AmIPseudoHost) { x = 51;  y = 400; }
-	else { x = 591; y = 400; }
+	scr_spawn_en_base();   // en la base de mi equipo (antes: x=51 el host, x=591 los demás)
 
 	if (variable_instance_exists(id, "latest_x")) latest_x = x;
 	if (variable_instance_exists(id, "latest_y")) latest_y = y;
@@ -504,6 +503,7 @@ if (state == PLAYERSTATE.DEAD && has_flag == true)
 			});
 		}
 	}
+	fb_toast("SOLTASTE LA BANDERA", "Quedo en el suelo", FB_ORO);
 }
 
 var objetivo = (global.myTeam == "AZUL") ? oFlag : oFlag2;
@@ -524,6 +524,7 @@ if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD
 			SendEventToClient(clientId, "flag_capture", { team: global.myTeam });
 		}
 	}
+	fb_banner_tienes();   // B: LA TIENES! (scr_feedback)
 }
 
 var miBase = (global.myTeam == "AZUL") ? obj_base_blue : obj_base_red;
@@ -574,27 +575,20 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending)
 			SendEventToClient(clientId, "sync_score", {
 				azul: global.puntos_azul,
 				rojo: global.puntos_rojo,
-				resetFlag: flag_scored
+				resetFlag: flag_scored,
+				nombre: global.myName   // opcional: para mostrar quien anoto (las versiones viejas lo ignoran)
 			});
 		}
 
 		score_pending = false;
-		var notif = instance_create_layer(0, 0, "Instances", oNotification);
-		notif.target_scale = 1.5;
-		var miObjetivo = (global.myTeam == "AZUL") ? "ROJA" : "AZUL";
-		if (flag_scored == miObjetivo) {
-			notif.text = "TU EQUIPO ANOTO!";
-			notif.color = c_lime;
-		} else {
-			notif.text = "EL OTRO EQUIPO ANOTO!";
-			notif.color = c_orange;
-		}
+		fb_anotacion(global.myTeam, global.myName);   // C2: franja de anotacion (scr_feedback)
 	}
 	else {
 		with(oOtherPlayer) {
 			SendEventToClient(clientId, "request_point", {
 				team: (global.myTeam == "AZUL") ? "AZUL" : "ROJA",
-				resetFlag: flag_scored
+				resetFlag: flag_scored,
+				nombre: global.myName   // opcional
 			});
 		}
 	}
@@ -617,17 +611,15 @@ if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (
 	if (oBrain.AmIPseudoHost) {
 		with(miBandera) { x = spawnX; y = spawnY; }
 
-		var notif = instance_create_layer(0, 0, "Instances", oNotification);
-		notif.text = "¡SALVASTE TU BANDERA!";
-		notif.color = c_aqua;
-		notif.target_scale = 1.2;
+		fb_toast("BANDERA DEVUELTA", "Salvaste tu bandera", fb_team_col(global.myTeam));
 
 		with(oOtherPlayer) {
 			SendEventToClient(clientId, "sync_score", {
 				azul: global.puntos_azul,
 				rojo: global.puntos_rojo,
 				resetFlag: (global.myTeam == "AZUL") ? "AZUL" : "ROJA",
-				reason: "RETORNO"
+				reason: "RETORNO",
+				nombre: global.myName   // opcional
 			});
 		}
 		score_pending = false;
@@ -636,7 +628,8 @@ if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (
 		with(oOtherPlayer) {
 			SendEventToClient(clientId, "request_point", {
 				team: "SISTEMA",
-				resetFlag: (global.myTeam == "AZUL") ? "AZUL" : "ROJA"
+				resetFlag: (global.myTeam == "AZUL") ? "AZUL" : "ROJA",
+				nombre: global.myName   // opcional
 			});
 		}
 	}
@@ -695,12 +688,7 @@ if (global.xp >= 100)
 	global.lvl += 1;
 	global.xp -= 100;
 
-	if (instance_exists(oNotification)) {
-		var notif = instance_create_layer(0, 0, "Instances", oNotification);
-		notif.text = "SUBISTE AL NIVEL " + string(global.lvl) + "!";
-		notif.color = c_yellow;
-		notif.target_scale = 2;
-	}
+	fb_toast("SUBISTE AL NIVEL " + string(global.lvl) + "!", "", FB_ORO);
 
 	ini_open("data.ini");
 	ini_write_real("user", "lvl", global.lvl);

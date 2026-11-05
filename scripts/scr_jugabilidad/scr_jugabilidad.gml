@@ -193,9 +193,7 @@ function scr_rail_update() {
 	}
 
 	if (_golpes >= 2) {
-		var _no = instance_create_layer(x, y - 50, "Instances", oNotification);
-		_no.text = "DOBLE IMPACTO!";
-		_no.color = c_yellow;
+		fb_toast("DOBLE IMPACTO!", "Railgun", c_yellow);
 	}
 
 	scrCamShake(8);

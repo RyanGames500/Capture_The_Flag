@@ -1,17 +1,11 @@
+// Feedback de partido limpio en cada mapa (scr_feedback)
+fb_init();
+
 if (AmIPseudoHost) {
 
-    // 1) Mover al host a la izquierda
-    with (oPlayer) {
-        x = 51;
-        y = 400;
-        latest_x = x;
-        latest_y = y;
-    }
-
-    // 2) Decirle al cliente que se ponga a la derecha
-    if (instance_exists(oOtherPlayer)) {
-        SendEventToClient(oOtherPlayer.clientId, "init_pos_color", { x: 1359, y: 400,  team: "ROJO"});
-    }
+    // Cada jugador nace solo en la base de su equipo (scr_spawn_en_base).
+    // Antes aquí el host se ponía a la izquierda y mandaba a UN solo rival a x=1359.
+    with (oPlayer) scr_spawn_en_base();
 }
 
 
