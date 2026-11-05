@@ -83,7 +83,7 @@ your sharedProperties
 
 		// --- SPRITE: durante el golpe mostramos su sprite de HIT local ---
 		if (hit_bloqueo_timer > 0) {
-		    var _hits = [spr_player_hit, spr_player2_hit, spr_player3_hit, spr_player4_hit];
+		    var _hits = [spr_player_hit, spr_player2_hit, spr_player3_hit, spr_sargento_hit];
 		    sprite_index = _hits[clamp(mySelectedPJ, 0, 3)];
 		} else {
 		    sprite_index = real(SP._SI);
@@ -125,6 +125,12 @@ your sharedProperties
 		has_shield = real(SP._SH)
 		team = string(SP._TEAM);
 		max_health = real(SP._MH);
+		// Habilidad (scr_personajes). Si viene de una versión vieja no trae nada.
+		hab_co = variable_struct_exists(SP, "_HCO") ? real(SP._HCO) : false;
+		hab_da = variable_struct_exists(SP, "_HDA") ? real(SP._HDA) : false;
+		hab_gf = variable_struct_exists(SP, "_HGF") ? real(SP._HGF) : 0;
+		hab_gx = variable_struct_exists(SP, "_HGX") ? real(SP._HGX) : x;
+		hab_gy = variable_struct_exists(SP, "_HGY") ? real(SP._HGY) : y;
 
 		var net_melee = real(SP._MELEE);
 

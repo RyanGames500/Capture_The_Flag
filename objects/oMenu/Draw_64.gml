@@ -368,6 +368,9 @@ else if (menu_state == "lobby_espera") {
         }
     }
 
+    // --- 3b. AJUSTES DE LA PARTIDA (tiempo, mapa, banderas) ---
+    scr_ajustes_draw(oBrain.AmIPseudoHost, lobby_sel);
+
     // --- 4. FOOTER / BOTONES ---
     draw_set_halign(fa_center);
     draw_set_valign(fa_top);
@@ -375,7 +378,7 @@ else if (menu_state == "lobby_espera") {
         var cant = 1; with(oOtherPlayer) cant++;
         if (cant == global.max_players_allowed) {
             draw_set_color(c_yellow);
-            draw_text(gui_w / 2, gui_h - 80, "SALA LLENA! PRESIONA 'S' PARA EMPEZAR");
+            draw_text(gui_w / 2, gui_h - 80, touch_mode() ? "SALA LLENA! PRESIONA OK PARA EMPEZAR" : "SALA LLENA! PRESIONA 'S' PARA EMPEZAR");
         } else {
             draw_set_color(c_gray);
             draw_text(gui_w / 2, gui_h - 80, "ESPERANDO... (" + string(cant) + "/" + string(global.max_players_allowed) + ")");

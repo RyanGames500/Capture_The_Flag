@@ -36,6 +36,7 @@ else
         case "smg":   maxReserve = 240; break;
         case "escop": maxReserve = 180; break;
         case "shell": maxReserve = 40;  break;
+        case "sniper": maxReserve = 15; break;   // francotiradores (scr_armas)
     }
 
     var cur = (variable_struct_exists(reserve, t)) ? reserve[$ t] : 0;

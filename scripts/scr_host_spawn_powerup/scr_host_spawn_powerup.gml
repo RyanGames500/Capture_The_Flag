@@ -7,7 +7,7 @@ function scr_host_spawn_powerup(_x, _y, _tipo, _spawnID)
     p.spawn_id = _spawnID;
     
     // Configuración según tipo
-    p.amount = (_tipo == "heal") ? 25 : 0; 
+    p.amount = (_tipo == "heal") ? 40 : 0;   // 40: la vida de los personajes subió ×1.5
     
     // Tiempos (600 frames = 10 segundos)
     if (_tipo == "speed")  p.duration = 400;

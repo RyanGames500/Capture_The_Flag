@@ -8,6 +8,7 @@ function callback_ChangeRoom(new_room_id) {
     
     // Tu lógica de matchmaking de antes...
     if(string_count("auto_match_", new_room_id)){
+        scr_ajustes_default();   // partida rápida: 5 min, nivel 1, 3 banderas
         room_goto(rm_stage1);
     }
 }

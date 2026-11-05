@@ -1,1 +1,1 @@
-tipo_spawn = "weapon";
+tipo_spawn = "ammo";

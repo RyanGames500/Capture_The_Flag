@@ -18,7 +18,7 @@ if (!ocupado) {
 
         // 3. DECIDIR QUÉ CREAR
         switch(tipo_spawn) {
-            case 0: _es_municion = true; break;
+            case 0: if (mezcla && random(100) < 25) _es_granada = true; else _es_municion = true; break;
             case 1: _es_granada  = true; break;
             case 2: _es_powerup  = true; break;
         }
@@ -50,14 +50,15 @@ if (!ocupado) {
         if (_es_powerup) {
             my_item = instance_create_layer(x, y, "Instances", oPowerupPickup);
             with(my_item) {
-                var _pows = ["speed", "heal", "shield", "damage", "ammo"];
-                tipo = _pows[irandom(array_length(_pows)-1)];
+                tipo = scr_poder_al_azar(other.nivel);   // los de la base / los del centro (scr_armas)
                 duration = 600;
                 amount = 50; // Para el heal
                 spawn_id = other.id;
             }
         }
 
-        timer = cooldown_max;
+        // Cuánto tarda en volver cuando lo agarren (8 s munición, 18 s poderes, ±20%)
+        timer = scr_spawn_frames((tipo_spawn == 2) ? "powerup" : "ammo", nivel);
+        timer_max = timer;
     }
 }

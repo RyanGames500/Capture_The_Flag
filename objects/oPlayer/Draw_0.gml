@@ -115,3 +115,6 @@ if (has_shield) {
     gpu_set_blendmode(bm_normal);
     draw_set_alpha(1);
 }
+
+// Habilidad: coraza, estela del impulso, gancho y la flecha de la Exploradora (scr_personajes)
+scr_hab_draw();

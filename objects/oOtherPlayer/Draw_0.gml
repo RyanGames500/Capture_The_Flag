@@ -108,3 +108,9 @@ if (has_shield) {
     gpu_set_blendmode(bm_normal);
     draw_set_alpha(1);
 }
+
+// --- HABILIDAD: lo que mandó por la red (scr_personajes) ---
+scr_hab_draw_otro();
+
+// --- LAG: si hace rato no llegan sus datos, se ve gris con LAG encima ---
+scr_red_draw_lag();

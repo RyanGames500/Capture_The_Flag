@@ -8,6 +8,7 @@
 #macro BOT_NAV_JUMP_W    64    // lo más lejos que llega de lado en un salto hacia arriba
 #macro BOT_NAV_REPLAN    60    // frames entre recalcular el camino
 #macro BOT_NAV_STUCK     120   // frames sin avanzar antes de rehacer el camino
+#macro BOT_NAV_GAP_W     128   // hueco más ancho que salta corriendo (a la misma altura, más o menos)
 
 /// Arma la red una sola vez por nivel. La guarda en global.bot_nav.
 function scr_bot_nav_build() {
@@ -58,6 +59,7 @@ function scr_bot_nav_build() {
 			}
 
 			var _dh = _A.py - _B.py;
+			var _n_antes = array_length(_A.e);
 			if (_dh > 0 && _dh <= BOT_NAV_JUMP_H && _adx <= BOT_NAV_JUMP_W) {
 				if (collision_rectangle(_A.px - 9, _B.py - 50, _A.px + 10, _A.py - 1, obj_wall, false, true) == noone) {
 					array_push(_A.e, { to: j, t: "jump", c: _adx + _dh + 40 });
@@ -72,6 +74,32 @@ function scr_bot_nav_build() {
 				} else if (_clear && _A.fin != 0 && sign(_dx) == _A.fin && _adx <= _reach + 16) {
 					array_push(_A.e, { to: j, t: "fall", c: _adx + _fall * 0.5 });
 				}
+			}
+
+			// Hueco entre dos plataformas casi a la misma altura: salta corriendo desde la orilla
+			if (array_length(_A.e) == _n_antes && _A.fin != 0 && sign(_dx) == _A.fin && _B.fin == -_A.fin
+			&& abs(_dh) <= 40 && _adx <= BOT_NAV_GAP_W) {
+				var _top = min(_A.py, _B.py);
+				if (collision_rectangle(min(_A.px, _B.px), _top - 80, max(_A.px, _B.px), _top - 1, obj_wall, false, true) == noone) {
+					array_push(_A.e, { to: j, t: "gap", c: _adx + 60 });
+				}
+			}
+		}
+	}
+
+	// 4. Plataformas de salto: desde el punto encima de la plataforma, a lo que queda arriba
+	with (oSalto) {
+		for (var _pi = 0; _pi < _count; _pi++) {
+			var _PA = _nodes[_pi];
+			if (abs(_PA.px - x) > 16 || abs(_PA.py - y) > 2) continue;
+			for (var _pj = 0; _pj < _count; _pj++) {
+				var _PB = _nodes[_pj];
+				var _pdh = _PA.py - _PB.py;
+				if (_pdh <= BOT_NAV_JUMP_H || _pdh > SALTO_ALTO - 24) continue;
+				var _padx = abs(_PB.px - _PA.px);
+				if (_padx > 150) continue;
+				if (collision_rectangle(_PA.px - 9, _PB.py - 50, _PA.px + 10, _PA.py - 40, obj_wall, false, true) != noone) continue;
+				array_push(_PA.e, { to: _pj, t: "pad", c: _padx + 80 });
 			}
 		}
 	}
@@ -129,7 +157,7 @@ function scr_bot_nav_path(_from, _to) {
 	return _path;
 }
 
-/// Qué tipo de paso hay entre dos puntos: "walk", "jump", "drop" o "fall".
+/// Qué tipo de paso hay entre dos puntos: "walk", "jump", "drop", "fall", "gap" o "pad".
 function scr_bot_nav_edge(_a, _b) {
 	var _edges = global.bot_nav.nodes[_a].e;
 	for (var k = 0; k < array_length(_edges); k++) {
@@ -184,6 +212,16 @@ function scr_bot_nav_move(_tx, _ty) {
 	if (!is_undefined(_n) && _grounded) {
 		if (_type == "jump" && abs(x - _n.px) <= BOT_NAV_JUMP_W) key_jump = true;
 		if (_type == "drop" && abs(x - _n.px) < 16 && _onplat) drop_timer = 14;
+		// Plataforma de salto: parado encima, salta (oSalto lo lanza alto) y en el aire va hacia el destino
+		if (_type == "pad") {
+			var _desde = _nodes[nav_path[nav_i - 1]];
+			if (abs(x - _desde.px) < 12 && abs(_feet - _desde.py) < 6) { key_jump = true; nav_quiere_pad = true; }
+		}
+		// Hueco: salta ya en la orilla, corriendo hacia el otro lado
+		if (_type == "gap") {
+			var _from = _nodes[nav_path[nav_i - 1]];
+			if (abs(x - _from.px) < 14 && abs(_feet - _from.py) < 6) key_jump = true;
+		}
 	}
 
 	// Atascado: si no se acerca a su siguiente punto, rehace el camino

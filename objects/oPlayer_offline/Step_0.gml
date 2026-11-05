@@ -22,10 +22,10 @@ if (emote_cd > 0) emote_cd--;
 var _emote_to_send = -1;
 
 if (emote_cd <= 0) {
-    if (keyboard_check_pressed(ord("1"))) _emote_to_send = 0;
-    if (keyboard_check_pressed(ord("2"))) _emote_to_send = 1;
-    if (keyboard_check_pressed(ord("3"))) _emote_to_send = 2;
-    if (keyboard_check_pressed(ord("4"))) _emote_to_send = 3;
+    if (vkey_pressed(ord("1"))) _emote_to_send = 0;
+    if (vkey_pressed(ord("2"))) _emote_to_send = 1;
+    if (vkey_pressed(ord("3"))) _emote_to_send = 2;
+    if (vkey_pressed(ord("4"))) _emote_to_send = 3;
 
     if (_emote_to_send != -1) {
         var _e = instance_create_layer(x, y - 75, "Instances", oEmote);
@@ -50,10 +50,10 @@ if (ammo_timer > 0) { ammo_timer--; if (ammo_timer <= 0) infinite_ammo = false; 
 is_grounded = place_meeting(x, y + 1, obj_wall) || place_meeting(x, y + 1, oPlataformaPasable);
 
 // 1. Entradas
-key_left  = keyboard_check(ord("A"));
-key_right = keyboard_check(ord("D"));
-key_jump  = keyboard_check_pressed(ord("W"));
-key_melee = mouse_check_button_pressed(mb_right);
+key_left  = vkey(ord("A"));
+key_right = vkey(ord("D"));
+key_jump  = vkey_pressed(ord("W"));
+key_melee = vmouse_pressed(mb_right);
 
 if (melee_cd > 0) melee_cd--;
 if (melee_active > 0) melee_active--;
@@ -68,9 +68,10 @@ if (speed_timer > 0) {
     walksp_mult = 1.0;
 }
 walksp = walksp_base * walksp_mult;
+walksp *= scr_arma_peso_mult();   // la Thompson pesa (scr_armas)
 
 // --- RECOIL Y RECARGA ---
-if (!mouse_check_button(mb_left)) ak_recoil = max(0, ak_recoil - 0.6);
+if (!vmouse(mb_left)) ak_recoil = max(0, ak_recoil - 0.6);
 recoil_kick *= 0.75; recoil_angle *= 0.75; recoil_x *= 0.7; recoil_y *= 0.7;
 
 if (reloading) {
@@ -112,17 +113,17 @@ if (melee_active > 0) {
 
     var target = instance_place(hx, hy, oPlayer2_local); 
     if (target != noone) {
-        target.hp -= melee_damage;
+        scr_dano_bot(target, melee_damage, global.myName);
         melee_active = 0;
     }
 }
 
 // --- ATAQUE SECUNDARIO (GRANADAS / MELEE) ---
-if (mouse_check_button_pressed(mb_right)) {
+if (vmouse_pressed(mb_right)) {
     if (granadas > 0) {
         granadas -= 1;
         melee_cd = room_speed div 3;
-        var dir = point_direction(x, y - 16, mouse_x, mouse_y);
+        var dir = point_direction(x, y - 16, aim_x(), aim_y());
         var fuerza = 8;
         var nade = instance_create_layer(x + lengthdir_x(15, dir), y - 16 + lengthdir_y(15, dir), "Instances", oGranada);
         nade.owner_name = global.myName;
@@ -141,6 +142,11 @@ if (mouse_check_button_pressed(mb_right)) {
 
 if (state != PLAYERSTATE2.DEAD) vsp += grv;
 
+
+// --- PLATAFORMA DE SALTO (scr_jugabilidad): saltar encima de ella te lanza alto ---
+if (key_jump && is_grounded && (state == PLAYERSTATE2.IDLE || state == PLAYERSTATE2.WALK || state == PLAYERSTATE2.JUMP)) {
+	if (scr_salto_usar()) { is_grounded = false; key_jump = false; state = PLAYERSTATE2.JUMP; }
+}
 
 // --- MÁQUINA DE ESTADOS ---
 switch (state) {
@@ -190,7 +196,7 @@ switch (state) {
 // ======================================================
 
 // --- 1. ACTIVACIÓN (Disparo directo al Mouse) ---
-if (mouse_check_button_pressed(mb_middle) && state != PLAYERSTATE2.GRAPPLE) {
+if (vmouse_pressed(mb_middle) && state != PLAYERSTATE2.GRAPPLE) {
     state = PLAYERSTATE2.GRAPPLE;
     grapple_hitting = false;
     grapple_is_returning = false;
@@ -200,7 +206,7 @@ if (mouse_check_button_pressed(mb_middle) && state != PLAYERSTATE2.GRAPPLE) {
     grapple_timer = 0;
     
     // Fijamos la dirección exacta hacia el mouse en este instante
-    grapple_dir = point_direction(x, y - 20, mouse_x, mouse_y);
+    grapple_dir = point_direction(x, y - 20, aim_x(), aim_y());
     
     // Sonido de lanzamiento
     if (global.sfx) audio_play_sound(snd_shoot, 10, false);
@@ -282,7 +288,7 @@ if (state == PLAYERSTATE2.GRAPPLE) {
             vsp = lengthdir_y(16, _dir_hacia_pared);
             
             // Soltar si llegas, presionas espacio o pasa mucho tiempo
-            if (_dist < 35 || keyboard_check_pressed(vk_space) || grapple_timer > 50) {
+            if (_dist < 35 || vkey_pressed(vk_space) || grapple_timer > 50) {
                 state = PLAYERSTATE2.IDLE;
                 vsp = -4; // Saltito de salida
             }
@@ -306,7 +312,7 @@ if (state == PLAYERSTATE2.GRAPPLE) {
                 }
                 
                 // Soltar si llega, espacio o tiempo
-                if (_dist_enemigo < 50 || keyboard_check_pressed(vk_space) || grapple_timer > 60) {
+                if (_dist_enemigo < 50 || vkey_pressed(vk_space) || grapple_timer > 60) {
                     state = PLAYERSTATE2.IDLE;
                     // Opcional: Activar stun o ataque melee aquí
                 }

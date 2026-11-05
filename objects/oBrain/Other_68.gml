@@ -123,6 +123,7 @@ case "state_update":
         if(clientId == _incomingId){
             afk = realData.afk;
             sharedProperties = realData.SP;
+            last_sp_time = current_time;   // para saber si tiene lag
             found = true;
             entities = (realData.entities);
         }

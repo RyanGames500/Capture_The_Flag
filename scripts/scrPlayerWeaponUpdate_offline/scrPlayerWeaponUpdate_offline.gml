@@ -3,7 +3,7 @@ function scrPlayerWeaponUpdate_offline()
     if (guns[weapon.index] == noone) exit;
 
     // Actualizar el ángulo
-    weapon.angle = point_direction(x, y, mouse_x, mouse_y);
+    weapon.angle = point_direction(x, y, aim_x(), aim_y());
 
     // Cooldowns
     if (weapon.frequency > 0) weapon.frequency--;
@@ -12,10 +12,16 @@ function scrPlayerWeaponUpdate_offline()
     var w = guns[weapon.index];
     var t2 = w.type2;
 
+    // Armas nuevas: railgun y mina tienen su propio disparo (scr_jugabilidad)
+    if (t2 == "rail") { scr_rail_update(); exit; }
+    if (t2 == "mina") { scr_mina_update(); exit; }
+    // Las 19 armas nuevas comparten un solo disparo que lee sus números (scr_armas)
+    if (scr_arma_es_generica(w)) { scr_arma_generica_update(); exit; }
+
     // =========================================
     // DISPARO
     // =========================================
-    if (mouse_check_button(mb_left) && weapon.frequency <= 0)
+    if (vmouse(mb_left) && weapon.frequency <= 0)
     {
         // ---------- SIN BALAS ----------
         if (w.ammo <= 0)
@@ -66,8 +72,8 @@ function scrPlayerWeaponUpdate_offline()
             var bullet = instance_create_layer(bx, by, "Instances", oPlayer_bullet);
             bullet.owner_name = global.myName;
             bullet.sprite_index = sprBullet_gun;
-            bullet.speed = 7;
-            bullet.direction = point_direction(bx, by, mouse_x, mouse_y);
+            bullet.speed = 16;   // antes 7 (llegaba a 280 px)
+            bullet.direction = point_direction(bx, by, aim_x(), aim_y());
             bullet.life = 40;
             bullet.owner_team = global.myTeam;
             bullet.owner_id = id;
@@ -109,14 +115,14 @@ function scrPlayerWeaponUpdate_offline()
             recoil_kick += 3;
             recoil_angle += random_range(-1, 1);
 
-            var base_dir = point_direction(bx, by, mouse_x, mouse_y);
+            var base_dir = point_direction(bx, by, aim_x(), aim_y());
             ak_recoil = clamp(ak_recoil + 0.9, 0, 10);
             var shot_dir = base_dir + random_range(-2.0, 2.0) - (ak_recoil * random_range(0.5, 0.9));
 
             var bullet = instance_create_layer(bx, by, "Instances", oPlayer_bullet);
             bullet.owner_name = global.myName;
             bullet.sprite_index = sprBullet_smg;
-            bullet.speed = 11;
+            bullet.speed = 16;   // antes 11
             bullet.direction = shot_dir;
             bullet.life = 35;
             bullet.damage = w.damage * damage_boost; 
@@ -159,7 +165,7 @@ function scrPlayerWeaponUpdate_offline()
 
             var pellets = 7;
             var spread = 18;
-            var base_dir = point_direction(bx, by, mouse_x, mouse_y);
+            var base_dir = point_direction(bx, by, aim_x(), aim_y());
 
             var flash = instance_create_layer(bx, by, "Instances", oMuzzleFlash);
             flash.sprite_index = sprMuzzle_escop;
@@ -176,7 +182,7 @@ function scrPlayerWeaponUpdate_offline()
                 var b = instance_create_layer(bx, by, "Instances", oPlayer_bullet);
                 b.owner_name = global.myName;
                 b.sprite_index = sprBullet_escop;
-                b.speed = 6 + random_range(-0.5, 0.5);
+                b.speed = 8 + random_range(-0.6, 0.6);   // antes 6: sigue siendo de corto alcance
                 b.direction = ang;
                 b.life = 18 + irandom(6);
                 b.damage = w.damage * damage_boost; 
@@ -248,17 +254,17 @@ function scrPlayerWeaponUpdate_offline()
             recoil_kick += 4.5;
             recoil_angle += random_range(-1.5, 1.5);
 
-            var base_dir = point_direction(bx, by, mouse_x, mouse_y);
+            var base_dir = point_direction(bx, by, aim_x(), aim_y());
             ak_recoil = clamp(ak_recoil + 0.7, 0, 8); 
             var shot_dir = base_dir + random_range(-1.5, 1.5) - (ak_recoil * random_range(0.4, 0.7));
 
             var bullet = instance_create_layer(bx, by, "Instances", oPlayer_bullet);
             bullet.owner_name = global.myName;
             bullet.sprite_index = sprBullet_smg;
-            bullet.speed = 14;
+            bullet.speed = 19;   // antes 14
             bullet.direction = shot_dir;
             bullet.image_angle = shot_dir;
-            bullet.life = 45;
+            bullet.life = 40;    // con 19 de velocidad llega a 760 px
             bullet.damage = w.damage * damage_boost; 
             bullet.owner_team = global.myTeam;
             bullet.owner_id = id;

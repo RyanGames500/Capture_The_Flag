@@ -119,6 +119,43 @@ weapon_struct_box = {
     reloadTime: 0,
     index: 0
 };
+
+// --- ARMAS NUEVAS (scr_jugabilidad) ---
+// No usan reserva: cuando se acaban las cargas vuelves a las manos.
+weapon_struct_rail = {
+    sprite_suelo: spr_railgun,
+    sprite: spr_railgun,
+    object: oGun,
+    subimage: 0,
+    ammo: 3,
+    maxAmmo: 3,
+    frequency: room_speed,     // 1 s entre disparos (más la carga de medio segundo)
+    type2: "rail",
+    damage: RAIL_DANO,
+    ammoType: "",
+    clipSize: 0,
+    reloadTime: 0,
+    index: 0
+};
+
+weapon_struct_mina = {
+    sprite_suelo: spr_mina,
+    sprite: spr_mina,
+    object: oGun,
+    subimage: 0,
+    ammo: 2,
+    maxAmmo: 2,
+    frequency: 20,
+    type2: "mina",
+    damage: MINA_DANO,
+    ammoType: "",
+    clipSize: 0,
+    reloadTime: 0,
+    index: 0
+};
+
+// --- LAS 19 ARMAS NUEVAS (scr_armas) ---
+scr_armas_init();
 #endregion
 
 //efecto fantasma
@@ -220,3 +257,16 @@ abandono_gano   = false;
 abandono_titulo = "";
 abandono_texto  = "";
 if (!variable_global_exists("fx_ps")) fx_init();
+
+// --- AVISO DE RED (scr_red) ---
+net_estado = "ok";      // "ok", "unst" (inestable) o "lost" (sin conexión)
+net_lost_desde = 0;     // cuándo se perdió
+net_botones_desde = 0;  // desde cuándo cuenta para mostrar los botones
+net_toast = 0;          // frames del aviso CONEXION RECUPERADA
+net_sel = 0;            // botón elegido: 0 seguir esperando, 1 salir
+
+// --- RELOJ DE PARTIDA Y AJUSTES DE SALA (scr_reloj) ---
+scr_ajustes_default();  // 5 min, nivel 1, 3 banderas
+reloj_seg = -1;         // segundos que quedan (-1 = no ha empezado o sin límite)
+reloj_frames = 0;
+reloj_fin = false;      // se acabó el tiempo (si van empatados: muerte súbita)

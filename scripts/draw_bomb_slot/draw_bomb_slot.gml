@@ -4,7 +4,8 @@ function draw_bomb_slot(_x, _y, _pj, _name, _ready, _is_me, _team, _w, _h) {
 
     // --- 1. FONDO DE PUNTOS (spr_fondo_select) ---
     // Lo dibujamos estirado exactamente al tamaño alto del slot
-    draw_sprite_stretched(global.fondo_puntos, 0, _x - (_w/2), _y - (_h/2), _w, _h);
+    var _fondo = (_team == "AZUL") ? spr_fondo_select_azul : global.fondo_puntos;   // fondo del color del equipo
+    draw_sprite_stretched(_fondo, 0, _x - (_w/2), _y - (_h/2), _w, _h);
 
     // --- 2. PERSONAJE (Imagen completa p.ej. Adriana, Terry...) ---
     if (_pj != -1 && _pj < array_length(global.pj_portraits)) {
@@ -31,6 +32,9 @@ function draw_bomb_slot(_x, _y, _pj, _name, _ready, _is_me, _team, _w, _h) {
     var _anim_frame = (current_time * 0.015) % sprite_get_number(spr_marco_slot); 
     draw_sprite_ext(spr_marco_slot, _anim_frame, _x, _y, (_w * 1.08) / sprite_get_width(spr_marco_slot), (_h * 1.08) / sprite_get_height(spr_marco_slot), 0, _col_team, 1);
 
+    // --- 3b. PERSONAJE Y SU HABILIDAD (scr_personajes) ---
+    scr_pj_slot_texto(_pj, _x, _y - (_h/2) + 22);
+
     // --- 4. INFO JUGADOR (Nombre arriba) ---
     draw_set_halign(fa_center);
     var _txt_c = _is_me ? c_yellow : c_white;
@@ -44,13 +48,13 @@ function draw_bomb_slot(_x, _y, _pj, _name, _ready, _is_me, _team, _w, _h) {
         draw_set_alpha(1);
         
         var _vib = sin(current_time*0.05)*5; // Vibración estilo arcade
-        draw_text_transformed_color(_x, _y, "READY!", 2, 2, _vib, c_lime, c_lime, c_white, c_white, 1);
+        draw_text_transformed_color(_x, _y, "LISTO!", 2, 2, _vib, c_lime, c_lime, c_white, c_white, 1);
     }
     
     // Indicador de "TÚ"
     if (_is_me) {
         var _float = sin(current_time * 0.01) * 5;
         // Ponemos un "P1" o flecha brillante arriba a la izquierda del marco
-        draw_text_transformed_color(_x - (_w/2), _y - (_h/2) - 20 + _float, "P1 YOURS", 0.8, 0.8, 0, c_yellow, c_yellow, c_orange, c_orange, 1);
+        draw_text_transformed_color(_x - (_w/2), _y - (_h/2) - 20 + _float, "TU", 0.8, 0.8, 0, c_yellow, c_yellow, c_orange, c_orange, 1);
     }
 }

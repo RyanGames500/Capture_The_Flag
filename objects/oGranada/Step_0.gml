@@ -27,7 +27,7 @@ var target = instance_place(x, y, oPlayer2_local);
 if (target != noone && !done) {
     instance_create_layer(x, y, "Instances", oExplosion);
 	scrCamShake(11);
-	oPlayer2_local.hp-=40;
+	scr_dano_bot(target, 40, global.myName);
     instance_destroy();
     done = true;
 }

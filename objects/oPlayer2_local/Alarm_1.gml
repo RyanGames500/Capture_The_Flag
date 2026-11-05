@@ -6,6 +6,7 @@ y = spawn_y;
 
 // 2. RESETEAR ESTADO FÍSICO Y SALUD
 hp = 100;
+last_killer = "";
 isDead = false;
 state = PLAYER2.IDLE;
 visible = true;

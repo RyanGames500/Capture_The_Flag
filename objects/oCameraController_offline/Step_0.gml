@@ -2,6 +2,10 @@
 if (instance_exists(follow)) {
     xTo = follow.x - camera_get_view_width(cam) * 0.5;
     yTo = follow.y - camera_get_view_height(cam) * 0.5;
+
+    // Mirar hacia donde apuntas: la cámara se adelanta un poco hacia la mira (scr_mira)
+    xTo += scr_mira_adelanto_x(follow);
+    yTo += scr_mira_adelanto_y(follow);
 }
 
 // clamp a room
@@ -21,3 +25,6 @@ shake_y = random_range(-shake, shake);
 
 // aplicar
 camera_set_view_pos(cam, cx + shake_x, cy + shake_y);
+
+// fondo con profundidad (scr_jugabilidad)
+scr_fondo_parallax(cam);

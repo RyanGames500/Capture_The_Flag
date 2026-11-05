@@ -12,6 +12,7 @@ if (variable_instance_exists(id, "is_box") && is_box)
 }
 else 
 {
-    // Balas o Rockets normales
+    // Balas o Rockets normales (las balas con su estela, scr_mira)
+    if (!is_rocket && (sprite_index == sprBullet_gun || sprite_index == sprBullet_smg || sprite_index == sprBullet_escop)) scr_bala_estela(x, y, direction, 24);
     draw_self();
 }

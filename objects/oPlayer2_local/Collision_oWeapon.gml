@@ -1,5 +1,8 @@
 // --- Colisión del Player con objgun ---
 is_bot=true
+// El bot no sabe usar el railgun ni la mina: las deja en el piso para ti
+if (is_struct(other.weapon) && (other.weapon.type2 == "rail" || other.weapon.type2 == "mina" || scr_arma_es_generica(other.weapon))) exit;
+
 // 1. Verificamos que el objeto tenga un arma asignada
 if (is_struct(other.weapon)) {
     

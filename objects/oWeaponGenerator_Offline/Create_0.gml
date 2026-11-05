@@ -1,2 +1,8 @@
-var _arma = instance_create_layer(x, y, "Instances", objgun);
-_arma.weapon = choose(oBrain.weapon_struct_m4,oBrain.weapon_struct_pistola,oBrain.weapon_struct_bazooka,oBrain.weapon_struct_escopeta,oBrain.weapon_struct_smg,oBrain.weapon_struct_box)
+// Generador de armas (local). Ahora vuelve a poner un arma cuando se llevan la suya.
+// nivel (código de creación en el room): 1 = pistolas/subfusiles, 2 = rifles/escopetas,
+// 3 = las fuertes (esperan 20 s al empezar), 0 = de todo.
+nivel = 0;
+my_item = noone;
+timer = 0;
+timer_max = 0;
+primera_vez = true;

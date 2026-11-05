@@ -1,9 +1,15 @@
+// --- AVISO DE RED: revisa cuánto hace que el servidor no responde ---
+scr_red_step();
+
+// --- RELOJ DE PARTIDA (lo lleva el líder) ---
+scr_reloj_step();
+
 // ======================================================
 // 🏆 LÓGICA DE VICTORIA Y PAUSA (MODO OFFLINE Y ONLINE)
 // ======================================================
 
 // --- 1. ACTIVACIÓN DE PAUSA (ESC) ---
-if (keyboard_check_pressed(vk_escape) && !global.game_over && room != rm_menu)
+if (vkey_pressed(vk_escape) && !global.game_over && room != rm_menu)
 {
     global.pausa = !global.pausa;
     if (global.pausa) {
@@ -14,11 +20,11 @@ if (keyboard_check_pressed(vk_escape) && !global.game_over && room != rm_menu)
 
 // --- 2. LÓGICA DEL MENÚ DE PAUSA ---
 if (global.pausa) {
-    var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+    var move = vkey_pressed(vk_down) - vkey_pressed(vk_up);
     var max_index = (global.ONLINE) ? 1 : 2;
     pause_index = clamp(pause_index + move, 0, max_index);
 
-    if (keyboard_check_pressed(vk_enter)) {
+    if (vkey_pressed(vk_enter)) {
         if (global.ONLINE) {
             if (pause_index == 0) global.pausa = false;
             if (pause_index == 1) { 
@@ -81,13 +87,13 @@ if (global.game_over == true && !abandono_activo) {
         }
 
         // --- NAVEGACIÓN DE BOTONES (Ahora solo 2 opciones) ---
-        var move = keyboard_check_pressed(vk_right) - keyboard_check_pressed(vk_left);
+        var move = vkey_pressed(vk_right) - vkey_pressed(vk_left);
         
         // El límite máximo ahora es siempre 1 (porque el índice es 0 y 1)
         victory_index = clamp(victory_index + move, 0, 1);
 
         // --- ACCIÓN AL PRESIONAR ENTER ---
-        if (keyboard_check_pressed(vk_enter)) {
+        if (vkey_pressed(vk_enter)) {
             
             if (global.ONLINE) {
                 switch(victory_index) {
@@ -147,7 +153,7 @@ if (global.game_over == true && !abandono_activo) {
         }
         
         // Salir rápido con ESC
-        if (keyboard_check_pressed(vk_escape) && !abandono_activo){
+        if (vkey_pressed(vk_escape) && !abandono_activo){
             if (global.ONLINE) LeaveRoom(); else room_goto(rm_menu);
         }
     }
@@ -258,8 +264,14 @@ if (global.game_over == false)
 	if (oBrain.AmIPseudoHost) 
     {
         var _ganador = 0;
-        if (global.puntos_rojo >= 3) _ganador = 1;
-        if (global.puntos_azul >= 3) _ganador = 2;
+        var _lim = scr_banderas_para_ganar();   // lo elige el líder en la sala (3 en partida rápida)
+        if (global.puntos_rojo >= _lim) _ganador = 1;
+        if (global.puntos_azul >= _lim) _ganador = 2;
+        // Se acabó el tiempo: gana el que va arriba. Si van empatados, sigue (muerte súbita)
+        // y la siguiente bandera rompe el empate.
+        if (_ganador == 0 && reloj_fin && global.puntos_rojo != global.puntos_azul) {
+            _ganador = (global.puntos_rojo > global.puntos_azul) ? 1 : 2;
+        }
 
         if (_ganador != 0) 
         {
@@ -292,7 +304,7 @@ if (global.game_over == true)
 
     if (victory_alpha >= 0.9) 
     {
-        if (keyboard_check_pressed(vk_escape)) 
+        if (vkey_pressed(vk_escape)) 
         {
             LeaveRoom();
         }
@@ -303,20 +315,7 @@ else
     victory_alpha = 0; 
 }
 
-if (oBrain.AmIPseudoHost) {
-    with(oHammer) {
-        if (!ataca && irandom(200) == 1) { 
-            ataca = true;
-            image_speed = 1;
-            
-            // CAMBIO: Avisar a TODOS los clientes del ataque
-            var hammerData = { _id: myHammerId };
-            with(oOtherPlayer) {
-                SendEventToClient(clientId, "hammer_attack", hammerData);
-            }
-        }
-    }
-}
+// Las prensas (oHammer) ahora deciden solas cuándo caen y avisan con "hammer_go" (ver scr_prensa)
     
 // ======================================================
 // 🔔 ALERTAS (CAPTURA DE BANDERA, ETC)
@@ -358,55 +357,74 @@ if (oBrain.AmIPseudoHost)
 {
     with(oSpawnPoint) 
     {
+        // a) Las armas fuertes (nivel 3) esperan 20 segundos al empezar la partida
+        if (primera_vez) {
+            primera_vez = false;
+            if (tipo_spawn == "weapon" && nivel == 3 && !ocupado) {
+                cooldown = scr_spawn_primera_espera();
+                cooldown_max = cooldown;
+                scr_spawn_point_enviar(id);
+            }
+        }
+
+        // b) ¿Se llevaron lo que puse? (lo agarraron o desapareció) -> el punto queda libre y empieza su reloj
+        if (ocupado) {
+            if (mi_item == noone) mi_item = scr_spawn_point_item_cerca();   // por si me tocó ser host a mitad de partida
+            if (mi_item == noone || !instance_exists(mi_item)) {
+                mi_item = noone;
+                ocupado = false;
+                cooldown = scr_spawn_frames(tipo_spawn, nivel);
+                cooldown_max = cooldown;
+                scr_spawn_point_enviar(id);
+            }
+        }
+
+        // c) Libre: contar y, al llegar a cero, poner algo
         if (!ocupado) 
         {
             if (cooldown > 0) {
                 cooldown--;
             } else {
-                ocupado = true;
+                var _nuevo = noone;
                 
 				// --- SPAWN DE MUNICIÓN ---
 				if (tipo_spawn == "ammo") {
-				    // Solo llamas a la función. 
-				    // Ella crea el objeto en el servidor y le avisa a TODOS los clientes.
-				    host_spawn_ammo(x, y, 25); 
+				    // Crea el objeto en el host y le avisa a TODOS los clientes.
+				    _nuevo = host_spawn_ammo(x, y, 25); 
 				}
 				// --- SPAWN DE ARMAS ---
                 else if (tipo_spawn == "weapon") {
                     var _struct_a_usar = arma_struct;
                     if (_struct_a_usar == noone) {
-                        var _pick = irandom(5);                                         
-                        if (_pick == 0)      _struct_a_usar = other.weapon_struct_pistola;
-                        else if (_pick == 1) _struct_a_usar = other.weapon_struct_escopeta;
-                        else if (_pick == 2) _struct_a_usar = other.weapon_struct_smg;
-                        else if (_pick == 3) _struct_a_usar = other.weapon_struct_bazooka;
-						else if (_pick == 4) _struct_a_usar = other.weapon_struct_box;
-                        else                 _struct_a_usar = other.weapon_struct_m4;
+                        // Según el nivel del punto (scr_armas): 1 pistolas/subfusiles, 2 rifles/escopetas, 3 fuertes, 0 de todo
+                        _struct_a_usar = scr_arma_al_azar(nivel);
                     }
-                    
-                    // Ahora solo llamamos a la función. 
-                    // Ella se encarga de crear el objeto Y avisar a todos los clientes.
-                    host_spawn_weapon(oGun, x, y, _struct_a_usar);
-                }
-				//SPAWN DE POWERUPS
-				else if (tipo_spawn == "powerup") {
-				    // 0: Speed, 1: Heal, 2: Shield, 3: Damage, 4: Ammo
-				    var pick = irandom(4); 
-				    var tipo_final = "heal";
-    
-				    if (pick == 0) tipo_final = "speed";
-				    if (pick == 1) tipo_final = "heal";
-				    if (pick == 2) tipo_final = "shield";
-				    if (pick == 3) tipo_final = "damage";
-				    if (pick == 4) tipo_final = "ammo";
+                    _nuevo = host_spawn_weapon(oGun, x, y, _struct_a_usar);
 
-				    // La función se encarga del resto
-				    scr_host_spawn_powerup(x, y, tipo_final, myID);
+                    // Aviso arriba cuando sale un arma fuerte (a todos)
+                    if (nivel == 3 && _nuevo != noone) {
+                        var _txt = scr_arma_nombre(_struct_a_usar) + " EN EL CENTRO";
+                        scrAddAlert(_txt, c_orange);
+                        with(oOtherPlayer) SendEventToClient(clientId, "aviso_arma", { txt: _txt });
+                    }
+                }
+				// --- SPAWN DE PODERES ---
+				else if (tipo_spawn == "powerup") {
+				    // Según el nivel del punto (scr_armas): 1 curación/velocidad, 2 escudo/daño/balas, 0 todos
+				    _nuevo = scr_host_spawn_powerup(x, y, scr_poder_al_azar(nivel), myID);
 				}
 
-                // Avisar a todos que el punto se ocupó
-                with(oOtherPlayer) {
-                    SendEventToClient(clientId, "sync_spawn_point", { pID: other.myID, isOcupado: true });
+                if (_nuevo != noone && instance_exists(_nuevo)) {
+                    mi_item = _nuevo;
+                    ocupado = true;
+                    cooldown = 0;
+                    cooldown_max = 0;
+                    // Avisar a todos que el punto se ocupó
+                    scr_spawn_point_enviar(id);
+                } else {
+                    // No se pudo crear: probar otra vez en 1 segundo
+                    cooldown = game_get_speed(gamespeed_fps);
+                    cooldown_max = 0;
                 }
             }
         }
@@ -452,12 +470,8 @@ if (oBrain.AmIPseudoHost)
                     });
                 }
 
-                // 4. Spawns ocupados
-                with(oSpawnPoint) {
-                    if (ocupado) {
-                        SendEventToClient(targetID, "sync_spawn_point", { pID: myID, isOcupado: true });
-                    }
-                }
+                // 4. Puntos de spawn (ocupados y los que van contando, para que vea los anillos)
+                with(oSpawnPoint) scr_spawn_point_enviar(id, targetID);
             }
         }
     }
@@ -489,7 +503,7 @@ if (save_state == "sending") {
 // --- LÓGICA DE SELECCIÓN VERTICAL (Actualizada para 4 personajes) ---
 if (!intro_disparada && room != rm_menu) {
     if (!global.mi_listo) {
-        var move = keyboard_check_pressed(vk_down) - keyboard_check_pressed(vk_up);
+        var move = vkey_pressed(vk_down) - vkey_pressed(vk_up);
         
         if (move != 0) {
             // CAMBIO AQUÍ: Sumamos 4 y usamos % 4 para que el ciclo sea 0, 1, 2, 3
@@ -508,7 +522,7 @@ if (!intro_disparada && room != rm_menu) {
 
 // oBrain - Step Event (Lógica de selección)
 
-if (!global.mi_listo && keyboard_check_pressed(vk_enter)) {
+if (!global.mi_listo && vkey_pressed(vk_enter)) {
     global.mi_listo = true;
     
     // 1. DETERMINAR POSICIÓN SEGÚN EQUIPO
@@ -607,7 +621,7 @@ if (abandono_check > 0) {
 if (abandono_activo && room != rm_menu) {
     abandono_timer--;
     // Enter o ESC para salir antes
-    if (abandono_timer <= 0 || keyboard_check_pressed(vk_enter) || keyboard_check_pressed(vk_escape)) {
+    if (abandono_timer <= 0 || vkey_pressed(vk_enter) || vkey_pressed(vk_escape)) {
         abandono_activo = false;
         LeaveRoom();
     }

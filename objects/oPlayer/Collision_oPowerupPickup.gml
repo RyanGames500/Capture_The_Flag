@@ -6,7 +6,7 @@ if (other.tipo == "speed") {
     walksp_mult = 1.5; 
 } 
 else if (other.tipo == "heal") { 
-    health = min(100, health + other.amount); 
+    health = min(max_health, health + other.amount);   // tope: la vida de tu personaje
 }
 else if (other.tipo == "shield") {
     has_shield = true;
