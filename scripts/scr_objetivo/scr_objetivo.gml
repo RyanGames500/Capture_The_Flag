@@ -2033,6 +2033,7 @@ function scr_voz_recibir(_m, _de) {
 		}
 		global.voz.rec++;
 		global.voz.hablan[$ _k] = 15;
+		global.voz.duck_t = VOZ_BAJA_T;   // la musica baja mientras se oye a alguien
 	} catch (_e) { scr_voz_err("recibir", _e); }
 }
 
@@ -2125,6 +2126,8 @@ function scr_voz_step() {
 		var _hk = variable_struct_get_names(_v.hablan);
 		for (var i = 0; i < array_length(_hk); i++) if (_v.hablan[$ _hk[i]] > 0) _v.hablan[$ _hk[i]] -= 1;
 		if (_v.pico_t > 0) _v.pico_t--;
+		if (!variable_struct_exists(_v, "duck_t")) _v.duck_t = 0;
+		if (_v.duck_t > 0) _v.duck_t--;
 
 		if (!scr_voz_activa()) {
 			if (_v.on || array_length(variable_struct_get_names(_v.colas)) > 0) scr_voz_apagar();
@@ -2364,4 +2367,20 @@ function scr_voz_en_zona(_mx, _my) {
 		if (point_in_rectangle(_mx, _my, _g.x, _y0, _g.x + _g.pw, _y0 + _ph)) return true;
 	}
 	return false;
+}
+
+// ------------------------------------------------------
+// MUSICA MAS BAJITA MIENTRAS ALGUIEN HABLA (como Discord / Free Fire)
+// Mientras se oye la voz de alguien la musica baja a VOZ_MUSICA; cuando se calla, a los
+// VOZ_BAJA_T frames vuelve sola a su volumen (scr_musica_step la sube y baja suave).
+// Tu propia voz no la baja (tu no te escuchas).
+// ------------------------------------------------------
+#macro VOZ_MUSICA  0.3   // a cuanto baja la musica (0.3 = 30%)
+#macro VOZ_BAJA_T  60    // cuanto se queda bajita despues de la ultima voz (60 = 1 segundo)
+
+function scr_voz_baja_musica() {
+	if (!variable_global_exists("voz") || !is_struct(global.voz)) return 1;
+	if (!variable_struct_exists(global.voz, "duck_t") || global.voz.duck_t <= 0) return 1;
+	if (!scr_voz_activa()) return 1;
+	return VOZ_MUSICA;
 }

@@ -5,6 +5,9 @@ if (bot_local) { scr_botnet_step(); exit; }
 try{
 if(sharedProperties!=-1){
 var SP = json_parse(sharedProperties)
+// Todavia no tiene personaje en el mapa (sala de espera o eligiendo): sus datos llegan sin
+// posicion. Antes eso daba el error "_x not set" muchisimas veces; ahora solo no se mueve.
+if (is_struct(SP) && variable_struct_exists(SP, "_x")) {
 
 /*
 This is every instance of another player in the room you are in
@@ -173,6 +176,7 @@ your sharedProperties
 
 		
 
+}   // fin: ya tiene personaje
 //DO NOT PUT YOUR CODE AFTER THIS LINE
 }
 }catch(e){

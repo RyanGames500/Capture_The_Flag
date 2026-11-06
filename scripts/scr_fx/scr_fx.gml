@@ -646,6 +646,7 @@ function scr_musica_step() {
     var _e = scr_musica_elegir();
     var _n = scr_musica_existe(_e[0]) ? _e[0] : "";
     var _g = (variable_global_exists("pausa") && global.pausa) ? 0.5 : 1;
+    _g *= scr_voz_baja_musica();   // en sala privada, mientras alguien habla la musica baja al 30% (scr_objetivo)
 
     if (_n != _m.nombre) {
         // la que sonaba se apaga suave
