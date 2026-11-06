@@ -310,7 +310,9 @@ function opt_init() {
         temblor: 0,     // 0 normal, 1 suave, 2 apagado
         btn_tam: 0,     // botones del celular: 0 normal, 1 grande, 2 chico
         btn_alpha: 70,  // que tanto se ven los botones del celular (70 = como antes)
-        mira: 0         // distancia de la mira en el celular: 0 normal, 1 lejos, 2 cerca
+        mira: 0,        // distancia de la mira en el celular: 0 normal, 1 lejos, 2 cerca
+        mic_modo: 0,    // voz en salas privadas: 0 mantener para hablar, 1 microfono abierto
+        vol_voz: 100    // volumen de la voz de los demas 0..100
     };
     ini_open("ajustes.ini");
     var _viejo = !ini_key_exists("ajustes", "vol_sfx");   // ajustes de antes de las barras de musica/efectos
@@ -365,7 +367,9 @@ function opt_filas() {
         { k: "temblor",   n: "TEMBLOR DE PANTALLA",  o: ["NORMAL", "SUAVE", "APAGADO"], col: 0 },
         { k: "btn_tam",   n: "TAMANO DE BOTONES",    o: ["NORMAL", "GRANDE", "CHICO"], sec: "CONTROLES DEL CELULAR", col: 1 },
         { k: "btn_alpha", n: "VISIBILIDAD BOTONES",  slider: true, col: 1 },
-        { k: "mira",      n: "DISTANCIA DE LA MIRA", o: ["NORMAL", "LEJOS", "CERCA"], col: 1 }
+        { k: "mira",      n: "DISTANCIA DE LA MIRA", o: ["NORMAL", "LEJOS", "CERCA"], col: 1 },
+        { k: "mic_modo",  n: "MICROFONO",            o: ["MANTENER", "ABIERTO"], sec: "VOZ (SALAS PRIVADAS)", col: 1 },
+        { k: "vol_voz",   n: "VOLUMEN DE VOZ",       slider: true, col: 1 }
     ];
 }
 

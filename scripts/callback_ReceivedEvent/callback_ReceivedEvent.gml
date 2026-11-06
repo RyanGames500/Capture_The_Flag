@@ -138,6 +138,11 @@ case "SALA_LLENA":
             }
         break;
 
+case "voz":
+    // Voz de alguien de la sala privada (scr_objetivo, CHAT DE VOZ)
+    scr_voz_recibir(theMessageStruct, senderClientId);
+break;
+
 case "chat_sala":
     // Mensaje del chat de la sala privada (scr_objetivo)
     scr_chat_recibir(theMessageStruct);

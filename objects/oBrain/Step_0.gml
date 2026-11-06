@@ -1,6 +1,9 @@
 // --- MUSICA: cual suena ahorita (scr_fx) ---
 scr_musica_step();
 
+// --- CHAT DE VOZ de las salas privadas (scr_objetivo) ---
+scr_voz_step();
+
 // --- AVISO DE RED: revisa cuánto hace que el servidor no responde ---
 scr_red_step();
 
@@ -547,7 +550,7 @@ if (save_state == "sending") {
 
 // --- LÓGICA DE SELECCIÓN VERTICAL (Actualizada para 4 personajes) ---
 // Solo en línea o contra el bot (en el modo local no hay selección de personaje)
-if (!intro_disparada && room != rm_menu && (global.ONLINE || global.bot_partida)) {
+if ((!intro_disparada || scr_sel_tarde()) && room != rm_menu && (global.ONLINE || global.bot_partida)) {   // scr_sel_tarde: te quedaste sin personaje (scr_objetivo)
     if (!global.mi_listo) {
         var move = vkey_pressed(vk_down) - vkey_pressed(vk_up);
         
@@ -613,15 +616,23 @@ else if (!global.mi_listo && vkey_pressed(vk_enter)) {
 }
 
 // Auto-selección al acabarse el tiempo
-if (timer_intro == 0 && !global.mi_listo) {
+// Solo en el mapa, y ahora SI te crea el personaje (antes quedabas "listo" pero sin personaje)
+if (timer_intro == 0 && !global.mi_listo && room != rm_menu) {
     global.mi_listo = true;
-    with(oOtherPlayer) {
-        SendEventToClient(clientId, "pj_listo", { 
-            pj: global.pj_selected, 
-            fromId: global.clientId 
-        });
+    if (global.ONLINE && !instance_exists(oPlayer)) {
+        scr_sel_crear_jugador();   // scr_objetivo
+    } else {
+        with(oOtherPlayer) {
+            SendEventToClient(clientId, "pj_listo", { 
+                pj: global.pj_selected, 
+                fromId: global.clientId 
+            });
+        }
     }
 }
+
+// Seguro: si la partida ya empezo y no tengo personaje, me deja elegir (scr_objetivo)
+scr_sel_tarde_step();
 
 
 // ======================================================

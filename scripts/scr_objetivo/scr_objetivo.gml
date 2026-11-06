@@ -1410,6 +1410,7 @@ function scr_sala_roster_fijar(_aj) {
 /// Se borra la lista al cambiar de sala del servidor
 function scr_sala_roster_limpiar() {
 	scr_chat_reset();   // el chat es de cada sala
+	scr_voz_apagar();   // y la voz tambien (scr_objetivo, CHAT DE VOZ)
 	global.sala_roster = [];
 	global.sala_rechazados = {};
 	global.sala_eq = {};
@@ -1754,6 +1755,7 @@ function scr_partida_estado_nuevo() {
 	global.puntos_rojo = 0;
 	global.winner_team = 0;
 	global.mi_listo    = false;
+	global.sel_tarde   = false;
 	if (variable_global_exists("fest") && is_struct(global.fest)) global.fest.t = 0;
 	if (instance_exists(oBrain)) with (oBrain) {
 		intro_disparada   = false;
@@ -1765,4 +1767,601 @@ function scr_partida_estado_nuevo() {
 		abandono_check    = -1;
 	}
 	if (instance_exists(oIntroVersus)) instance_destroy(oIntroVersus);
+}
+
+// ======================================================
+// SEGURO DE SELECCION: nadie se queda sin personaje
+// Si la partida en linea ya arranco (paso la intro) y yo no tengo personaje, a los 0.75 s
+// me sale otra vez la seleccion ("LA PARTIDA YA EMPEZO: ELIGE Y ENTRAS"). Al darle ENTER
+// aparezco en mi base como siempre.
+// ======================================================
+function scr_sel_tarde() {
+	return variable_global_exists("sel_tarde") && global.sel_tarde;
+}
+
+/// Va en el Step de oBrain
+function scr_sel_tarde_step() {
+	if (!variable_global_exists("sel_tarde")) global.sel_tarde = false;
+	if (!variable_instance_exists(id, "sel_tarde_t")) sel_tarde_t = 0;
+	var _sin_pj = global.ONLINE && room != rm_menu && intro_disparada && !instance_exists(oIntroVersus)
+		&& !global.game_over && !instance_exists(oPlayer);
+	if (global.sel_tarde) {
+		if (!_sin_pj) global.sel_tarde = false;   // ya tengo personaje (o se acabo la partida)
+		return;
+	}
+	if (_sin_pj) {
+		sel_tarde_t++;
+		if (sel_tarde_t >= 45) {
+			sel_tarde_t = 0;
+			global.sel_tarde = true;
+			global.mi_listo = false;   // para que ENTER me cree el personaje
+			show_debug_message(">>> SELECCION: estaba en la partida sin personaje, vuelvo a elegir");
+		}
+	} else {
+		sel_tarde_t = 0;
+	}
+}
+
+/// Crea mi personaje en mi base y avisa a los demas (igual que al darle ENTER en la seleccion)
+function scr_sel_crear_jugador() {
+	global.myTeam = scr_my_team();
+	var _base = (global.myTeam == "AZUL") ? obj_base_blue : obj_base_red;
+	var _sx = instance_exists(_base) ? _base.x : ((global.myTeam == "AZUL") ? 100 : room_width - 100);
+	var _sy = instance_exists(_base) ? _base.y : 400;
+	instance_create_layer(_sx, _sy, "Instances", oPlayer);
+	effect_create_above(ef_ring, _sx, _sy, 1, (global.myTeam == "AZUL") ? c_aqua : c_red);
+	with (oOtherPlayer) {
+		if (es_bot) continue;
+		SendEventToClient(clientId, "pj_listo", { pj: global.pj_selected, fromId: global.clientId });
+	}
+	if (global.sfx) audio_play_sound(snd_ready, 1, false);
+}
+
+// ======================================================
+// CHAT DE VOZ (SOLO SALAS PRIVADAS)
+// - Sala de espera: hablan todos. Partida: solo te escucha tu equipo.
+// - AJUSTES > MICROFONO: MANTENER (V o el boton HABLAR) o ABIERTO (un toque lo prende/apaga).
+//   En ABIERTO solo se manda cuando de verdad hablas (si hay silencio no se gasta internet).
+// - Se graba con el microfono, se baja a 8000 Hz 16 bits mono y se manda cada ~0.2 s en base64
+//   a cada jugador que debe oirte (este servidor manda de uno en uno, por eso es un envio por persona).
+// - Cada jugador que habla tiene su propia cola de audio en mi aparato.
+// - HTML5 no puede grabar (manual de GameMaker: "Most platforms except HTML5 support recording audio"),
+//   ahi solo se intenta escuchar.
+// - Todo va dentro de try/catch: si algo falla, el juego sigue y el error sale en el contador.
+// Eventos: oBrain Async Grabacion (Other_73) -> scr_voz_async_grabacion
+//          oBrain Async Reproduccion (Other_74) -> scr_voz_async_play
+// ======================================================
+#macro VOZ_DEBUG    true    // contador de prueba (enviados / recibidos / volumen). Ponlo en false cuando ya funcione
+#macro VOZ_HZ       8000
+#macro VOZ_TROZO    3200    // bytes por envio (0.2 s a 8000 Hz 16 bits)
+#macro VOZ_UMBRAL   1200    // en ABIERTO: volumen minimo para mandar (de 32768). Sube si se manda ruido
+#macro VOZ_COLGAR   20      // en ABIERTO: frames que sigue mandando despues de que dejas de hablar
+#macro VOZ_PERMISO  "android.permission.RECORD_AUDIO"
+
+function scr_voz_init() {
+	if (variable_global_exists("voz") && is_struct(global.voz)) return;
+	global.voz = {
+		on: false, canal: -1, rate: 16000, fmt: buffer_s16, fijo: -1, fijo_tam: 0, pend: -1,
+		env: 0, rec: 0, vol: 0, pico_t: 0, err: "",
+		colas: {}, hablan: {}, mute: {},
+		abierto_on: true, perm_pedido: false,
+		panel: false, toque: false
+	};
+}
+
+function scr_voz_err(_donde, _e) {
+	scr_voz_init();
+	var _m = is_struct(_e) && variable_struct_exists(_e, "message") ? _e.message : string(_e);
+	global.voz.err = _donde + ": " + string_copy(_m, 1, 80);
+	show_debug_message("[Voz] ERROR en " + _donde + ": " + string(_m));
+}
+
+/// ¿Estoy en una sala privada (esperando o jugando)?
+function scr_voz_activa() {
+	if (!variable_global_exists("ONLINE") || !global.ONLINE) return false;
+	if (!scr_fin_es_privada()) return false;
+	if (room == rm_menu) return instance_exists(oMenu) && oMenu.menu_state == "lobby_espera";
+	return true;
+}
+
+/// ¿Este aparato puede grabar? (HTML5 no; Android necesita el permiso)
+function scr_voz_puede_grabar() {
+	if (os_browser != browser_not_a_browser) return false;
+	if (os_type == os_android && !os_check_permission(VOZ_PERMISO)) return false;
+	return audio_get_recorder_count() > 0;
+}
+
+/// Por que no puedo hablar (texto para el panel), o "" si si puedo
+function scr_voz_motivo() {
+	if (os_browser != browser_not_a_browser) return "VOZ NO DISPONIBLE EN NAVEGADOR (SOLO ESCUCHAS)";
+	if (os_type == os_android && !os_check_permission(VOZ_PERMISO)) return "FALTA PERMISO DE MICROFONO";
+	if (audio_get_recorder_count() <= 0) return "NO SE ENCONTRO MICROFONO";
+	return "";
+}
+
+/// A quien le mando mi voz: en la sala de espera a todos; en la partida solo a mi equipo
+function scr_voz_destinos() {
+	var _l = [];
+	var _sala = (room == rm_menu);
+	var _yo = scr_my_team();
+	with (oOtherPlayer) {
+		if (es_bot || clientId < 0) continue;
+		if (!_sala && team != _yo) continue;
+		array_push(_l, clientId);
+	}
+	return _l;
+}
+
+function scr_voz_hablando(_cid) {
+	scr_voz_init();
+	var _k = string(_cid);
+	return variable_struct_exists(global.voz.hablan, _k) && global.voz.hablan[$ _k] > 0;
+}
+
+/// ¿Yo estoy hablando ahorita? (para mi propio microfonito)
+function scr_voz_yo_hablo() {
+	scr_voz_init();
+	opt_init();
+	if (!global.voz.on) return false;
+	return (global.opt.mic_modo == 0) || (global.voz.pico_t > 0);
+}
+
+function scr_voz_empezar() {
+	var _v = global.voz;
+	if (!scr_voz_puede_grabar()) {
+		if (os_type == os_android && !os_check_permission(VOZ_PERMISO) && !_v.perm_pedido) {
+			_v.perm_pedido = true;
+			os_request_permission(VOZ_PERMISO);
+			show_debug_message("[Voz] pidiendo permiso de microfono");
+		}
+		return;
+	}
+	_v.canal = audio_start_recording(0);
+	var _info = audio_get_recorder_info(0);
+	if (ds_exists(_info, ds_type_map)) {
+		if (!is_undefined(_info[? "sample_rate"])) _v.rate = _info[? "sample_rate"];
+		if (!is_undefined(_info[? "data_format"])) _v.fmt = _info[? "data_format"];
+		ds_map_destroy(_info);
+	}
+	if (_v.pend == -1) _v.pend = buffer_create(VOZ_TROZO * 2, buffer_grow, 1);
+	buffer_seek(_v.pend, buffer_seek_start, 0);
+	_v.on = true;
+	show_debug_message("[Voz] grabando: canal " + string(_v.canal) + ", " + string(_v.rate) + " Hz, formato " + string(_v.fmt));
+}
+
+function scr_voz_parar() {
+	var _v = global.voz;
+	if (_v.canal != -1) audio_stop_recording(_v.canal);
+	_v.canal = -1;
+	_v.on = false;
+	// Lo que quedo sin mandar (si es mas de 0.05 s)
+	if (_v.pend != -1 && buffer_tell(_v.pend) >= 800) scr_voz_mandar();
+	if (_v.pend != -1) buffer_seek(_v.pend, buffer_seek_start, 0);
+	_v.vol = 0;
+	show_debug_message("[Voz] dejo de grabar");
+}
+
+/// Manda lo que hay en el buffer de envio
+function scr_voz_mandar() {
+	var _v = global.voz;
+	var _len = buffer_tell(_v.pend);
+	buffer_seek(_v.pend, buffer_seek_start, 0);
+	if (_len <= 0) return;
+	opt_init();
+	if (global.opt.mic_modo == 1 && _v.pico_t <= 0) return;   // ABIERTO y en silencio: no se manda
+	var _d = buffer_base64_encode(_v.pend, 0, _len);
+	var _m = { a: global.clientId, d: _d };
+	var _l = scr_voz_destinos();
+	for (var i = 0; i < array_length(_l); i++) SendEventToClient(_l[i], "voz", _m);
+	_v.env++;
+	_v.hablan[$ string(global.clientId)] = 15;
+}
+
+/// oBrain, Async - Grabacion de audio (Other_73)
+function scr_voz_async_grabacion() {
+	try {
+		scr_voz_init();
+		var _v = global.voz;
+		if (!_v.on || async_load[? "channel_index"] != _v.canal) return;
+		var _len = async_load[? "data_len"];
+		if (is_undefined(_len) || _len <= 0) return;
+		// 1) COPIAR primero a mi buffer fijo (leer directo del de GameMaker daba silencio)
+		if (_v.fijo == -1 || _v.fijo_tam < _len) {
+			if (_v.fijo != -1) buffer_delete(_v.fijo);
+			_v.fijo = buffer_create(_len, buffer_fixed, 1);
+			_v.fijo_tam = _len;
+		}
+		buffer_copy(async_load[? "buffer_id"], 0, _len, _v.fijo, 0);
+
+		// 2) Bajar a 8000 Hz, 16 bits, mono
+		var _bps = (_v.fmt == buffer_u8) ? 1 : ((_v.fmt == buffer_f32) ? 4 : 2);
+		var _n = _len div _bps;
+		var _paso = max(1, _v.rate / VOZ_HZ);
+		var _pico = 0;
+		for (var p = 0; p < _n; p += _paso) {
+			var _off = floor(p) * _bps;
+			if (_off + _bps > _len) break;
+			var _s;
+			if (_bps == 1) _s = (buffer_peek(_v.fijo, _off, buffer_u8) - 128) * 256;
+			else if (_bps == 4) _s = buffer_peek(_v.fijo, _off, buffer_f32) * 32767;
+			else _s = buffer_peek(_v.fijo, _off, buffer_s16);
+			_s = clamp(round(_s), -32768, 32767);
+			buffer_write(_v.pend, buffer_s16, _s);
+			_pico = max(_pico, abs(_s));
+		}
+		_v.vol = round(_pico / 32768 * 100);
+		if (_pico >= VOZ_UMBRAL) _v.pico_t = VOZ_COLGAR;
+
+		// 3) Cada ~0.2 s se manda un pedacito
+		if (buffer_tell(_v.pend) >= VOZ_TROZO) scr_voz_mandar();
+	} catch (_e) { scr_voz_err("grabar", _e); }
+}
+
+/// Llega voz de alguien (callback_ReceivedEvent, "voz")
+function scr_voz_recibir(_m, _de) {
+	try {
+		scr_voz_init();
+		if (!scr_voz_activa()) return;
+		if (!is_struct(_m) || !variable_struct_exists(_m, "d") || !is_string(_m.d)) return;
+		var _k = string(_de);
+		if (variable_struct_exists(global.voz.mute, _k) && global.voz.mute[$ _k]) return;   // lo silencie
+		// base64 -> buffer "grow"; la cola solo acepta buffers FIJOS: se copia
+		var _b = buffer_base64_decode(_m.d);
+		var _sz = buffer_get_size(_b);
+		if (_sz < 2) { buffer_delete(_b); return; }
+		_sz -= _sz mod 2;
+		var _fx = buffer_create(_sz, buffer_fixed, 1);
+		buffer_copy(_b, 0, _sz, _fx, 0);
+		buffer_delete(_b);
+
+		var _c = global.voz.colas[$ _k];
+		if (is_undefined(_c)) {
+			_c = { q: audio_create_play_queue(buffer_s16, VOZ_HZ, audio_mono), snd: -1, n: 0 };
+			global.voz.colas[$ _k] = _c;
+		}
+		audio_queue_sound(_c.q, _fx, 0, _sz);
+		_c.n++;
+		var _suena = (_c.snd >= 0) && audio_is_playing(_c.snd);
+		if (!_suena) {
+			if (_c.snd >= 0) { _c.snd = -1; _c.n = 1; }   // termino lo anterior: este es el primero
+			if (_c.n >= 2) {                                // juntar 2 pedacitos antes de sonar
+				_c.snd = audio_play_sound(_c.q, 10, false);
+				opt_init();
+				if (_c.snd >= 0) audio_sound_gain(_c.snd, global.opt.vol_voz / 100, 0);
+				_c.n = 0;
+			}
+		}
+		global.voz.rec++;
+		global.voz.hablan[$ _k] = 15;
+	} catch (_e) { scr_voz_err("recibir", _e); }
+}
+
+/// oBrain, Async - Reproduccion de audio (Other_74): borra el buffer que ya sono
+function scr_voz_async_play() {
+	try {
+		var _b = async_load[? "buffer_id"];
+		if (!is_undefined(_b) && buffer_exists(_b)) buffer_delete(_b);
+	} catch (_e) { scr_voz_err("play", _e); }
+}
+
+/// Apaga todo (al salir de la sala)
+function scr_voz_apagar() {
+	try {
+		scr_voz_init();
+		var _v = global.voz;
+		if (_v.on) scr_voz_parar();
+		var _k = variable_struct_get_names(_v.colas);
+		for (var i = 0; i < array_length(_k); i++) {
+			var _c = _v.colas[$ _k[i]];
+			if (_c.snd >= 0) audio_stop_sound(_c.snd);
+			audio_free_play_queue(_c.q);
+		}
+		_v.colas = {};
+		_v.hablan = {};
+		_v.panel = false;
+	} catch (_e) { scr_voz_err("apagar", _e); }
+}
+
+/// Silenciar / quitar silencio a alguien (solo en mi aparato)
+function scr_voz_mute_cambiar(_cid) {
+	var _v = global.voz;
+	var _k = string(_cid);
+	var _m = !(variable_struct_exists(_v.mute, _k) && _v.mute[$ _k]);
+	_v.mute[$ _k] = _m;
+	if (_m) {
+		var _c = _v.colas[$ _k];
+		if (!is_undefined(_c) && _c.snd >= 0) { audio_stop_sound(_c.snd); _c.snd = -1; _c.n = 0; }
+	}
+}
+
+function scr_voz_muted(_cid) {
+	scr_voz_init();
+	var _k = string(_cid);
+	return variable_struct_exists(global.voz.mute, _k) && global.voz.mute[$ _k];
+}
+
+/// Medidas del panel (sala de espera a la izquierda; en pausa tambien a la izquierda)
+function scr_voz_geo() {
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	var _u = clamp(min(_gw / 1280, _gh / 720), 0.6, 1.6);
+	return { u: _u, x: 20 * _u, y: 80 * _u, w: 170 * _u, h: 32 * _u,
+		hx: 20 * _u, hy: 120 * _u, hw: 170 * _u, hh: 48 * _u,       // boton HABLAR (sala de espera)
+		pw: 300 * _u, fila: 34 * _u };
+}
+
+/// Quienes salen en el panel: yo y las personas (en la partida, solo mi equipo)
+function scr_voz_lista() {
+	var _l = [{ cid: global.clientId, n: global.myName, yo: true, eq: scr_my_team() }];
+	var _sala = (room == rm_menu);
+	var _yo = scr_my_team();
+	with (oOtherPlayer) {
+		if (es_bot || clientId < 0) continue;
+		var _eq = (team != "") ? team : lobby_team;
+		if (!_sala && team != _yo) continue;
+		array_push(_l, { cid: clientId, n: (Name != "") ? Name : "...", yo: false, eq: _eq });
+	}
+	return _l;
+}
+
+/// ¿Algun dedo (o el mouse) aprieta este rectangulo?
+function __voz_toca(_x1, _y1, _x2, _y2, _solo_nuevo) {
+	for (var d = 0; d < 5; d++) {
+		var _on = _solo_nuevo ? device_mouse_check_button_pressed(d, mb_left) : device_mouse_check_button(d, mb_left);
+		if (!_on) continue;
+		var _mx = device_mouse_x_to_gui(d), _my = device_mouse_y_to_gui(d);
+		if (point_in_rectangle(_mx, _my, _x1, _y1, _x2, _y2)) return true;
+	}
+	return false;
+}
+
+/// Va en el Step de oBrain (siempre). Decide cuando grabar y maneja el panel.
+function scr_voz_step() {
+	try {
+		scr_voz_init();
+		opt_init();
+		var _v = global.voz;
+		_v.toque = false;
+		// Bajan los tiempos de "esta hablando"
+		var _hk = variable_struct_get_names(_v.hablan);
+		for (var i = 0; i < array_length(_hk); i++) if (_v.hablan[$ _hk[i]] > 0) _v.hablan[$ _hk[i]] -= 1;
+		if (_v.pico_t > 0) _v.pico_t--;
+
+		if (!scr_voz_activa()) {
+			if (_v.on || array_length(variable_struct_get_names(_v.colas)) > 0) scr_voz_apagar();
+			return;
+		}
+		// Volumen de voz de los que ya suenan
+		var _ck = variable_struct_get_names(_v.colas);
+		for (var i = 0; i < array_length(_ck); i++) {
+			var _c = _v.colas[$ _ck[i]];
+			if (_c.snd >= 0 && audio_is_playing(_c.snd)) audio_sound_gain(_c.snd, global.opt.vol_voz / 100, 0);
+		}
+
+		var _sala = (room == rm_menu);
+		var _chat = _sala && variable_global_exists("chat") && is_struct(global.chat) && global.chat.abierto;
+		var _g = scr_voz_geo();
+
+		// --- Que quiere el jugador: tecla V, boton HABLAR del celular (partida) o el de la sala ---
+		var _hold = false, _tap = false;
+		if (!_chat) {
+			_hold = keyboard_check(ord("V"));
+			_tap  = keyboard_check_pressed(ord("V"));
+		}
+		if (!_sala) {
+			_hold = _hold || __touch_held(string(ord("V")));
+			_tap  = _tap  || __touch_pressed(string(ord("V")));
+		} else if (!_chat && !(instance_exists(oMenu) && oMenu.confirmar_salida)) {
+			var _bx2 = _g.hx + _g.hw, _by2 = _g.hy + _g.hh;
+			if (__voz_toca(_g.hx, _g.hy, _bx2, _by2, false)) { _hold = true; _v.toque = true; }
+			if (__voz_toca(_g.hx, _g.hy, _bx2, _by2, true))  { _tap = true; _v.toque = true; }
+		}
+		var _quiere;
+		if (global.opt.mic_modo == 0) {
+			_quiere = _hold;
+		} else {
+			if (_tap) _v.abierto_on = !_v.abierto_on;
+			_quiere = _v.abierto_on;
+		}
+		if (_quiere && !_v.on) scr_voz_empezar();
+		if (!_quiere && _v.on) scr_voz_parar();
+
+		// --- Panel: abrir/cerrar y SILENCIAR (sala de espera o pausa) ---
+		var _ver_panel = _sala || global.pausa;
+		if (_ver_panel && !_chat && !(instance_exists(oMenu) && oMenu.confirmar_salida)) {
+			var _abierto = _sala ? _v.panel : true;
+			if (_sala && __voz_toca(_g.x, _g.y, _g.x + _g.w, _g.y + _g.h, true)) { _v.panel = !_v.panel; _v.toque = true; }
+			else if (_abierto) {
+				var _l = scr_voz_lista();
+				var _y0 = _sala ? _g.y + _g.h + _g.hh + 18 * _g.u : 120 * _g.u;
+				for (var i = 0; i < array_length(_l); i++) {
+					if (_l[i].yo) continue;
+					var _ry = _y0 + 30 * _g.u + i * _g.fila;
+					if (__voz_toca(_g.x + _g.pw - 110 * _g.u, _ry, _g.x + _g.pw - 6 * _g.u, _ry + _g.fila - 4 * _g.u, true)) {
+						scr_voz_mute_cambiar(_l[i].cid);
+						_v.toque = true;
+					}
+				}
+			}
+		}
+	} catch (_e) { scr_voz_err("step", _e); }
+}
+
+/// ¿La voz uso el toque este frame? (para que en la sala no se tome como otra cosa)
+function scr_voz_toque() {
+	return variable_global_exists("voz") && is_struct(global.voz) && global.voz.toque;
+}
+
+// ------------------------------------------------------
+// DIBUJOS
+// ------------------------------------------------------
+
+/// Microfonito (blanco) centrado en x, y
+function __voz_mic(_x, _y, _s, _col, _a) {
+	draw_set_alpha(_a);
+	draw_set_colour(_col);
+	draw_roundrect_ext(_x - 3 * _s, _y - 7 * _s, _x + 3 * _s, _y + 3 * _s, 6 * _s, 6 * _s, false);
+	draw_line_width(_x - 6 * _s, _y, _x - 5 * _s, _y + 4 * _s, 1.5 * _s);
+	draw_line_width(_x + 6 * _s, _y, _x + 5 * _s, _y + 4 * _s, 1.5 * _s);
+	draw_line_width(_x - 5 * _s, _y + 4 * _s, _x + 5 * _s, _y + 4 * _s, 1.5 * _s);
+	draw_line_width(_x, _y + 4 * _s, _x, _y + 8 * _s, 1.5 * _s);
+	draw_set_alpha(1);
+}
+
+/// Ondas animadas a la derecha del microfono
+function __voz_ondas(_x, _y, _s) {
+	var _t = (current_time / 1000) * 3;
+	for (var k = 0; k < 3; k++) {
+		var _r = (7 + k * 4 + frac(_t) * 4) * _s;
+		draw_set_alpha(0.85 - k * 0.25);
+		draw_set_colour(make_color_rgb(120, 220, 140));
+		for (var a = -35; a <= 35; a += 10) {
+			draw_line(_x + lengthdir_x(_r, a), _y + lengthdir_y(_r, a), _x + lengthdir_x(_r, a + 10), _y + lengthdir_y(_r, a + 10));
+		}
+	}
+	draw_set_alpha(1);
+}
+
+/// OPCION A: burbuja con microfono sobre la cabeza (Draw de oPlayer y oOtherPlayer)
+function scr_voz_draw_cabeza(_x, _y) {
+	draw_set_alpha(0.6);
+	draw_set_colour(c_black);
+	draw_roundrect_ext(_x - 13, _y - 9, _x + 13, _y + 9, 8, 8, false);
+	draw_set_alpha(1);
+	__voz_mic(_x - 4, _y, 0.8, c_white, 1);
+	__voz_ondas(_x - 2, _y, 0.6);
+	draw_set_colour(c_white);
+}
+
+/// Badge en la burbujita del borde (fb_indicadores): x, y = centro de la burbuja
+function scr_voz_draw_borde(_bx, _by) {
+	draw_set_colour(make_color_rgb(11, 15, 26));
+	draw_circle(_bx + 21, _by - 21, 12, false);
+	draw_set_colour(make_color_rgb(78, 200, 120));
+	draw_circle(_bx + 21, _by - 21, 10, false);
+	__voz_mic(_bx + 21, _by - 21, 0.75, c_white, 1);
+}
+
+/// Una fila del panel
+function __voz_fila(_x, _y, _w, _h, _it, _u) {
+	var _habla = _it.yo ? scr_voz_yo_hablo() : scr_voz_hablando(_it.cid);
+	var _mute = !_it.yo && scr_voz_muted(_it.cid);
+	if (_habla) { draw_set_alpha(0.18); draw_set_colour(make_color_rgb(120, 220, 140)); draw_rectangle(_x, _y, _x + _w, _y + _h, false); draw_set_alpha(1); }
+	draw_set_colour((_it.eq == "ROJO") ? make_color_rgb(255, 90, 100) : make_color_rgb(79, 156, 255));
+	draw_rectangle(_x, _y, _x + 3 * _u, _y + _h, false);
+	__voz_mic(_x + 18 * _u, _y + _h / 2, 0.9 * _u, c_white, _mute ? 0.3 : 1);
+	if (_habla) __voz_ondas(_x + 20 * _u, _y + _h / 2, 0.6 * _u);
+	draw_set_font(fnt_menu);
+	draw_set_halign(fa_left);
+	draw_set_valign(fa_middle);
+	draw_set_colour(c_white);
+	var _nom = string(_it.n) + (_it.yo ? " (TU)" : "");
+	draw_text_transformed(_x + 40 * _u, _y + _h / 2, string_copy(_nom, 1, 14), 0.6 * _u, 0.6 * _u, 0);
+	if (!_it.yo) {
+		draw_set_halign(fa_center);
+		draw_set_colour(_mute ? make_color_rgb(255, 107, 122) : make_color_rgb(169, 180, 208));
+		draw_text_transformed(_x + _w - 58 * _u, _y + _h / 2, _mute ? "SILENCIADO" : "SILENCIAR", 0.5 * _u, 0.5 * _u, 0);
+	}
+	draw_set_halign(fa_left);
+}
+
+/// OPCION C: panel de la sala de espera (Draw GUI de oMenu) y de la pausa (Draw GUI de oBrain)
+function scr_voz_draw_panel() {
+	if (!scr_voz_activa()) return;
+	scr_voz_init();
+	opt_init();
+	var _v = global.voz;
+	var _g = scr_voz_geo();
+	var _u = _g.u;
+	var _sala = (room == rm_menu);
+	var _tinta = make_color_rgb(11, 15, 26);
+	var _oro = make_color_rgb(255, 212, 71);
+	var _l = scr_voz_lista();
+
+	if (_sala) {
+		// Barrita plegada: quien habla
+		var _quien = "";
+		for (var i = 0; i < array_length(_l); i++) {
+			var _h = _l[i].yo ? scr_voz_yo_hablo() : scr_voz_hablando(_l[i].cid);
+			if (_h) _quien += ((_quien == "") ? "" : ", ") + string(_l[i].n);
+		}
+		draw_set_alpha(0.85); draw_set_colour(_tinta);
+		draw_roundrect_ext(_g.x, _g.y, _g.x + _g.w, _g.y + _g.h, 8, 8, false);
+		draw_set_alpha(1);
+		__voz_mic(_g.x + 16 * _u, _g.y + _g.h / 2, 0.9 * _u, c_white, 1);
+		draw_set_font(fnt_menu);
+		draw_set_halign(fa_left); draw_set_valign(fa_middle);
+		draw_set_colour((_quien != "") ? make_color_rgb(123, 224, 143) : make_color_rgb(169, 180, 208));
+		var _txt = (_quien != "") ? string_copy(_quien, 1, 14) + " HABLA" : (_v.panel ? "VOZ (CERRAR)" : "VOZ (ABRIR)");
+		draw_text_transformed(_g.x + 32 * _u, _g.y + _g.h / 2, _txt, 0.55 * _u, 0.55 * _u, 0);
+
+		// Boton HABLAR (mantener / prender-apagar segun AJUSTES)
+		var _motivo = scr_voz_motivo();
+		var _activo = _v.on;
+		var _col = (_motivo != "") ? make_color_rgb(90, 90, 100) : (_activo ? make_color_rgb(78, 200, 120) : _oro);
+		draw_set_alpha(0.9); draw_set_colour(_tinta);
+		draw_roundrect_ext(_g.hx, _g.hy, _g.hx + _g.hw, _g.hy + _g.hh, 10, 10, false);
+		draw_set_alpha(1); draw_set_colour(_col);
+		draw_roundrect_ext(_g.hx, _g.hy, _g.hx + _g.hw, _g.hy + _g.hh, 10, 10, true);
+		__voz_mic(_g.hx + 22 * _u, _g.hy + _g.hh / 2, 1.1 * _u, _col, 1);
+		var _bt;
+		if (_motivo != "") _bt = "SIN VOZ";
+		else if (global.opt.mic_modo == 0) _bt = touch_mode() ? "MANTENER" : "MANTENER V";
+		else _bt = _v.abierto_on ? "MIC ENCENDIDO" : "MIC APAGADO";
+		draw_set_colour(_col);
+		draw_text_transformed(_g.hx + 42 * _u, _g.hy + _g.hh / 2, _bt, 0.55 * _u, 0.55 * _u, 0);
+		if (_motivo != "") {
+			draw_set_colour(make_color_rgb(169, 180, 208)); draw_set_alpha(0.7);
+			draw_set_font(fnt_small);
+			draw_text_ext_transformed(_g.hx, _g.hy + _g.hh + 12 * _u, _motivo, -1, _g.hw / (0.6 * _u), 0.6 * _u, 0.6 * _u, 0);
+			draw_set_alpha(1);
+		}
+		if (!_v.panel) { scr_voz_draw_debug(_g.x, _g.hy + _g.hh + 40 * _u); return; }
+	}
+
+	// Lista con SILENCIAR
+	var _y0 = _sala ? _g.y + _g.h + _g.hh + 18 * _u : 120 * _u;
+	var _ph = 30 * _u + array_length(_l) * _g.fila + 6 * _u;
+	draw_set_alpha(0.9); draw_set_colour(_tinta);
+	draw_roundrect_ext(_g.x, _y0, _g.x + _g.pw, _y0 + _ph, 10, 10, false);
+	draw_set_alpha(1); draw_set_colour(_oro);
+	draw_set_font(fnt_menu);
+	draw_set_halign(fa_left); draw_set_valign(fa_middle);
+	draw_text_transformed(_g.x + 10 * _u, _y0 + 15 * _u, _sala ? "VOZ DE LA SALA" : "VOZ DE TU EQUIPO", 0.6 * _u, 0.6 * _u, 0);
+	for (var i = 0; i < array_length(_l); i++) {
+		__voz_fila(_g.x + 4 * _u, _y0 + 30 * _u + i * _g.fila, _g.pw - 8 * _u, _g.fila - 4 * _u, _l[i], _u);
+	}
+	scr_voz_draw_debug(_g.x, _y0 + _ph + 14 * _u);
+	draw_set_halign(fa_left); draw_set_valign(fa_top);
+	draw_set_colour(c_white); draw_set_alpha(1);
+}
+
+/// Contador de prueba (VOZ_DEBUG)
+function scr_voz_draw_debug(_x, _y) {
+	if (!VOZ_DEBUG || !scr_voz_activa()) return;
+	scr_voz_init();
+	var _v = global.voz;
+	draw_set_font(fnt_small);
+	draw_set_halign(fa_left); draw_set_valign(fa_top);
+	draw_set_colour(c_black); draw_set_alpha(0.6);
+	var _t = "[VOZ] env " + string(_v.env) + "  rec " + string(_v.rec) + "  vol " + string(_v.vol) + "%";
+	draw_text(_x + 1, _y + 1, _t);
+	draw_set_alpha(1); draw_set_colour(c_yellow);
+	draw_text(_x, _y, _t);
+	if (_v.err != "") { draw_set_colour(c_red); draw_text(_x, _y + 14, _v.err); }
+	draw_set_colour(c_white);
+}
+
+/// ¿Ese punto cae en la barrita, el boton HABLAR o el panel abierto de la sala? (oMenu, para no tomar el toque como otra cosa)
+function scr_voz_en_zona(_mx, _my) {
+	if (!scr_voz_activa() || room != rm_menu) return false;
+	scr_voz_init();
+	var _g = scr_voz_geo();
+	if (point_in_rectangle(_mx, _my, _g.x, _g.y, _g.x + _g.w, _g.y + _g.h)) return true;
+	if (point_in_rectangle(_mx, _my, _g.hx, _g.hy, _g.hx + _g.hw, _g.hy + _g.hh)) return true;
+	if (global.voz.panel) {
+		var _y0 = _g.y + _g.h + _g.hh + 18 * _g.u;
+		var _ph = 30 * _g.u + array_length(scr_voz_lista()) * _g.fila + 6 * _g.u;
+		if (point_in_rectangle(_mx, _my, _g.x, _y0, _g.x + _g.pw, _y0 + _ph)) return true;
+	}
+	return false;
 }
