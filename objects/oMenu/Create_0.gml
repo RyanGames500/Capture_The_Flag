@@ -149,3 +149,10 @@ reto_timer = 0; // Para efectos de brillo o tiempo límite
 
 // Controles táctiles en el celular (en PC no hace nada)
 touch_ensure();
+
+// Venimos de jugar contra el bot y eligió BUSCAR RIVAL: buscar partida rápida de una
+if (variable_global_exists("bot_rebuscar") && global.bot_rebuscar) {
+    global.bot_rebuscar = false;
+    menu_state = "connecting";
+    ChangeRoom("auto_matchmake_2");
+}

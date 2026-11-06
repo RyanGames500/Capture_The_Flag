@@ -10,7 +10,7 @@ draw_rectangle(_x1 - 1, _y1 - 1, _x2 + 1, _y2 + 1, false);
 draw_set_color(c_dkgray);
 draw_rectangle(_x1, _y1, _x2, _y2, false);
 
-var _width = (health / 100) * (_x2 - _x1);
+var _width = clamp(health / max(1, max_health), 0, 1) * (_x2 - _x1);
 if (health > 0) {
     var _barColor = (global.myTeam == "AZUL") ? c_blue : c_red;
     draw_set_color(_barColor);
@@ -169,3 +169,6 @@ if (has_shield) {
     gpu_set_blendmode(bm_normal);
     draw_set_alpha(1);
 }
+
+// Contra el bot: coraza, estela del impulso y gancho (scr_personajes)
+if (global.bot_partida) scr_hab_draw();

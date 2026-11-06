@@ -1,8 +1,30 @@
+// --- MUSICA: cual suena ahorita (scr_fx) ---
+scr_musica_step();
+
 // --- AVISO DE RED: revisa cuánto hace que el servidor no responde ---
 scr_red_step();
 
 // --- RELOJ DE PARTIDA (lo lleva el líder) ---
 scr_reloj_step();
+
+// --- BOTS DE LA SALA PRIVADA (scr_objetivo): el lider los mueve y le manda a todos como van ---
+// Si el lider anterior se fue, ahora los muevo yo desde donde iban.
+if (global.ONLINE && room != rm_menu && AmIPseudoHost) {
+    with (oOtherPlayer) if (es_bot && !bot_local) scr_botnet_tomar();
+    scr_botnet_enviar();
+}
+
+// --- BOT: si en partida rápida nadie entra en unos segundos, juegas contra un bot ---
+if (scr_bot_esperando()) {
+    if (bot_espera == 0) bot_espera_max = room_speed * irandom_range(BOT_ESPERA_MIN, BOT_ESPERA_MAX);
+    bot_espera++;
+    if (bot_espera >= bot_espera_max) scr_bot_empezar();
+} else {
+    bot_espera = 0;
+}
+
+// --- CONTRA EL BOT: selección de personaje e intro (igual que en línea) ---
+scr_bot_selec_step();
 
 // ======================================================
 // 🏆 LÓGICA DE VICTORIA Y PAUSA (MODO OFFLINE Y ONLINE)
@@ -21,7 +43,7 @@ if (vkey_pressed(vk_escape) && !global.game_over && room != rm_menu)
 // --- 2. LÓGICA DEL MENÚ DE PAUSA ---
 if (global.pausa) {
     var move = vkey_pressed(vk_down) - vkey_pressed(vk_up);
-    var max_index = (global.ONLINE) ? 1 : 2;
+    var max_index = (global.ONLINE || global.bot_partida) ? 1 : 2;
     pause_index = clamp(pause_index + move, 0, max_index);
 
     if (vkey_pressed(vk_enter)) {
@@ -32,6 +54,10 @@ if (global.pausa) {
                 with(oOtherPlayer) { SendEventToClient(clientId, "player_left_msg", { texto: _msg }); }
                 LeaveRoom();
             }
+        } else if (global.bot_partida) {
+            // Contra el bot: CONTINUAR o SALIR (sin reiniciar)
+            if (pause_index == 0) global.pausa = false;
+            if (pause_index == 1) { global.pausa = false; scr_bot_salir(false); }
         } else {
             switch(pause_index) {
                 case 0: global.pausa = false; break;
@@ -65,6 +91,13 @@ if (global.ONLINE == false && global.game_over == false) {
         global.game_over = true;
         global.winner_team = _ganador_local;
         window_set_cursor(cr_arrow);
+
+        // Contra el bot de partida rápida: copas y XP (menos que contra una persona)
+        if (global.bot_partida && !puntos_procesados) {
+            puntos_procesados = true;
+            var _mi_eq = (global.myTeam == "ROJO") ? 1 : 2;
+            scr_bot_premio(_ganador_local == _mi_eq);
+        }
         with(oMouseIcon_falso) { window_set_cursor(cr_arrow); }
     }
 }
@@ -77,6 +110,7 @@ if (global.game_over == true && !abandono_activo) {
         
         if (AmIPseudoHost) {
             with(oOtherPlayer) {
+                if (es_bot) continue;   // un bot no tiene tag para la solicitud de amistad
                 SendEventToClient(clientId, "identificar_rival", { 
                     rival_tag: global.miFriendTag, 
                     rival_nombre: global.myName
@@ -86,81 +120,83 @@ if (global.game_over == true && !abandono_activo) {
             }
         }
 
-        // --- NAVEGACIÓN DE BOTONES (Ahora solo 2 opciones) ---
+        // --- NAVEGACION DE BOTONES (los botones dependen del modo: scr_fin_opciones) ---
+        var _ops = scr_fin_opciones();
         var move = vkey_pressed(vk_right) - vkey_pressed(vk_left);
-        
-        // El límite máximo ahora es siempre 1 (porque el índice es 0 y 1)
-        victory_index = clamp(victory_index + move, 0, 1);
+        victory_index = clamp(victory_index + move, 0, array_length(_ops) - 1);
 
-        // --- ACCIÓN AL PRESIONAR ENTER ---
+        // --- ACCION AL PRESIONAR ENTER ---
         if (vkey_pressed(vk_enter)) {
-            
-            if (global.ONLINE) {
-                switch(victory_index) {
-                    case 0: // --- BOTÓN ENVIAR SOLICITUD (Ahora es el índice 0) ---
-                        if (global.ultimo_rival_tag != "") {
-                            ultimo_intento_busqueda = global.ultimo_rival_tag; 
-                            estado_busqueda = "encontrado";
-                            datos_busqueda_resultado = {}; 
+            switch (_ops[victory_index]) {
+                case "ENVIAR SOLICITUD": // partida rapida en linea
+                    if (global.ultimo_rival_tag != "") {
+                        ultimo_intento_busqueda = global.ultimo_rival_tag; 
+                        estado_busqueda = "encontrado";
+                        datos_busqueda_resultado = {}; 
 
-                            if (is_struct(datos_busqueda_resultado)) {
-                                var id_rival = string(ultimo_intento_busqueda); 
-                                scr_enviar_solicitud_amistad(id_rival); 
-                                
-                                // Reset de variables de búsqueda
-                                estado_busqueda = "idle";
-                                friends_search_input = "";
-                                datos_busqueda_resultado = -1; 
-                                
-                                mensaje_texto = "SOLICITUD ENVIADA!";
-                                mensaje_alpha = 3;
-                                
-                                // Movemos el foco al botón EXIT automáticamente tras enviar
-                                victory_index = 1; 
-                            }
-                        } else {
-                            mensaje_texto = "No se encontro el Tag del rival";
-                            mensaje_alpha = 2;
+                        if (is_struct(datos_busqueda_resultado)) {
+                            var id_rival = string(ultimo_intento_busqueda); 
+                            scr_enviar_solicitud_amistad(id_rival); 
+                            
+                            // Reset de variables de búsqueda
+                            estado_busqueda = "idle";
+                            friends_search_input = "";
+                            datos_busqueda_resultado = -1; 
+                            
+                            mensaje_texto = "SOLICITUD ENVIADA!";
+                            mensaje_alpha = 3;
+                            
+                            // Movemos el foco al botón SALIR automáticamente tras enviar
+                            victory_index = 1; 
                         }
-                        break;
-                        
-                    case 1: // --- EXIT ---
-                        LeaveRoom(); 
-                        break;
-                }
-            } 
-            else { // --- CASO OFFLINE (RESTART O EXIT) ---
-                if (victory_index == 0) {
-                    // REINTENTAR
+                    } else {
+                        mensaje_texto = "No se encontro el Tag del rival";
+                        mensaje_alpha = 2;
+                    }
+                break;
+
+                case "BUSCAR RIVAL": // contra el bot de partida rapida
+                    scr_bot_salir(true);
+                break;
+
+                case "REINTENTAR": // local
                     puntos_procesados = false;
                     global.puntos_azul = 0; 
                     global.puntos_rojo = 0;
                     global.game_over = false; 
                     room_restart();
-                } else {
-                    // EXIT
-                    scr_load_from_local();
-                    puntos_procesados = false;
-                    global.game_over = false; 
-                    global.puntos_azul = 0;
-                    global.puntos_rojo = 0;
-                    global.winner_team = 0;
-                    victory_alpha = 0; 
-                    global.regresar_a_offline = true; 
-                    room_goto(rm_menu);
-                }
+                break;
+
+                case "SALIR":
+                    if (global.ONLINE) {
+                        LeaveRoom();
+                    } else if (global.bot_partida) {
+                        scr_bot_salir(false);
+                    } else {
+                        scr_load_from_local();
+                        puntos_procesados = false;
+                        global.game_over = false; 
+                        global.puntos_azul = 0;
+                        global.puntos_rojo = 0;
+                        global.winner_team = 0;
+                        victory_alpha = 0; 
+                        global.regresar_a_offline = true; 
+                        room_goto(rm_menu);
+                    }
+                break;
             }
         }
         
         // Salir rápido con ESC
         if (vkey_pressed(vk_escape) && !abandono_activo){
-            if (global.ONLINE) LeaveRoom(); else room_goto(rm_menu);
+            if (global.ONLINE) LeaveRoom(); else if (global.bot_partida) scr_bot_salir(false); else room_goto(rm_menu);
         }
     }
 }
 // --- LÓGICA DE SELECCIÓN Y INTRO ---
 // Solo en el mapa: en el menú el contador no debe correr
-if (oBrain.AmIPseudoHost && !intro_disparada && room != rm_menu) {
+// En línea el contador solo corre cuando ya hay rival (si estoy solo esperando, no arranca la partida sin nadie)
+if (oBrain.AmIPseudoHost && !intro_disparada && room != rm_menu && global.ONLINE && instance_exists(oOtherPlayer)) {
     
     // 🔥 CAMBIO PARA MULTIJUGADOR: Verificar si ABSOLUTAMENTE TODOS están listos
     var todos_ready = global.mi_listo; // Empezamos asumiendo que yo estoy listo
@@ -282,7 +318,7 @@ if (global.game_over == false)
     if (!puntos_procesados) {
         puntos_procesados = true;
         var mi_equipo = (global.myTeam == "ROJO") ? 1 : 2;
-        if (_ganador == mi_equipo) scr_add_victory(); else scr_add_loss();
+        scr_botnet_premio(_ganador == mi_equipo);   // con bots en la sala, premio de partida contra bots (scr_objetivo)
     }
 
             // CAMBIO: Avisamos a TODOS los clientes que terminó la partida
@@ -501,7 +537,8 @@ if (save_state == "sending") {
 }
 
 // --- LÓGICA DE SELECCIÓN VERTICAL (Actualizada para 4 personajes) ---
-if (!intro_disparada && room != rm_menu) {
+// Solo en línea o contra el bot (en el modo local no hay selección de personaje)
+if (!intro_disparada && room != rm_menu && (global.ONLINE || global.bot_partida)) {
     if (!global.mi_listo) {
         var move = vkey_pressed(vk_down) - vkey_pressed(vk_up);
         
@@ -522,7 +559,12 @@ if (!intro_disparada && room != rm_menu) {
 
 // oBrain - Step Event (Lógica de selección)
 
-if (!global.mi_listo && vkey_pressed(vk_enter)) {
+if (global.bot_partida && !global.mi_listo && vkey_pressed(vk_enter)) {
+    // Contra el bot: tu jugador ya está en el mapa, solo quedas listo
+    global.mi_listo = true;
+    if (global.sfx) audio_play_sound(snd_ready, 1, false);
+}
+else if (!global.mi_listo && vkey_pressed(vk_enter)) {
     global.mi_listo = true;
     
     // 1. DETERMINAR POSICIÓN SEGÚN EQUIPO
@@ -597,7 +639,7 @@ if (abandono_check > 0) {
                 abandono_gano = _empezada;
                 if (_empezada && !puntos_procesados) {
                     puntos_procesados = true;
-                    scr_add_victory(); // mismos trofeos y XP que una victoria normal
+                    scr_botnet_premio(true); // mismos trofeos y XP que una victoria normal (con bots: premio contra bots)
                 }
 
                 if (_empezada) {

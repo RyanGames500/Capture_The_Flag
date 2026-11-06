@@ -1,4 +1,14 @@
 function callback_LeaveRoom(){
+    // Ya no hay bots de sala privada (scr_objetivo)
+    global.botnet_defs = [];
+    global.botnet_partida = false;
+
+    // Ya estoy jugando contra el bot (salí de la búsqueda a propósito): no ir al menú
+    if (variable_global_exists("bot_partida") && global.bot_partida) {
+        show_debug_message(">>> Sali de la busqueda: partida contra el bot");
+        return;
+    }
+
     // 1. Variables de Juego (Puntaje y Estado)
     global.game_over = false;
     global.pausa = false; 

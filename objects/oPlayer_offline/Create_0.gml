@@ -129,3 +129,9 @@ grapple_speed_ext = 20;     // Velocidad de vuelo del gancho (¡Ajústalo!)
 grapple_hitting = false;    // ¿Ya impactó algo?
 grapple_dir = 0;            // Dirección fija del disparo
 grapple_is_returning = false; // ¿Se está devolviendo porque no pegó a nada?
+
+// Sprites y vida máxima. Contra el bot de partida rápida cambian según tu personaje (scr_reloj).
+spr_idle = spr_player_idle;
+spr_walk = spr_player_walk;
+spr_dead = spr_player_dead;
+max_health = 100;

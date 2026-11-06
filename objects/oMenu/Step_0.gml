@@ -1,3 +1,6 @@
+// MUSICA: si todavia no existe oBrain (sin conexion), la lleva el menu (scr_fx)
+if (!instance_exists(oBrain)) scr_musica_step();
+
 // ======================================================
 // TOQUES / CLICS DIRECTOS EN LOS BOTONES DEL MENU
 // El Draw GUI guarda donde esta cada boton (global.ui_taps) y aqui vemos si lo tocaron.
@@ -634,40 +637,23 @@ if (oBrain.AmIPseudoHost) {
     // 1. Detectar Click Derecho sobre un slot
     // En PC: clic derecho sobre un jugador. En el celular: tocarlo.
     var _kick_tap = touch_mode() && device_mouse_check_button_pressed(0, mb_left) && !show_kick_menu;
-    if (_kick_tap) {
-        // Si toco las flechitas de ajustes, no es un toque de expulsar
-        var _kp0 = scr_ajustes_panel_y();
-        var _kcx = display_get_gui_width() / 2;
-        for (var _kf = 0; _kf < 3; _kf++) {
-            var _kfy = _kp0 + 48 + _kf * 34;
-            if (abs(my - _kfy) < 16 && (abs(mx - (_kcx + 10)) < 26 || abs(mx - (_kcx + 230)) < 26)) _kick_tap = false;
-        }
-    }
     if (mouse_check_button_pressed(mb_right) || _kick_tap) {
-        var slot_w = 400;
-        var slot_h = 60;
-        var padding = 20;
+        // Las mismas casillas que se dibujan (scr_objetivo): solo se puede sacar a personas, no a mi ni a los bots
         var _found = false;
-        var _mitad = max(1, global.max_players_allowed / 2);
-
-        for (var i = 1; i < global.max_players_allowed; i++) { // Empezamos en 1 (no nos auto-kickeamos)
-            var es_derecha = (i >= _mitad);
-            var _x1 = es_derecha ? (display_get_gui_width() / 2) + 50 : (display_get_gui_width() / 2) - 450;
-            var _y1 = 200 + ((i % _mitad) * (slot_h + padding));
-            
-            // ¿El mouse está sobre este slot?
-            if (mx > _x1 && mx < _x1 + slot_w && my > _y1 && my < _y1 + slot_h) {
-                // Buscamos el ID del jugador en este slot
-                var _current_idx = 1;
-                with(oOtherPlayer) {
-                    if (_current_idx == i) {
-                        other.kick_target_id = clientId;
-                        other.kick_menu_x = mx;
-                        other.kick_menu_y = my;
-                        other.show_kick_menu = true;
-                        _found = true;
-                    }
-                    _current_idx++;
+        var _sl = scr_sala_slots();
+        for (var _t = 0; _t < 2 && !_found; _t++) {
+            var _lista = (_t == 0) ? _sl.azul : _sl.rojo;
+            for (var k = 0; k < array_length(_lista); k++) {
+                var _s = _lista[k];
+                if (_s.tipo != "humano") continue;
+                var _pos = scr_sala_slot_pos(_t == 1, k);
+                if (mx > _pos[0] && mx < _pos[0] + 400 && my > _pos[1] && my < _pos[1] + 60) {
+                    kick_target_id = _s.cid;
+                    kick_menu_x = mx;
+                    kick_menu_y = my;
+                    show_kick_menu = true;
+                    _found = true;
+                    break;
                 }
             }
         }
@@ -698,31 +684,10 @@ if (oBrain.AmIPseudoHost) {
 }
 
 if (oBrain.AmIPseudoHost) {
-        // --- AJUSTES DE LA PARTIDA (solo el líder los cambia) ---
-        var _cambio = false;
-        var _mv = vkey_pressed(vk_down) - vkey_pressed(vk_up);
-        if (_mv != 0) lobby_sel = clamp(lobby_sel + _mv, 0, 2);
-        var _lado = vkey_pressed(vk_right) - vkey_pressed(vk_left);
-        if (_lado != 0) { scr_ajustes_cambiar(lobby_sel, _lado); _cambio = true; }
-
-        // Con clic o con el dedo sobre las flechitas < >
-        if (device_mouse_check_button_pressed(0, mb_left) && !show_kick_menu) {
-            var _gx = device_mouse_x_to_gui(0);
-            var _gy = device_mouse_y_to_gui(0);
-            var _cx = display_get_gui_width() / 2;
-            var _p0 = scr_ajustes_panel_y();
-            for (var f = 0; f < 3; f++) {
-                var _fy = _p0 + 48 + f * 34;
-                if (abs(_gy - _fy) < 16) {
-                    if (abs(_gx - (_cx + 10)) < 26)  { lobby_sel = f; scr_ajustes_cambiar(f, -1); _cambio = true; }
-                    if (abs(_gx - (_cx + 230)) < 26) { lobby_sel = f; scr_ajustes_cambiar(f, 1);  _cambio = true; }
-                }
-            }
-        }
-
-        // Se mandan al cambiar y cada 2 segundos (así el que entra tarde también los ve)
+        // Los ajustes ya se eligieron al crear la sala. Se mandan cada 2 segundos
+        // (por si el líder se va y otro queda de líder, que los tenga)
         lobby_sync_cd -= 1;
-        if (_cambio || lobby_sync_cd <= 0) {
+        if (lobby_sync_cd <= 0) {
             lobby_sync_cd = room_speed * 2;
             scr_ajustes_enviar();
         }
@@ -731,18 +696,14 @@ if (oBrain.AmIPseudoHost) {
         // y ahora sirve para elegir los ajustes, así que no debe arrancar la partida).
         var _empezar = vkey_pressed(vk_enter);
         if (_empezar) {
-            
-            // --- CONTAR SI ESTÁN TODOS ---
-            var _total = 1; 
-            with(oOtherPlayer) _total++; // Contamos a los invitados
-            
-            if (_total == global.max_players_allowed) {
-                var _aj = scr_ajustes_struct();
-                with(oOtherPlayer) {
-                    SendEventToClient(clientId, "GO_TO_BATTLE", _aj);
-                }
-                room_goto(scr_mapa_room(global.match_mapa));
+            // Ya no hay que esperar a que se llene: los espacios vacios los juegan bots (scr_objetivo)
+            var _dest = scr_mapa_resolver();  // si es ALEATORIO, el líder elige aquí (una sola vez)
+            var _aj = scr_ajustes_struct();   // ya lleva el mapa elegido: todos van al mismo
+            global.botnet_defs = scr_sala_bots();
+            with(oOtherPlayer) {
+                if (!es_bot) SendEventToClient(clientId, "GO_TO_BATTLE", _aj);
             }
+            room_goto(_dest);
         }
     }
 }

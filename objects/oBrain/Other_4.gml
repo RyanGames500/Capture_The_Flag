@@ -20,3 +20,6 @@ with(oSpawnPoint) {
 // 📦 Pedirle al host todo lo que hay en el mapa cuando YO ya cargué (3 veces por si el host aún cargaba)
 resync_left = (global.ONLINE && room != rm_menu && !AmIPseudoHost) ? 3 : 0;
 resync_cd   = 5;
+
+// Sala privada: el lider pone los bots en los espacios vacios (scr_objetivo)
+scr_botnet_crear_todos();

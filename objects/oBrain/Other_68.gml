@@ -85,6 +85,9 @@ if(type == network_type_data){
 			oBrain.intro_disparada = false;
 			oBrain.timer_intro = 60 * 60;
 			global.mi_listo = false;
+			// Sala nueva: todavia sin bots (los pone el lider al empezar, scr_objetivo)
+			global.botnet_defs = [];
+			global.botnet_partida = false;
 			callback_ChangeRoom(realData.roomId)
 		}
 		instance_destroy(oOtherPlayer)

@@ -132,16 +132,7 @@ if (menu_state == "main") {
     draw_set_alpha(1); draw_set_color(C_ORO);
     draw_text_transformed(20 * u, 35 * u, "US-EAST-1", 0.75 * u, 0.75 * u, 0);
 
-    var _hud_rx = gui_w - 20 * u;
-    var _online_count = variable_global_exists("onlinePlayers") ? global.onlinePlayers : 0;
-    var _cnt_txt = string(_online_count);
-    draw_set_halign(fa_right);
-    draw_set_color(C_GRIS); draw_set_alpha(0.45);
-    draw_text_transformed(_hud_rx, 17 * u, "JUGADORES EN LINEA", 0.55 * u, 0.55 * u, 0);
-    draw_set_alpha(1); draw_set_color(C_AZUL);
-    draw_text_transformed(_hud_rx, 35 * u, _cnt_txt, 0.75 * u, 0.75 * u, 0);
-    draw_set_color(C_VERDE); draw_set_alpha(0.65 + 0.35 * sin(current_time / 290));
-    draw_circle(_hud_rx - (string_width(_cnt_txt) * 0.75 * u) - 10 * u, 35 * u, 4 * u, false);
+    // (Se quito el contador de JUGADORES EN LINEA)
     draw_set_alpha(1);
 
     // ── BANDERAS + VS ──
@@ -585,111 +576,74 @@ else if (menu_state == "lobby_espera") {
     draw_set_color(ui_oro);
     draw_text_transformed(tx, ty, room_text, 0.85, 0.85, 0);
 
-    // --- 2. LOGICA DE SLOTS ---
-    for (var j = 0; j < 8; j++) global.slot_nombres[j] = "---";
-
-    if (oBrain.AmIPseudoHost) {
-        // --- SOY EL HOST ---
-        global.slot_nombres[0] = global.myName;
-        var _index = 1;
-        with(oOtherPlayer) {
-            if (_index < 8) {
-                var _nombre_real = ds_map_find_value(global.playerNames, string(clientId));
-                global.slot_nombres[_index] = (!is_undefined(_nombre_real) && _nombre_real != "") ? _nombre_real : "Conectando...";
-                _index++;
-            }
-        }
-    } else {
-        // --- SOY INVITADO ---
-        var _host_encontrado = false;
-        var _next_free_slot = 1;
-
-        // El lider es el que diga el servidor (asi funciona aunque el lider cambie)
-        var _lider_id = oBrain.pseudoHostClientId;
-        with(oOtherPlayer) {
-            if (clientId == _lider_id) {
-                global.slot_nombres[0] = (Name != "" && Name != "Cargando...") ? Name : "Lider...";
-                _host_encontrado = true;
-            }
-        }
-
-        with(oOtherPlayer) {
-            if (clientId != _lider_id && _next_free_slot < 8) {
-                global.slot_nombres[_next_free_slot] = Name;
-                _next_free_slot++;
-            }
-        }
-
-        if (_next_free_slot < 8) {
-            global.slot_nombres[_next_free_slot] = global.myName;
-        }
-
-        if (!_host_encontrado) global.slot_nombres[0] = "Buscando lider...";
-    }
-
-    // --- 3. DIBUJAR LOS SLOTS (mismas posiciones de siempre) ---
-    var slot_w = 400; var slot_h = 60; var padding = 20;
+    // --- 2. CASILLAS: cada quien en su equipo y lo que falta son bots (scr_objetivo) ---
+    var _sl = scr_sala_slots();
+    var slot_w = 400; var slot_h = 60;
 
     draw_set_font(fnt_small);
     draw_set_halign(fa_left);
     draw_set_valign(fa_middle);
     draw_set_color(ui_azul);
     draw_text_transformed((gui_w / 2) - 450, 178, "EQUIPO AZUL", 0.65, 0.65, 0);
-    if (global.max_players_allowed > 1) {
-        draw_set_color(ui_rojo);
-        draw_text_transformed((gui_w / 2) + 50, 178, "EQUIPO ROJO", 0.65, 0.65, 0);
-    }
+    draw_set_color(ui_rojo);
+    draw_text_transformed((gui_w / 2) + 50, 178, "EQUIPO ROJO", 0.65, 0.65, 0);
 
-    for (var i = 0; i < global.max_players_allowed; i++) {
-        var mitad = global.max_players_allowed / 2;
-        var es_derecha = (i >= mitad);
-        var _x = es_derecha ? (gui_w / 2) + 50 : (gui_w / 2) - 450;
-        var _y = 200 + ((i % mitad) * (slot_h + padding));
+    var _n_bots = 0;
+    for (var _t = 0; _t < 2; _t++) {
+        var _lista = (_t == 0) ? _sl.azul : _sl.rojo;
+        var color_equipo = (_t == 1) ? ui_rojo : ui_azul;
+        for (var k = 0; k < array_length(_lista); k++) {
+            var _s = _lista[k];
+            var _pos = scr_sala_slot_pos(_t == 1, k);
+            var _x = _pos[0];
+            var _y = _pos[1];
+            var _soy_yo = (_s.tipo == "yo");
+            var _bot = (_s.tipo == "bot");
+            if (_bot) _n_bots++;
 
-        var color_equipo = es_derecha ? ui_rojo : ui_azul;
-        var nombre_final = global.slot_nombres[i];
-        var _soy_yo = (nombre_final == global.myName);
-        var _vacio  = (nombre_final == "---");
+            // Casilla (la del bot mas apagada)
+            ctf_ui_para(_x, _y, slot_w, slot_h, 10, ui_tinta, 0.88, false);
+            ctf_ui_para(_x, _y, slot_w, slot_h, 10, color_equipo, _bot ? 0.04 : 0.08, false);
+            ctf_ui_para(_x, _y, slot_w, slot_h, 10, _soy_yo ? ui_oro : (_bot ? ui_gris : color_equipo), _bot ? 0.35 : 0.55, true);
+            ctf_ui_para(_x, _y, 16, slot_h, 10, color_equipo, _bot ? 0.45 : 1, false);
 
-        ctf_ui_para(_x, _y, slot_w, slot_h, 10, ui_tinta, 0.88, false);
-        ctf_ui_para(_x, _y, slot_w, slot_h, 10, color_equipo, _vacio ? 0.03 : 0.08, false);
-        ctf_ui_para(_x, _y, slot_w, slot_h, 10, _soy_yo ? ui_oro : color_equipo, _vacio ? 0.2 : 0.55, true);
-        ctf_ui_para(_x, _y, 16, slot_h, 10, color_equipo, _vacio ? 0.35 : 1, false);
+            // Nombre
+            draw_set_font(fnt_menu);
+            draw_set_halign(fa_left);
+            draw_set_valign(fa_middle);
+            if (_soy_yo) draw_set_color(ui_oro);
+            else if (_bot) draw_set_color(c_ltgray);
+            else draw_set_color(c_white);
+            draw_text_transformed(_x + 32, _y + (slot_h / 2), string(_s.nombre), 0.85, 0.85, 0);
 
-        draw_set_font(fnt_menu);
-        draw_set_halign(fa_left);
-        draw_set_valign(fa_middle);
-        if (_soy_yo) {
-            draw_set_color(ui_oro);
-        } else if (_vacio) {
-            draw_set_color(ui_gris); draw_set_alpha(0.35);
-        } else {
-            draw_set_color(c_white);
+            // Etiqueta a la derecha: LIDER o BOT
+            if (_s.lider) {
+                draw_set_font(fnt_small);
+                draw_set_halign(fa_right);
+                draw_set_color(ui_oro);
+                draw_text_transformed(_x + slot_w - 22, _y + (slot_h / 2), "LIDER", 0.6, 0.6, 0);
+            } else if (_bot) {
+                var _cx = _x + slot_w - 92;
+                var _cy = _y + (slot_h / 2) - 14;
+                ctf_ui_para(_cx, _cy, 66, 28, 6, ui_gris, 0.25, false);
+                ctf_ui_para(_cx, _cy, 66, 28, 6, ui_gris, 0.7, true);
+                draw_set_font(fnt_small);
+                draw_set_halign(fa_center);
+                draw_set_color(c_ltgray);
+                draw_text_transformed(_cx + 33, _y + (slot_h / 2), "BOT", 0.6, 0.6, 0);
+            }
         }
-        draw_text_transformed(_x + 32, _y + (slot_h / 2), string(nombre_final), 0.85, 0.85, 0);
-        draw_set_alpha(1);
-        if (i == 0 && !_vacio) {
-            draw_set_font(fnt_small);
-            draw_set_halign(fa_right);
-            draw_set_color(ui_oro);
-            draw_text_transformed(_x + slot_w - 22, _y + (slot_h / 2), "LIDER", 0.6, 0.6, 0);
-        }
     }
-
-    // --- 3b. AJUSTES DE LA PARTIDA (tiempo, mapa, banderas) ---
-    scr_ajustes_draw(oBrain.AmIPseudoHost, lobby_sel);
 
     // --- 4. FOOTER ---
     var _ftxt = "";
     var _fcol = ui_gris;
     if (oBrain.AmIPseudoHost) {
-        var cant = 1; with(oOtherPlayer) cant++;
-        if (cant == global.max_players_allowed) {
-            _fcol = ui_oro;
-            _ftxt = touch_mode() ? "SALA LLENA! PRESIONA OK PARA EMPEZAR" : "SALA LLENA! PRESIONA ENTER PARA EMPEZAR";
-        } else {
-            _ftxt = "ESPERANDO... (" + string(cant) + "/" + string(global.max_players_allowed) + ")";
-        }
+        // Ya no hay que esperar a que se llene: lo que falte lo juegan bots
+        _fcol = ui_oro;
+        var _tecla = touch_mode() ? "OK" : "ENTER";
+        if (_n_bots == 0) _ftxt = "SALA LLENA! PRESIONA " + _tecla + " PARA EMPEZAR";
+        else _ftxt = "PRESIONA " + _tecla + " PARA EMPEZAR (" + string(_n_bots) + ((_n_bots == 1) ? " BOT)" : " BOTS)");
     } else {
         _fcol = c_white;
         _ftxt = "ESPERANDO A QUE EL LIDER INICIE...";

@@ -11,13 +11,10 @@ function host_drop_weapon(_weaponStruct, _x, _y)
     d.net_uid = global.next_weapon_uid++;
     d.taken = false;
 
-    if (instance_exists(oOtherPlayer)) {
-        SendEventToClient(oOtherPlayer.clientId, "spawn_weapon_pickup", {
-            uid: d.net_uid,
-            x: _x,
-            y: _y,
-            weapon: _weaponStruct
-        });
+    // A todos (antes solo le llegaba al primero; con bots en la sala podia tocarle a un bot)
+    var _m = { uid: d.net_uid, x: _x, y: _y, weapon: _weaponStruct };
+    with (oOtherPlayer) {
+        if (!es_bot) SendEventToClient(clientId, "spawn_weapon_pickup", _m);
     }
 }
 

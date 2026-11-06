@@ -16,6 +16,11 @@ function scr_trigger_intro(_azules, _rojos) {
             var _p  = { n: Name, pj: variable_instance_exists(id, "mySelectedPJ") ? mySelectedPJ : 0 };
             if (_tm == "AZUL") array_push(intro.lista_azul, _p); else array_push(intro.lista_rojo, _p);
         }
+        // Contra el bot de partida rápida: el rival con su nombre y personaje
+        if (variable_global_exists("bot_partida") && global.bot_partida) {
+            var _bt = { n: global.bot_nombre, pj: global.bot_pj };
+            if (_yo == "AZUL") array_push(intro.lista_rojo, _bt); else array_push(intro.lista_azul, _bt);
+        }
 
         if (instance_exists(oPlayer)) oPlayer.state = PLAYERSTATE.INTRO;
     }

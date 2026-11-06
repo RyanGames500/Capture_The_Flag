@@ -147,3 +147,6 @@ if (has_shield) {
     gpu_set_blendmode(bm_normal);
     draw_set_alpha(1);
 }
+
+// Contra el bot de partida rápida: coraza y estela del impulso de su personaje
+if (variable_instance_exists(id, "hab_cor_t")) __hab_draw(hab_cor_t > 0, hab_dash_vis > 0, 0, 0, 0);

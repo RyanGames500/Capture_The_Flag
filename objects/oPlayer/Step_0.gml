@@ -277,7 +277,7 @@ if (mi_clase == -1) {
 }
 
 // --- PLATAFORMA DE SALTO (scr_jugabilidad): saltar encima de ella te lanza alto ---
-if (key_jump && is_grounded && (state == PLAYERSTATE.IDLE || state == PLAYERSTATE.WALK || state == PLAYERSTATE.JUMP)) {
+if (key_jump && is_grounded && (state == PLAYERSTATE.IDLE || state == PLAYERSTATE.WALK || state == PLAYERSTATE.JUMP || (state == PLAYERSTATE.HIT && abs(push_h) < 1))) {
 	if (scr_salto_usar()) { is_grounded = false; key_jump = false; state = PLAYERSTATE.JUMP; }
 }
 
@@ -356,6 +356,18 @@ switch (state) {
 
 	case PLAYERSTATE.HIT:
 		sprite_index = anims[mi_clase].hit;
+		// Golpe normal (bala): se ve el golpe pero sigues moviendote, saltando y disparando.
+		// Solo te quita el control cuando te avientan (boxeo, mina, caja): ahi manda el empuje.
+		if (abs(push_h) < 1) {
+			if (canShoot && melee_active <= 0)
+			{
+				scrPlayerWeaponUpdate();
+			}
+			var move = key_right - key_left;
+			hsp = move * (has_flag ? walksp * scr_pj_mult_bandera() : walksp);
+			if (hsp != 0) image_xscale = sign(hsp) * 1.5;
+			if (key_jump && is_grounded) { is_grounded = false; vsp = jumpsp; state = PLAYERSTATE.JUMP; }
+		}
 		if (image_index >= image_number - 1) state = PLAYERSTATE.IDLE;
 	break;
 
@@ -531,12 +543,15 @@ var miBase = (global.myTeam == "AZUL") ? obj_base_blue : obj_base_red;
 
 if (place_meeting(x, y, miBase) && has_flag && !score_pending)
 {
-	global.flags_captured += 1;
-	global.xp += 25;
+	// En sala privada no se suma nada (es partida entre amigos)
+	if (!scr_fin_es_privada()) {
+		global.flags_captured += 1;
+		global.xp += 25;
 
-	with(oBrain) {
-		save_state = "prepare";
-		save_timer = room_speed;
+		with(oBrain) {
+			save_state = "prepare";
+			save_timer = room_speed;
+		}
 	}
 
 	score_pending = true;
@@ -598,12 +613,15 @@ var miBandera = (global.myTeam == "AZUL") ? oFlag2 : oFlag;
 
 if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (miBandera.x != miBandera.spawnX))
 {
-	global.flags_returned += 1;
-	global.xp += 15;
+	// En sala privada no se suma nada (es partida entre amigos)
+	if (!scr_fin_es_privada()) {
+		global.flags_returned += 1;
+		global.xp += 15;
 
-	with(oBrain) {
-		save_state = "prepare";
-		save_timer = room_speed;
+		with(oBrain) {
+			save_state = "prepare";
+			save_timer = room_speed;
+		}
 	}
 
 	score_pending = true;

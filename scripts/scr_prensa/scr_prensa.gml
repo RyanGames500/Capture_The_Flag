@@ -48,6 +48,18 @@ function hammer_aplastar(_f) {
         }
     }
 
+    // En linea: el lider revisa a sus bots de la sala privada (scr_objetivo)
+    if (global.ONLINE && oBrain.AmIPseudoHost) {
+        with (oOtherPlayer) {
+            if (bot_local && !isDead && collision_rectangle(_x1, _y1, _x2, _y2, id, false, true) != noone) {
+                last_killer = "La prensa";
+                last_killer_id = -1;
+                last_reason = "crush";
+                hp = 0;
+            }
+        }
+    }
+
     // En local: el bot también se puede aplastar
     if (!global.ONLINE && instance_exists(oPlayer2_local)) {
         with (oPlayer2_local) {

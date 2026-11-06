@@ -250,7 +250,24 @@ is_closing=false;
 mensaje_alpha=0
 // --- ABANDONO DE PARTIDA ---
 abandono_check  = -1;
+
+// Bot en partida rápida (scr_reloj)
+bot_espera = 0;
+bot_espera_max = 0;
+bot_elige_t = 0;
+bot_cambia_t = 0;
+if (!variable_global_exists("bot_nombre"))   global.bot_nombre   = "";
+if (!variable_global_exists("bot_pj"))       global.bot_pj       = 0;
+if (!variable_global_exists("bot_pj_vista")) global.bot_pj_vista = 0;
+if (!variable_global_exists("bot_listo"))    global.bot_listo    = false;
+if (!variable_global_exists("bot_partida"))  global.bot_partida  = false;
+if (!variable_global_exists("bot_rebuscar")) global.bot_rebuscar = false;
 abandono_activo = false;
+
+// Bots en la sala privada (scr_objetivo)
+botnet_cd = 0;
+if (!variable_global_exists("botnet_defs"))    global.botnet_defs    = [];
+if (!variable_global_exists("botnet_partida")) global.botnet_partida = false;
 abandono_timer  = 0;
 abandono_total  = 1;
 abandono_gano   = false;

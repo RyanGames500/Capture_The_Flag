@@ -36,6 +36,6 @@ function scr_get_host_id() {
     }
     var _h = -1;
     with (oOtherPlayer) { if (variable_instance_exists(id, "isHost") && isHost) _h = clientId; }
-    if (_h == -1 && instance_exists(oOtherPlayer)) _h = instance_find(oOtherPlayer, 0).clientId;
+    if (_h == -1) with (oOtherPlayer) { if (_h == -1 && !es_bot) _h = clientId; }   // nunca un bot de la sala privada
     return _h;
 }

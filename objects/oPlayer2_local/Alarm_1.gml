@@ -5,7 +5,8 @@ x = spawn_x;
 y = spawn_y;
 
 // 2. RESETEAR ESTADO FÍSICO Y SALUD
-hp = 100;
+hp = hp_max;
+if (variable_instance_exists(id, "mi_clase")) scr_bot_hab_reset();
 last_killer = "";
 isDead = false;
 state = PLAYER2.IDLE;

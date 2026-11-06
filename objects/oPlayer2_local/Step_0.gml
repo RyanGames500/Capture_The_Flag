@@ -1,3 +1,7 @@
+// Contra el bot de partida rápida: quieto mientras eligen personaje y en la intro VS
+if (scr_bot_congelado()) { hsp = 0; vsp = 0; sprite_index = spr_idle; exit; }
+if (global.bot_partida) scr_bot_hab_step();   // habilidad y pasivas de su personaje (scr_reloj)
+
 // Esto debería estar en el Step de tu objeto enemigo/jugador
 if (state == PLAYER2.HIT) {
     hsp = hsp * 0.9; // Fricción: pierde 10% de velocidad cada frame
@@ -79,6 +83,7 @@ else
 
 // Ahora sí, se calcula la velocidad final
 walksp = walksp_base * walksp_mult;
+walksp *= scr_hab_vel_mult();   // la coraza del Tanque pesa (contra el bot)
 
 if (!mouse_check_button(mb_left)) {
     ak_recoil = max(0, ak_recoil - 0.6); // qué tan rápido se “calma”
@@ -359,7 +364,7 @@ if (key_jump && is_grounded && nav_quiere_pad && (state == PLAYER2.IDLE || state
 switch (state) {
 
     case PLAYER2.IDLE:
-        sprite_index = spr_player_idle;
+        sprite_index = spr_idle;
         hsp = 0;
 		scrPlayerWeaponUpdate_bot();
         if (key_right || key_left)
@@ -375,7 +380,7 @@ switch (state) {
 case PLAYER2.WALK:
 
 	var move = key_right - key_left;
-    var _speed_final = has_flag ? walksp * 0.7 : walksp;
+    var _speed_final = has_flag ? walksp * scr_pj_mult_bandera() : walksp;   // 0.7 normal, o la de su personaje
 
     // SOLO camina si no está siendo empujado fuertemente
     if (abs(push_h) < 1) { 
@@ -383,7 +388,7 @@ case PLAYER2.WALK:
     }
         
         scrPlayerWeaponUpdate_bot();
-        sprite_index = spr_player_walk;
+        sprite_index = spr_walk;
 
         if (hsp != 0) image_xscale = sign(hsp) * 1.5;
 
@@ -411,7 +416,7 @@ case PLAYER2.WALK:
 
     case PLAYER2.DEAD:
         hsp = 0;
-        sprite_index = spr_player_dead;
+        sprite_index = spr_dead;
 
         if (image_index >= image_number - 1)
             visible = false;

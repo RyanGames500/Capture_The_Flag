@@ -11,6 +11,12 @@ if (mecha < 0) {
 				if (!isDead && !invulnerable && collision_rectangle(other.x - 12, other.y - 10, other.x + 12, other.y, id, false, false) != noone) _pisada = true;
 			}
 		}
+		// Los bots de la sala privada los revisa el lider (scr_objetivo)
+		if (oBrain.AmIPseudoHost) {
+			with (oOtherPlayer) {
+				if (bot_local && !isDead && !invulnerable && team != other.team && collision_rectangle(other.x - 12, other.y - 10, other.x + 12, other.y, id, false, false) != noone) _pisada = true;
+			}
+		}
 	} else {
 		with (oPlayer2_local) {
 			if (!isDead && team != other.team && collision_rectangle(other.x - 12, other.y - 10, other.x + 12, other.y, id, false, false) != noone) _pisada = true;

@@ -39,13 +39,14 @@ function scr_bala_cruza_muro(_x1, _y1, _x2, _y2) {
 }
 
 /// El primer rival (en línea) que hay en el tramo de la bala, o noone.
-function scr_bala_rival_en_tramo(_x1, _y1, _x2, _y2) {
+function scr_bala_rival_en_tramo(_x1, _y1, _x2, _y2, _eq = undefined) {
+	if (is_undefined(_eq)) _eq = global.myTeam;   // las balas de los bots mandan su equipo (scr_objetivo)
 	var _r = noone;
 	var _l = ds_list_create();
 	var _n = collision_line_list(_x1, _y1, _x2, _y2, oOtherPlayer, false, true, _l, true);
 	for (var i = 0; i < _n; i++) {
 		var _c = _l[| i];
-		if (variable_instance_exists(_c, "team") && _c.team != global.myTeam) { _r = _c; break; }
+		if (variable_instance_exists(_c, "team") && _c.team != _eq) { _r = _c; break; }
 	}
 	ds_list_destroy(_l);
 	return _r;

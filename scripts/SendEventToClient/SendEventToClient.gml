@@ -1,5 +1,10 @@
 
 function SendEventToClient(recieverClientId,eventName, yourMessageStruct){
+	// Los bots de la sala privada no son clientes del servidor: sus golpes los maneja el lider (scr_objetivo)
+	if (is_numeric(recieverClientId) && recieverClientId <= BOTNET_ID_BASE) {
+		scr_botnet_evento(recieverClientId, eventName, yourMessageStruct);
+		return;
+	}
 	//format for sending info to server 
 		var Buffer = buffer_create(1, buffer_grow, 1)
 	
