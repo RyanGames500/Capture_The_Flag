@@ -23,6 +23,7 @@ if (is_rocket)
 // 1. Chocar con paredes
 if (place_meeting(x, y, obj_wall)  and !is_rocket) 
 {
+    if (!is_granada) fx_sparks(x, y, direction + 180, 6);   // chispas (como en linea)
     instance_destroy();
 }
 else if (place_meeting(x, y, obj_wall)  and is_rocket) 
@@ -69,6 +70,7 @@ if (bot != noone)
                     
                     // Sonido de impacto
                     if (global.sfx) audio_play_sound(snd_hit, 10, false);
+                    fx_sparks(other.x, other.y, other.direction + 180, 8);   // chispas en ti (como en linea)
                 }
             }
             instance_destroy();
@@ -88,6 +90,7 @@ if (bot != noone)
                     
                     // Sonido de impacto
                     if (global.sfx) audio_play_sound(snd_hit, 10, false);
+                    fx_sparks(other.x, other.y, other.direction + 180, 4, true);
                 }
             }
 		    instance_create_layer(x, y, "Instances", oExplosionFX); // Tu objeto de explosión

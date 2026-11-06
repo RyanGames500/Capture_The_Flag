@@ -408,9 +408,11 @@ else if (menu_state == "options") {
         draw_text_transformed(_lx, _T + _rh / 2, "<", 0.7 * ui_u, 0.7 * ui_u, 0);
         draw_set_alpha(1);
 
-        // Toque / clic: izquierda baja, derecha sube
-        ui_tap_add(_X, _T, _X + _cw * 0.35, _T + _rh, i, vk_left);
-        ui_tap_add(_X + _cw * 0.35, _T, _X + _cw, _T + _rh, i, vk_right);
+        // Toque / clic: izquierda baja, derecha sube. La linea que los separa queda a la mitad
+        // entre la flechita "<" y la ">" (antes estaba al 35% y la "<" caia del lado de subir)
+        var _corte = (_lx + _vr) / 2;
+        ui_tap_add(_X, _T, _corte, _T + _rh, i, vk_left);
+        ui_tap_add(_corte, _T, _X + _cw, _T + _rh, i, vk_right);
 
         _oy[_c] += _rh + _rg;
     }
