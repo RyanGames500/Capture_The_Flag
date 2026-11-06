@@ -632,5 +632,8 @@ if (mensaje_alpha > 0) {
 }
 draw_set_alpha(1);
 
+// --- PUNTO GANADOR: CAPTURA! y confeti antes de los resultados (scr_fx) ---
+scr_fin_festejo_draw();
+
 // --- AVISO DE RED: pantalla de sin conexión y aviso de recuperada (encima de todo) ---
 scr_red_draw_overlay();

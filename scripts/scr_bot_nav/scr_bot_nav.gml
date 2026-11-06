@@ -289,7 +289,10 @@ function scr_bot_nav_move(_tx, _ty) {
 		_n = _nodes[nav_path[nav_i]];
 		_gx = _n.px;
 		_type = scr_bot_nav_edge(nav_path[nav_i - 1], nav_path[nav_i]);
-		if (_grounded && abs(x - _n.px) < 10 && abs(_feet - _n.py) < 4) {
+		// Llego al punto. Si su cuerpo es ancho (Sargento, Marina) y el punto queda pegado a un muro,
+		// no cabe ahi: cuenta como que llego si ya esta topando con el muro de ese lado
+		var _hacia = (_n.px > x) ? 1 : -1;
+		if (_grounded && abs(_feet - _n.py) < 4 && (abs(x - _n.px) < 10 || place_meeting(x + _hacia * 2, y, obj_wall))) {
 			nav_i += 1;
 			nav_best = 999999;
 			nav_fails = 0;
@@ -329,7 +332,8 @@ function scr_bot_nav_move(_tx, _ty) {
 		// (antes saltaba desde lejos y se quedaba debajo del techo brincando)
 		if (_type == "jump") {
 			var _sal = _nodes[nav_path[nav_i - 1]];
-			if (abs(x - _sal.px) > 4) {
+			var _hacia_sal = (_sal.px > x) ? 1 : -1;
+			if (abs(x - _sal.px) > 4 && !place_meeting(x + _hacia_sal * 2, y, obj_wall)) {
 				key_left = false;
 				key_right = false;
 				if (_sal.px > x) key_right = true;
@@ -358,6 +362,13 @@ function scr_bot_nav_move(_tx, _ty) {
 			var _from = _nodes[nav_path[nav_i - 1]];
 			if (abs(x - _from.px) < 14 && abs(_feet - _from.py) < 6) key_jump = true;
 		}
+	}
+
+	// Muro bajito enfrente (por ejemplo al pie del bloque del nivel 3): lo brinca
+	// (antes se quedaba empujando contra el muro sin saltar)
+	if (_grounded && (key_left || key_right) && !key_jump) {
+		var _frente = key_right ? 4 : -4;
+		if (place_meeting(x + _frente, y, obj_wall)) key_jump = true;
 	}
 
 	// Banda en contra: caminando casi no avanza, brinca (en el aire no lo empuja)

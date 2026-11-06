@@ -557,6 +557,7 @@ function minimapa_draw() {
 // ======================================================
 function scr_audio_base() {
     if (variable_global_exists("audio_ids")) return;
+    scr_musica_lista();   // que las canciones queden dentro del juego
     global.audio_ids  = asset_get_ids(asset_sound);
     global.audio_base = [];   // el volumen que le pusiste a cada sonido en GameMaker
     global.audio_mus  = [];   // true si es musica
@@ -586,8 +587,26 @@ function scr_audio_volumenes() {
 // ======================================================
 #macro MUS_FADE 1000   // milisegundos para pasar de una cancion a otra
 
+// Las canciones se nombran aqui DIRECTO: si solo se buscan por texto, GameMaker cree que
+// no se usan y las quita del juego al compilar (por eso no sonaba nada).
+// Si agregas otra cancion, ponla tambien en esta lista.
+function scr_musica_lista() {
+    if (!variable_global_exists("mus_lista")) {
+        global.mus_lista = {
+            mus_menu:     mus_menu,
+            mus_nivel1:   mus_nivel1,
+            mus_nivel2:   mus_nivel2,
+            mus_nivel3:   mus_nivel3,
+            mus_tension:  mus_tension,
+            mus_victoria: mus_victoria,
+            mus_derrota:  mus_derrota
+        };
+    }
+    return global.mus_lista;
+}
+
 function scr_musica_existe(_n) {
-    return (_n != "" && asset_get_type(_n) == asset_sound);
+    return (_n != "" && variable_struct_exists(scr_musica_lista(), _n));
 }
 
 /// Devuelve [nombre, se_repite]
@@ -634,7 +653,7 @@ function scr_musica_step() {
         _m.nombre = _n;
         _m.g = _g;
         if (_n != "") {
-            _m.inst = audio_play_sound(asset_get_index(_n), 50, _e[1], 0);
+            _m.inst = audio_play_sound(variable_struct_get(scr_musica_lista(), _n), 50, _e[1], 0);
             audio_sound_gain(_m.inst, _g, _e[1] ? MUS_FADE : 0);   // las de ganar/perder entran de golpe
             show_debug_message(">>> MUSICA: " + _n + "  (volumen musica " + string(global.opt.vol_musica) + "%)");
         }
@@ -644,7 +663,7 @@ function scr_musica_step() {
         _m.reintento -= 1;
         if (_m.reintento <= 0) {
             _m.reintento = 30;
-            _m.inst = audio_play_sound(asset_get_index(_n), 50, true, 0);
+            _m.inst = audio_play_sound(variable_struct_get(scr_musica_lista(), _n), 50, true, 0);
             audio_sound_gain(_m.inst, _g, MUS_FADE);
             _m.g = _g;
             show_debug_message(">>> MUSICA (otra vez): " + _n);
@@ -661,4 +680,320 @@ function scr_musica_step() {
             array_delete(_m.viejas, i, 1);
         }
     }
+}
+
+
+// ======================================================
+// PUNTO GANADOR (como el gol que gana en Brawl Stars)
+// Al acabarse la partida: flash, la camara se acerca a la base del que gano,
+// sale CAPTURA! (o TIEMPO! si fue por reloj) con confeti, y despues los resultados.
+// Cada pantalla lo hace sola cuando ve que se acabo la partida (no manda nada por red).
+// ======================================================
+#macro FEST_FRAMES 150    // cuanto dura el CAPTURA! con confeti (150 = 2.5 segundos)
+#macro FEST_PAUSA  60     // pausa despues, antes de los resultados (60 = 1 segundo)
+#macro FEST_ZOOM   1.5    // que tanto se acerca la camara
+
+/// Va en el Step de oBrain
+function scr_fin_festejo_step() {
+    if (!variable_global_exists("fest")) global.fest = { t: -1, x: 0, y: 0, conf: [], txt: "", gana: "", col: c_white };
+    var _f = global.fest;
+    if (!global.game_over || room == rm_menu) { _f.t = -1; return; }
+    if (_f.t == -1) {
+        // Si se acabo porque el otro se salio, no hay festejo
+        if (instance_exists(oBrain) && oBrain.abandono_activo) { _f.t = 0; return; }
+        _f.t = FEST_FRAMES + FEST_PAUSA;
+        var _azul = (global.winner_team != 1);   // 1 = ROJO, 2 = AZUL
+        var _b = instance_find(_azul ? obj_base_blue : obj_base_red, 0);
+        if (_b != noone) { _f.x = _b.x; _f.y = _b.y; }
+        else { _f.x = room_width / 2; _f.y = room_height / 2; }
+        _f.col  = _azul ? make_color_rgb(61, 157, 240) : make_color_rgb(229, 72, 77);
+        _f.gana = _azul ? "GANA AZUL" : "GANA ROJO";
+        _f.txt  = (instance_exists(oBrain) && oBrain.reloj_fin) ? "TIEMPO!" : "CAPTURA!";
+        _f.conf = [];
+        var _oro = make_color_rgb(242, 182, 50);
+        repeat (70) {
+            array_push(_f.conf, { x: random(1), y: -random(0.6), v: random_range(0.004, 0.010),
+                c: choose(_f.col, _f.col, _oro, c_white), r: random(360), w: random_range(-9, 9), s: random_range(0.7, 1.3) });
+        }
+        scrCamShake(5);
+    }
+    if (_f.t > 0) _f.t -= 1;
+}
+
+function scr_fin_festejo_activo() {
+    return variable_global_exists("fest") && global.fest.t > 0;
+}
+
+/// Va al inicio del Step de la camara. Devuelve true si este frame la mueve el festejo.
+function scr_fin_festejo_camara(_cam) {
+    if (!variable_instance_exists(id, "fest_w")) { fest_w = -1; fest_h = -1; fest_z = 1; }
+    var _activo = variable_global_exists("fest") && global.game_over && global.fest.t != -1
+                  && !(instance_exists(oBrain) && oBrain.abandono_activo);
+    if (_activo) {
+        var _f = global.fest;
+        if (fest_w < 0) { fest_w = camera_get_view_width(_cam); fest_h = camera_get_view_height(_cam); fest_z = 1; }
+        fest_z = lerp(fest_z, FEST_ZOOM, 0.06);
+        var _w = fest_w / fest_z, _h = fest_h / fest_z;
+        var _cx = camera_get_view_x(_cam) + camera_get_view_width(_cam) / 2;
+        var _cy = camera_get_view_y(_cam) + camera_get_view_height(_cam) / 2;
+        _cx = lerp(_cx, _f.x, 0.08);
+        _cy = lerp(_cy, _f.y - 30, 0.08);
+        var _x = clamp(_cx - _w / 2, 0, max(0, room_width - _w));
+        var _y = clamp(_cy - _h / 2, 0, max(0, room_height - _h));
+        camera_set_view_size(_cam, _w, _h);
+        camera_set_view_pos(_cam, _x, _y);
+        scr_fondo_parallax(_cam);
+        return true;
+    }
+    // Ya no hay festejo: la camara vuelve a su tamano
+    if (fest_w > 0) {
+        camera_set_view_size(_cam, fest_w, fest_h);
+        fest_w = -1;
+    }
+    return false;
+}
+
+/// Va al final del Draw GUI de oBrain
+function scr_fin_festejo_draw() {
+    if (!variable_global_exists("fest")) return;
+    var _f = global.fest;
+    if (!global.game_over || _f.t <= 0) return;
+    var _e = FEST_FRAMES + FEST_PAUSA - _f.t;    // frames que lleva
+    if (_e >= FEST_FRAMES) return;               // ya esta en la pausa: no se dibuja nada
+    var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+    var _queda = FEST_FRAMES - _e;
+    var _fin = (_queda < 20) ? _queda / 20 : 1;  // se desvanece al final
+
+    // Flash blanco al anotar
+    if (_e < 10) {
+        draw_set_alpha(0.7 * (1 - _e / 10));
+        draw_set_colour(c_white);
+        draw_rectangle(0, 0, _gw, _gh, false);
+    }
+
+    // Confeti
+    var _u = _gh / 720;
+    for (var i = 0; i < array_length(_f.conf); i++) {
+        var _c = _f.conf[i];
+        _c.y += _c.v;
+        _c.r += _c.w;
+        if (_c.y < 0) continue;
+        var _px = _c.x * _gw + sin(_c.r * 0.05) * 10 * _u;
+        var _py = _c.y * _gh;
+        var _lw = 7 * _u * _c.s, _lh = 4 * _u * _c.s;
+        var _dx = lengthdir_x(_lw, _c.r), _dy = lengthdir_y(_lw, _c.r);
+        var _ex = lengthdir_x(_lh, _c.r + 90), _ey = lengthdir_y(_lh, _c.r + 90);
+        draw_set_alpha(_fin);
+        draw_set_colour(_c.c);
+        draw_triangle(_px - _dx - _ex, _py - _dy - _ey, _px + _dx - _ex, _py + _dy - _ey, _px + _dx + _ex, _py + _dy + _ey, false);
+        draw_triangle(_px - _dx - _ex, _py - _dy - _ey, _px + _dx + _ex, _py + _dy + _ey, _px - _dx + _ex, _py - _dy + _ey, false);
+    }
+
+    // CAPTURA! (entra creciendo y late un poquito)
+    draw_set_font(fnt_menu);
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    if (_e > 12) {
+        var _k = min(1, (_e - 12) / 15);
+        var _pop = 1 + sin(_k * pi) * 0.25;                  // se pasa un poco y regresa
+        var _base = (_gh * 0.15) / max(1, string_height(_f.txt));
+        var _sc = _base * (0.4 + 0.6 * _k) * _pop * (1 + sin(_e * 0.13) * 0.03);
+        var _ty = _gh * 0.38;
+        draw_set_alpha(_fin);
+        draw_set_colour(c_black);
+        for (var _o = 0; _o < 8; _o++) {
+            var _ox = lengthdir_x(4 * _u, _o * 45), _oy = lengthdir_y(4 * _u, _o * 45);
+            draw_text_transformed(_gw / 2 + _ox, _ty + _oy, _f.txt, _sc, _sc, 0);
+        }
+        draw_set_colour(_f.col);
+        draw_text_transformed(_gw / 2, _ty, _f.txt, _sc, _sc, 0);
+
+        // GANA AZUL / GANA ROJO
+        if (_e > 35) {
+            var _s2 = (_gh * 0.05) / max(1, string_height(_f.gana));
+            var _ty2 = _ty + _gh * 0.12;
+            draw_set_colour(c_black);
+            for (var _o = 0; _o < 8; _o++) {
+                draw_text_transformed(_gw / 2 + lengthdir_x(2 * _u, _o * 45), _ty2 + lengthdir_y(2 * _u, _o * 45), _f.gana, _s2, _s2, 0);
+            }
+            draw_set_colour(make_color_rgb(242, 182, 50));
+            draw_text_transformed(_gw / 2, _ty2, _f.gana, _s2, _s2, 0);
+        }
+    }
+    draw_set_alpha(1);
+    draw_set_colour(c_white);
+    draw_set_halign(fa_left);
+    draw_set_valign(fa_top);
+}
+
+// ======================================================
+// PANTALLA DE RESPAWN (tipo Brawl Stars)
+// "ELIMINADO POR <nombre>" + circulo con cuenta regresiva + "A JUGAR!" al volver.
+// Solo dibujo: usa alarm[1] (el timer de respawn que ya existe) y last_killer.
+// Se llama en el Draw GUI de oPlayer y oPlayer_offline.
+// ======================================================
+function scr_respawn_draw(_muerto) {
+    if (!variable_instance_exists(id, "resp_fx")) resp_fx = { estaba: false, t: 0, max_al: 120 };
+    if (variable_global_exists("game_over") && global.game_over) { resp_fx.estaba = false; resp_fx.t = 0; return; }
+    var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+    var _u = _gh / 720;
+
+    draw_set_font(fnt_menu);
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+
+    if (_muerto) {
+        if (!resp_fx.estaba) { resp_fx.estaba = true; resp_fx.t = 0; resp_fx.max_al = max(1, alarm[1]); }
+        resp_fx.t++;
+        var _al = max(0, alarm[1]);
+        var _tot = max(1, resp_fx.max_al);
+        var _fade = min(1, resp_fx.t / 15);
+
+        // Oscurece la pantalla
+        draw_set_alpha(0.65 * _fade);
+        draw_set_colour(make_color_rgb(10, 12, 20));
+        draw_rectangle(0, 0, _gw, _gh, false);
+
+        var _cx = _gw / 2, _cy = _gh * 0.52;
+        var _base = (_gh * 0.045) / max(1, string_height("A"));
+
+        // ELIMINADO POR
+        var _quien = (variable_instance_exists(id, "last_killer") && last_killer != "") ? string(last_killer) : "";
+        draw_set_alpha(_fade);
+        draw_set_colour(make_color_rgb(255, 107, 107));
+        draw_text_transformed(_cx, _gh * 0.24, (_quien != "") ? "ELIMINADO POR" : "ELIMINADO", _base, _base, 0);
+        if (_quien != "") {
+            draw_set_colour(c_white);
+            draw_text_transformed(_cx, _gh * 0.32, _quien, _base * 1.6, _base * 1.6, 0);
+        }
+
+        // Circulo de cuenta regresiva
+        var _r = 70 * _u;
+        var _grosor = 10 * _u;
+        draw_set_alpha(0.18 * _fade);
+        draw_set_colour(c_white);
+        scr_resp_arco(_cx, _cy, _r, _grosor, 1);
+        draw_set_alpha(_fade);
+        draw_set_colour(make_color_rgb(255, 210, 63));
+        scr_resp_arco(_cx, _cy, _r, _grosor, _al / _tot);
+
+        // Numero (salta un poquito cada segundo)
+        var _seg = max(1, ceil(_al / 60));
+        var _frac = (_al mod 60) / 60;
+        var _pop = 1 + max(0, _frac - 0.8) * 1.2;
+        draw_set_colour(c_white);
+        draw_text_transformed(_cx, _cy, string(_seg), _base * 2.6 * _pop, _base * 2.6 * _pop, 0);
+
+        // REAPARECES EN
+        draw_set_colour(make_color_rgb(207, 214, 230));
+        draw_text_transformed(_cx, _cy + _r + 40 * _u, "REAPARECES EN", _base * 0.8, _base * 0.8, 0);
+    }
+    else {
+        if (resp_fx.estaba) { resp_fx.estaba = false; resp_fx.t = 45; }   // acaba de revivir
+        if (resp_fx.t > 0) {
+            resp_fx.t--;
+            var _a = resp_fx.t / 45;
+            var _s = (_gh * 0.07) / max(1, string_height("A")) * (1 + (1 - _a) * 0.3);
+            draw_set_alpha(_a);
+            draw_set_colour(c_black);
+            for (var _o = 0; _o < 8; _o++) draw_text_transformed(_gw / 2 + lengthdir_x(3 * _u, _o * 45), _gh * 0.3 + lengthdir_y(3 * _u, _o * 45), "A JUGAR!", _s, _s, 0);
+            draw_set_colour(make_color_rgb(255, 210, 63));
+            draw_text_transformed(_gw / 2, _gh * 0.3, "A JUGAR!", _s, _s, 0);
+        }
+    }
+    draw_set_alpha(1);
+    draw_set_colour(c_white);
+    draw_set_halign(fa_left);
+    draw_set_valign(fa_top);
+}
+
+// Arco grueso que empieza arriba y va en sentido del reloj (_p de 0 a 1)
+function scr_resp_arco(_cx, _cy, _r, _g, _p) {
+    if (_p <= 0) return;
+    var _n = max(2, ceil(48 * _p));
+    var _ri = _r - _g / 2, _ro = _r + _g / 2;
+    draw_primitive_begin(pr_trianglestrip);
+    for (var i = 0; i <= _n; i++) {
+        var _ang = 90 - 360 * _p * (i / _n);
+        draw_vertex(_cx + lengthdir_x(_ro, _ang), _cy + lengthdir_y(_ro, _ang));
+        draw_vertex(_cx + lengthdir_x(_ri, _ang), _cy + lengthdir_y(_ri, _ang));
+    }
+    draw_primitive_end();
+}
+
+// ======================================================
+// EFECTO "LLEVAS LA BANDERA" (opcion A)
+// Bordes suaves del color de tu equipo que respiran + cartel arriba + brillo en los pies.
+// scr_bandera_gui_draw() va en el Draw GUI; scr_bandera_aura_draw() en el Draw (antes del personaje).
+// ======================================================
+function scr_bandera_color() {
+    return (scr_my_team() == "AZUL") ? make_color_rgb(70, 140, 255) : make_color_rgb(255, 70, 70);
+}
+
+function scr_bandera_gui_draw() {
+    var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+    var _u = _gh / 720;
+    var _col = scr_bandera_color();
+    var _p = 0.5 + 0.5 * sin(current_time / 1000 * 3);
+    var _a = 0.35 + _p * 0.15;
+
+    // Bordes que se desvanecen hacia adentro (sin cuadros duros)
+    var _d = 140 * _u;
+    draw_primitive_begin(pr_trianglestrip);   // arriba
+    draw_vertex_colour(0, 0, _col, _a); draw_vertex_colour(_gw, 0, _col, _a);
+    draw_vertex_colour(0, _d, _col, 0); draw_vertex_colour(_gw, _d, _col, 0);
+    draw_primitive_end();
+    draw_primitive_begin(pr_trianglestrip);   // abajo
+    draw_vertex_colour(0, _gh, _col, _a); draw_vertex_colour(_gw, _gh, _col, _a);
+    draw_vertex_colour(0, _gh - _d, _col, 0); draw_vertex_colour(_gw, _gh - _d, _col, 0);
+    draw_primitive_end();
+    draw_primitive_begin(pr_trianglestrip);   // izquierda
+    draw_vertex_colour(0, 0, _col, _a); draw_vertex_colour(0, _gh, _col, _a);
+    draw_vertex_colour(_d, 0, _col, 0); draw_vertex_colour(_d, _gh, _col, 0);
+    draw_primitive_end();
+    draw_primitive_begin(pr_trianglestrip);   // derecha
+    draw_vertex_colour(_gw, 0, _col, _a); draw_vertex_colour(_gw, _gh, _col, _a);
+    draw_vertex_colour(_gw - _d, 0, _col, 0); draw_vertex_colour(_gw - _d, _gh, _col, 0);
+    draw_primitive_end();
+
+    // Cartel "LLEVAS LA BANDERA"
+    draw_set_font(fnt_menu);
+    var _txt = "LLEVAS LA BANDERA";
+    var _s = (_gh * 0.032) / max(1, string_height(_txt));
+    var _tw = string_width(_txt) * _s;
+    var _bh = 46 * _u, _bw = _tw + 80 * _u;
+    var _bx = _gw / 2 - _bw / 2, _by = 14 * _u;
+    draw_set_alpha(0.8);
+    draw_set_colour(make_color_rgb(15, 25, 50));
+    draw_rectangle(_bx, _by, _bx + _bw, _by + _bh, false);
+    draw_set_alpha(1);
+    draw_set_colour(_col);
+    draw_rectangle(_bx, _by + _bh - 4 * _u, _bx + _bw, _by + _bh, false);
+
+    // Banderita dibujada
+    var _fx = _bx + 18 * _u, _fy = _by + 9 * _u;
+    draw_set_colour(c_white);
+    draw_rectangle(_fx, _fy, _fx + 3 * _u, _fy + 28 * _u, false);
+    draw_set_colour(make_color_rgb(255, 75, 75));
+    draw_triangle(_fx + 3 * _u, _fy, _fx + 22 * _u, _fy + 7 * _u, _fx + 3 * _u, _fy + 14 * _u, false);
+
+    draw_set_halign(fa_left);
+    draw_set_valign(fa_middle);
+    draw_set_colour(c_white);
+    draw_text_transformed(_fx + 34 * _u, _by + _bh / 2 - 2 * _u, _txt, _s, _s, 0);
+    draw_set_valign(fa_top);
+}
+
+function scr_bandera_aura_draw() {
+    if (!has_flag) return;
+    var _p = 0.5 + 0.5 * sin(current_time / 1000 * 3);
+    var _col = scr_bandera_color();
+    var _r = 22 + _p * 4;
+    gpu_set_blendmode(bm_add);
+    draw_set_colour(_col);
+    draw_set_alpha(0.25 + _p * 0.15);
+    draw_ellipse(x - _r, bbox_bottom - _r * 0.28, x + _r, bbox_bottom + _r * 0.28, false);
+    draw_set_alpha(1);
+    gpu_set_blendmode(bm_normal);
+    draw_set_colour(c_white);
 }

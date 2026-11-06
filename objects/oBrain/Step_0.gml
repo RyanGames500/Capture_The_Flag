@@ -103,7 +103,10 @@ if (global.ONLINE == false && global.game_over == false) {
 }
 
 // --- 4. LÓGICA PANTALLA DE VICTORIA (MODIFICADA) ---
-if (global.game_over == true && !abandono_activo) {
+// --- PUNTO GANADOR: festejo (camara se acerca, CAPTURA!, confeti) antes de los resultados (scr_fx) ---
+scr_fin_festejo_step();
+
+if (global.game_over == true && !abandono_activo && !scr_fin_festejo_activo()) {
     if (victory_alpha < 1) victory_alpha += 0.05; 
 
     if (victory_alpha >= 0.9) {
@@ -336,7 +339,7 @@ if (global.game_over == false)
 if (global.game_over == true) 
 {
 	with(oMouseIcon_falso){window_set_cursor(cr_arrow);}
-    if (victory_alpha < 1) victory_alpha += 0.05; 
+    if (victory_alpha < 1 && !scr_fin_festejo_activo()) victory_alpha += 0.05;   // espera al festejo del punto ganador (scr_fx)
 
     if (victory_alpha >= 0.9) 
     {

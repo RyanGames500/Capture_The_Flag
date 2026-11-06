@@ -1,3 +1,6 @@
+// Punto ganador: la camara se acerca a la base del que gano (scr_fx)
+if (scr_fin_festejo_camara(cam)) exit;
+
 // follow target
 if (instance_exists(follow)) {
     xTo = follow.x - camera_get_view_width(cam) * 0.5;

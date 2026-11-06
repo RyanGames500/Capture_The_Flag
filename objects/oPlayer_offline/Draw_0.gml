@@ -1,3 +1,4 @@
+scr_bandera_aura_draw();   // brillo bajo los pies si llevas la bandera (scr_fx)
 // --- BARRA DE VIDA ÉPICA (LOCAL) ---
 var _x1 = x - 30;
 var _y1 = y - 45;

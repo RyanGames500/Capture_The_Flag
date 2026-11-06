@@ -29,11 +29,13 @@ if (!is_granada && speed > 0) {
     var _nx = x + hspeed;
     var _ny = y + vspeed;
     if (collision_line(x, y, _nx, _ny, obj_wall, false, true) != noone) {
+        if (!is_rocket) fx_sparks(x, y, direction + 180, 6);   // chispas (como en linea)
         if (is_rocket) { instance_create_layer(x, y, "Instances", oExplosionFX); scrCamShake(11); }
         instance_destroy();
         exit;
     }
     if (collision_line(x, y, _nx, _ny, oPlataformaPasable, false, true) != noone) {
+        if (!is_rocket) fx_sparks(x, y, direction + 180, 6);
         instance_destroy();
         exit;
     }
@@ -48,6 +50,7 @@ if (!is_granada && speed > 0) {
 // 1. Chocar con paredes
 if (place_meeting(x, y, obj_wall)  and !is_rocket) 
 {
+    if (!is_granada) fx_sparks(x, y, direction + 180, 6);
     instance_destroy();
 }
 else if (place_meeting(x, y, obj_wall)  and is_rocket) 
@@ -70,6 +73,7 @@ if (bot != noone)
         var _dmg = is_rocket ? damage_rocket : damage;
         var _ok = scr_dano_bot(bot, _dmg, global.myName);
         if (_ok && global.sfx) audio_play_sound(snd_hit, 10, false);
+        if (_ok) fx_sparks(x, y, direction + 180, is_rocket ? 4 : 8, is_rocket);   // chispas en el bot (como en linea)
         if (is_rocket) {
             instance_create_layer(x, y, "Instances", oExplosionFX);
             scrCamShake(11);
