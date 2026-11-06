@@ -263,6 +263,8 @@ if (global.pausa && !global.game_over) {
         draw_set_color(color);
         draw_text_transformed(mid_x, mid_y + (i * 50), texto, escala, escala, 0);
     }
+    // Voz de tu equipo: silenciar a alguien (sala privada, scr_objetivo)
+    scr_voz_draw_panel();
 }
 
 // --- 4. PANTALLA DE RESULTADOS (diseno A: GANASTE / PERDISTE, marcador, equipos, premio) ---
@@ -444,7 +446,7 @@ draw_set_valign(fa_top);
 
 
 
-if (!intro_disparada && room != rm_menu && (global.ONLINE == true || global.bot_partida)) {
+if ((!intro_disparada || scr_sel_tarde()) && room != rm_menu && (global.ONLINE == true || global.bot_partida)) {   // tambien si te quedaste sin personaje
     var sw = display_get_gui_width();
     var sh = display_get_gui_height();
     var _yo = scr_my_team();   // mi equipo desde que entro a la sala (antes salía vacío y todo se veía rojo)
@@ -461,7 +463,7 @@ if (!intro_disparada && room != rm_menu && (global.ONLINE == true || global.bot_
     var segs = ceil(timer_intro / 60);
     draw_text_transformed_color(sw/2 + 3, 40 + 3, "ELIGE TU PERSONAJE", 1.8, 1.8, 0, c_black, c_black, c_black, c_black, 1);
     draw_text_transformed_color(sw/2, 40, "ELIGE TU PERSONAJE", 1.8, 1.8, 0, c_white, c_white, c_white, c_white, 1);
-    draw_text_transformed_color(sw/2, 84, string(segs), 1.3, 1.3, 0, c_yellow, c_yellow, c_orange, c_orange, 1);
+    draw_text_transformed_color(sw/2, 84, scr_sel_tarde() ? "LA PARTIDA YA EMPEZO: ELIGE Y ENTRAS" : string(segs), scr_sel_tarde() ? 0.8 : 1.3, scr_sel_tarde() ? 0.8 : 1.3, 0, c_yellow, c_yellow, c_orange, c_orange, 1);
 
     // 3. ¿QUIÉN VA EN CADA EQUIPO?
     var _az = [];   // cada uno: [pj, nombre, listo, soy_yo]
@@ -631,6 +633,9 @@ if (mensaje_alpha > 0) {
     mensaje_alpha -= 0.02; // Para que se vaya desvaneciendo
 }
 draw_set_alpha(1);
+
+// Contador de prueba de la voz (VOZ_DEBUG, scr_objetivo)
+if (!global.pausa) scr_voz_draw_debug(20, display_get_gui_height() - 60);
 
 // --- PUNTO GANADOR: CAPTURA! y confeti antes de los resultados (scr_fx) ---
 scr_fin_festejo_draw();

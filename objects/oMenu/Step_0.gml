@@ -580,6 +580,8 @@ var _chat_abierto = _chat_tomo || global.chat.abierto;
 // --- SALIR DE LA SALA PRIVADA (con confirmacion) ---
 var _lobby_input_ok = true;
 if (_chat_abierto) _lobby_input_ok = false;   // con el chat abierto no se empieza ni se expulsa
+// Tocar el panel de voz (scr_objetivo) no cuenta como tocar a un jugador
+if (device_mouse_check_button_pressed(0, mb_left) && scr_voz_en_zona(device_mouse_x_to_gui(0), device_mouse_y_to_gui(0))) _lobby_input_ok = false;
 if (menu_state == "lobby_espera") {
     var _sgw = display_get_gui_width();
     var _sgh = display_get_gui_height();

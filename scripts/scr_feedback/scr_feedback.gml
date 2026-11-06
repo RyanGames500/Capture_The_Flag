@@ -829,6 +829,9 @@ function fb_indicadores() {
 			fb_icono("flag", _bx - 20, _by - 21);
 		}
 
+		// Esta hablando por voz (sala privada, scr_objetivo)
+		if (!es_bot && scr_voz_activa() && scr_voz_hablando(clientId)) scr_voz_draw_borde(_bx, _by);
+
 		// Metros
 		var _m = string(max(1, round(point_distance(_ox, _oy, x, y) / FB_METRO))) + " m";
 		if (_flag) _m = (_aliado ? "ESCOLTALO  " : "ATRAPALO  ") + _m;

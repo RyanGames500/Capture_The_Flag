@@ -161,6 +161,16 @@ function __touch_buttons_base(_mode, _W, _H) {
 	_hb.ico = "pausa";
 	array_push(_b, _hb);
 	array_push(_b, _K(_W - 150, 60, 34, ":)", [], "emotes"));
+	// Chat de voz en sala privada (scr_objetivo): mantener o prender/apagar segun AJUSTES
+	if (_p != noone && scr_voz_activa()) {
+		opt_init(); scr_voz_init();
+		var _vt = (global.opt.mic_modo == 0) ? "HABLAR" : (global.voz.abierto_on ? "MIC ON" : "MIC OFF");
+		if (scr_voz_motivo() != "") _vt = "SIN VOZ";
+		_hb = _K(_W - 240, 60, 34, _vt, [string(ord("V"))]);
+		_hb.ico = "mic";
+		if (global.voz.on) _hb.col = make_color_rgb(78, 200, 120);
+		array_push(_b, _hb);
+	}
 	if (instance_exists(oTouchControls) && oTouchControls.emote_open) {
 		for (var i = 0; i < 4; i++) {
 			array_push(_b, _K(_W - 150 - i * 78, 140, 34, string(i + 1), [string(ord(string(i + 1)))], "emote" + string(i + 1)));
@@ -218,6 +228,9 @@ function touch_icono(_ico, _x, _y, _s, _col) {
 		break;
 		case "golpe":
 			__touch_spr_centro(spr_Hand, _x, _y, 2.6 * _s);
+		break;
+		case "mic":
+			__voz_mic(_x, _y, 1.6 * _s, _col, 1);
 		break;
 		case "pausa":
 			draw_rectangle(_x - 9 * _s, _y - 11 * _s, _x - 3 * _s, _y + 11 * _s, false);

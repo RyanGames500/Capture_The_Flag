@@ -681,6 +681,9 @@ else if (menu_state == "lobby_espera") {
     // --- CHAT DE LA SALA (scr_objetivo) ---
     scr_chat_draw();
 
+    // --- VOZ DE LA SALA (scr_objetivo): barrita, boton HABLAR y lista con SILENCIAR ---
+    scr_voz_draw_panel();
+
     // --- 6. VENTANITA: SEGURO QUE QUIERES SALIR? ---
     if (confirmar_salida) {
         draw_set_color(c_black); draw_set_alpha(0.7);

@@ -122,3 +122,6 @@ scr_hab_draw();
 
 // Efecto encima (zap, hielo, red) (scr_armas)
 scr_efx_draw_cuerpo(scr_efx_codigo());
+
+// Chat de voz: mi microfonito cuando hablo (scr_objetivo)
+if (visible && scr_voz_activa() && scr_voz_yo_hablo()) scr_voz_draw_cabeza(x, y - 74);

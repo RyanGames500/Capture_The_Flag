@@ -117,3 +117,6 @@ scr_red_draw_lag();
 
 // Efecto encima (zap, hielo, red) (scr_armas)
 scr_efx_draw_cuerpo(scr_efx_vis());
+
+// Chat de voz: microfonito sobre la cabeza del que habla (scr_objetivo)
+if (!es_bot && visible && scr_voz_activa() && scr_voz_hablando(clientId)) scr_voz_draw_cabeza(x, y - 74);
