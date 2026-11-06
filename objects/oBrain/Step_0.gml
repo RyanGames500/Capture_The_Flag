@@ -47,7 +47,11 @@ if (global.pausa) {
     pause_index = clamp(pause_index + move, 0, max_index);
 
     if (vkey_pressed(vk_enter)) {
-        if (global.ONLINE) {
+        if (global.ONLINE && scr_botq_activa()) {
+            // Partida rapida contra el bot nuevo: CONTINUAR o SALIR (ya estas solo en tu sala)
+            if (pause_index == 0) global.pausa = false;
+            if (pause_index == 1) { global.pausa = false; scr_bot_salir(false); }
+        } else if (global.ONLINE) {
             if (pause_index == 0) global.pausa = false;
             if (pause_index == 1) { 
                 var _msg = string(global.myName) + " Abandono la Partida!";
@@ -171,7 +175,9 @@ if (global.game_over == true && !abandono_activo && !scr_fin_festejo_activo()) {
                 break;
 
                 case "SALIR":
-                    if (global.ONLINE) {
+                    if (scr_botq_activa()) {
+                        scr_bot_salir(false);   // partida rapida contra el bot nuevo
+                    } else if (global.ONLINE) {
                         LeaveRoom();
                     } else if (global.bot_partida) {
                         scr_bot_salir(false);
@@ -233,8 +239,8 @@ if (oBrain.AmIPseudoHost && !intro_disparada && room != rm_menu && global.ONLINE
         intro_disparada = true; 
 
         // --- Recopilar nombres para la Intro (Esto ya te sirve para varios) ---
-        var listaAzul = (global.myTeam == "AZUL") ? global.myName : "";
-        var listaRojo = (global.myTeam == "ROJO") ? global.myName : "";
+        var listaAzul = (scr_my_team() == "AZUL") ? global.myName : "";   // mi equipo de esta sala (antes podia ser el de la partida anterior)
+        var listaRojo = (scr_my_team() == "ROJO") ? global.myName : "";
 
         with(oOtherPlayer) {
             var nameStr = (variable_instance_exists(id, "Name")) ? Name : "Jugador";
@@ -573,6 +579,8 @@ else if (!global.mi_listo && vkey_pressed(vk_enter)) {
     // 1. DETERMINAR POSICIÓN SEGÚN EQUIPO
     var _spawnX, _spawnY;
     
+    // Mi equipo de ESTA sala (global.myTeam podia traer el de la partida anterior y te ponia en la base equivocada)
+    global.myTeam = scr_my_team();
     if (global.myTeam == "AZUL") {
         // Si existe el objeto base, spawnea ahí. Si no, usa una coordenada segura.
         _spawnX = instance_exists(obj_base_blue) ? obj_base_blue.x : 100;

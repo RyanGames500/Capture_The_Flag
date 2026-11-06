@@ -43,7 +43,10 @@ function scr_ajustes_cambiar(_fila, _dir) {
 }
 
 function scr_ajustes_struct() {
-	return { t: global.match_tiempo, m: global.match_mapa, b: global.match_banderas };
+	var _s = { t: global.match_tiempo, m: global.match_mapa, b: global.match_banderas };
+	// En la sala de espera el lider tambien manda los equipos (parejos, scr_objetivo)
+	if (room == rm_menu && instance_exists(oBrain) && oBrain.AmIPseudoHost) _s.eq = scr_sala_equipos_calc();
+	return _s;
 }
 
 /// Aplica los ajustes que mandó el líder (revisa que vengan bien).
@@ -52,6 +55,7 @@ function scr_ajustes_aplicar(_s) {
 	if (variable_struct_exists(_s, "t") && is_numeric(_s.t)) global.match_tiempo   = max(0, round(_s.t));
 	if (variable_struct_exists(_s, "m") && is_numeric(_s.m)) global.match_mapa     = clamp(round(_s.m), 0, MAPA_ALEATORIO);
 	if (variable_struct_exists(_s, "b") && is_numeric(_s.b)) global.match_banderas = clamp(round(_s.b), 1, 5);
+	if (variable_struct_exists(_s, "eq")) scr_sala_equipos_aplicar(_s.eq);   // equipos que repartio el lider
 }
 
 /// El líder les manda los ajustes a todos los de la sala.
@@ -272,8 +276,68 @@ function scr_bot_esperando() {
 		&& variable_global_exists("roomId") && string_pos("auto_matchmake", string(global.roomId)) == 1;
 }
 
-/// Empieza la partida contra el bot
+/// Partida rapida sin rival: juegas contra el MISMO bot de las salas privadas (scr_objetivo).
+/// Sales de la cola a tu propia sala (nadie mas entra) y, cuando el servidor confirma
+/// (callback_LeaveRoom -> scr_botq_arrancar), vas al mapa en linea con un bot rival.
+/// Si el servidor no contesta en 3 s, se usa el bot viejo de siempre (scr_bot_empezar_viejo).
+#macro BOTQ_ESPERA 180
+
 function scr_bot_empezar() {
+	if (!variable_global_exists("botq_pendiente")) global.botq_pendiente = false;
+	if (global.botq_pendiente) {
+		// Ya pedimos salir de la cola: esperando al servidor
+		global.botq_espera--;
+		if (global.botq_espera <= 0) {
+			global.botq_pendiente = false;
+			scr_bot_empezar_viejo();
+		}
+		return;
+	}
+	scr_ajustes_default();
+	global.match_mapa = irandom(scr_mapa_total() - 1);   // mapa al azar
+	scr_bot_rival_nuevo();                              // nombre de persona y personaje del rival
+	global.botq_pendiente = true;
+	global.botq_espera = BOTQ_ESPERA;
+	LeaveRoom();
+}
+
+/// ¿Estoy jugando la partida rapida contra el bot nuevo?
+function scr_botq_activa() {
+	return variable_global_exists("botq") && global.botq;
+}
+
+/// El servidor ya me dejo solo en mi sala: arranca la partida con el bot (callback_LeaveRoom)
+function scr_botq_arrancar() {
+	global.botq_pendiente = false;
+	global.botq = true;
+	global.bot_partida = false;
+	global.serverTeam = "AZUL";
+	global.myTeam = "AZUL";
+	with (oBrain) {
+		AmIPseudoHost = true;
+		pseudoHostClientId = global.clientId;
+		intro_disparada   = false;
+		timer_intro       = 60 * 60;
+		bot_espera        = 0;
+		puntos_procesados = false;
+		victory_alpha     = 0;
+		victory_index     = 0;
+		abandono_activo   = false;
+		abandono_check    = -1;
+	}
+	global.puntos_azul = 0;
+	global.puntos_rojo = 0;
+	global.winner_team = 0;
+	global.game_over   = false;
+	global.pausa       = false;
+	global.mi_listo    = false;
+	// El rival: un bot de sala privada, con nombre de persona (sin "BOT")
+	global.botnet_defs = [{ i: BOTNET_ID_BASE - 4, n: global.bot_nombre, t: "ROJO", r: "ataque", h: true, pj: global.bot_pj }];
+	room_goto(scr_mapa_room(global.match_mapa));
+}
+
+/// Empieza la partida contra el bot VIEJO (partida offline). Solo si el servidor no contesta.
+function scr_bot_empezar_viejo() {
 	var _l = scr_bot_rooms();
 	scr_ajustes_default();
 	var _m = irandom(array_length(_l) - 1);   // mapa al azar
@@ -325,6 +389,8 @@ function scr_bot_premio(_gane) {
 /// Salir de la partida contra el bot. _buscar = true vuelve a buscar rival de una.
 function scr_bot_salir(_buscar) {
 	global.bot_partida  = false;
+	global.botq         = false;   // tambien sirve para la partida contra el bot nuevo
+	global.botq_pendiente = false;
 	global.bot_rebuscar = _buscar;
 	global.ONLINE       = true;
 	global.game_over    = false;

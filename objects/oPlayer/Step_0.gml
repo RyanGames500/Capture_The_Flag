@@ -108,6 +108,10 @@ key_right = vkey(ord("D"));
 key_jump  = vkey_pressed(ord("W"));
 key_melee = vmouse_pressed(mb_right);
 
+// Efectos de las armas nuevas: aturdido / en la red no camina (scr_armas)
+scr_efx_step();
+scr_efx_controles();
+
 // Habilidad (Q) y pasivas de tu personaje (scr_personajes)
 scr_hab_step();
 
@@ -129,6 +133,7 @@ else
 walksp = walksp_base * walksp_mult;
 walksp *= scr_arma_peso_mult();   // la Thompson pesa (scr_armas)
 walksp *= scr_hab_vel_mult();     // la coraza del Tanque pesa (scr_personajes)
+walksp *= scr_efx_vel_mult();     // el congelador te pone lento (scr_armas)
 
 if (!vmouse(mb_left)) {
 	ak_recoil = max(0, ak_recoil - 0.6);
@@ -179,6 +184,7 @@ if (global.ONLINE && spawn_lock > 0)
 }
 
 var canShoot = (!has_flag) && (state != PLAYERSTATE.DEAD);
+if (scr_efx_aturdido()) canShoot = false;   // aturdido o congelado: no dispara
 
 if (melee_active > 0)
 {
@@ -223,7 +229,7 @@ if (melee_active > 0)
 	}
 }
 
-if (vmouse_pressed(mb_right))
+if (vmouse_pressed(mb_right) && !scr_efx_aturdido())
 {
 	if (granadas > 0) {
 		granadas -= 1;
@@ -680,6 +686,8 @@ global.sharedProperties = {
 	_KILLS: kills,
 	_VIS: visible,
 	_HF: has_flag,
+	_EF: scr_efx_codigo(),   // efecto que traes encima (scr_armas)
+	_WT: (guns[weapon.index] != noone) ? scr_arma_tinte(guns[weapon.index]) : c_white,
 	_INV: invulnerable || scr_hab_esquivando(),   // en el impulso las balas tampoco le pegan
 	_NAME: playerName,
 	_ANG: weapon.angle,

@@ -90,7 +90,7 @@ if (state != PLAYERSTATE.DEAD) {
         var ajuste_vertical = (weaponScaleY == -2) ? -desfase_arriba : desfase_arriba;
         var weaponX = handX + lengthdir_x(desfase_adelante, handAngle) + lengthdir_x(ajuste_vertical, handAngle - 90);
         var weaponY = handY + lengthdir_y(desfase_adelante, handAngle) + lengthdir_y(ajuste_vertical, handAngle - 90);
-        draw_sprite_ext(guns[weapon.index].sprite, 0, weaponX, weaponY, 2, weaponScaleY, handAngle, c_white, 1);
+        draw_sprite_ext(guns[weapon.index].sprite, 0, weaponX, weaponY, 2, weaponScaleY, handAngle, scr_arma_tinte(guns[weapon.index]), 1);
     }
 
 } // fin brazo y arma
@@ -119,3 +119,6 @@ if (has_shield) {
 
 // Habilidad: coraza, estela del impulso, gancho y la flecha de la Exploradora (scr_personajes)
 scr_hab_draw();
+
+// Efecto encima (zap, hielo, red) (scr_armas)
+scr_efx_draw_cuerpo(scr_efx_codigo());

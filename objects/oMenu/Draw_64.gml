@@ -678,6 +678,9 @@ else if (menu_state == "lobby_espera") {
         draw_set_alpha(1);
     }
 
+    // --- CHAT DE LA SALA (scr_objetivo) ---
+    scr_chat_draw();
+
     // --- 6. VENTANITA: SEGURO QUE QUIERES SALIR? ---
     if (confirmar_salida) {
         draw_set_color(c_black); draw_set_alpha(0.7);

@@ -419,7 +419,7 @@ if (state == PLAYERSTATE2.DEAD && has_flag == true) {
         velocidad_caida = -2;
         sprite_index = spr_suela;
     }
-    fb_toast("SOLTASTE LA BANDERA", "Recuperala rapido", FB_ROJO, "flag");
+    fb_toast("SOLTASTE LA BANDERA", "Quedo en el suelo", FB_ORO);   // igual que en linea
 }
 
 // --- CAPTURA LOCAL ---
@@ -467,7 +467,7 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending) {
 var miBandera = (global.myTeam == "AZUL") ? oFlag2 : oFlag;
 if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (miBandera.x != miBandera.spawnX)) {
     with(miBandera) { x = spawnX; y = spawnY; }
-    fb_toast("BANDERA DEVUELTA", "Tu bandera esta a salvo", FB_AZUL, "flag");
+    fb_toast("BANDERA DEVUELTA", "Salvaste tu bandera", fb_team_col(global.myTeam));   // igual que en linea
 }
 
 // --- INVULNERABILIDAD ---

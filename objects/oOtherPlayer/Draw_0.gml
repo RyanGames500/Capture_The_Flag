@@ -92,7 +92,7 @@ if (state != PLAYERSTATE.DEAD) {
         var ajuste_vertical = (weaponScaleY == -2) ? -desfase_arriba : desfase_arriba;
         var weaponX = handX + lengthdir_x(desfase_adelante, handAngle) + lengthdir_x(ajuste_vertical, handAngle - 90);
         var weaponY = handY + lengthdir_y(desfase_adelante, handAngle) + lengthdir_y(ajuste_vertical, handAngle - 90);
-        draw_sprite_ext(WSI, 0, weaponX, weaponY, 2, weaponScaleY, handAngle, c_white, 1);
+        draw_sprite_ext(WSI, 0, weaponX, weaponY, 2, weaponScaleY, handAngle, scr_efx_wti(), 1);
     }
 
 } // fin brazo y arma
@@ -114,3 +114,6 @@ scr_hab_draw_otro();
 
 // --- LAG: si hace rato no llegan sus datos, se ve gris con LAG encima ---
 scr_red_draw_lag();
+
+// Efecto encima (zap, hielo, red) (scr_armas)
+scr_efx_draw_cuerpo(scr_efx_vis());

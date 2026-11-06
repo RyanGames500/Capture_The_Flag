@@ -449,6 +449,7 @@ if (hp <= 0 && !isDead) {
             velocidad_caida = -2;
             sprite_index = spr_suela;
         }
+        fb_toast("TU BANDERA ESTA EN EL SUELO", "Tocala para devolverla", fb_team_col(scr_my_team()));   // igual que en linea
     }
 
     // Mensaje del bot
@@ -563,6 +564,7 @@ if (place_meeting(x, y, miBandera)
         x = spawnX;
         y = spawnY;
     }
+    fb_toast("EL RIVAL RECUPERO SU BANDERA", string(Name), fb_team_col(fb_rival(scr_my_team())));   // igual que en linea
 }
 
 // --- SISTEMA DE FLASH ROJO ---
