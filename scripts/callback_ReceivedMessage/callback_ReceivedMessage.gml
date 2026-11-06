@@ -9,7 +9,8 @@ function callback_ReceivedMessage(theMessage , senderClientId){
 		
 		if instance_exists(oOtherPlayer)
 			{
-			if oPlayer.isDead = false 
+			// En sala privada las bajas no cuentan (scr_objetivo)
+			if oPlayer.isDead = false && !scr_fin_es_privada()
 			{
 				global.kills++;
 			}

@@ -48,8 +48,10 @@ case "reto_duelo":
         ChangeRoom("duelo_" + string(_clientId_retador));
         
         // 3. ¡A la batalla! (duelo = partida normal: 5 min, 3 banderas)
+        // Mapa sacado del nombre de la sala del duelo: el retador saca el mismo
         scr_ajustes_default();
-        room_goto(rm_stage1);
+        global.match_mapa = scr_mapa_desde_codigo("duelo_" + string(_clientId_retador));
+        room_goto(scr_mapa_room(global.match_mapa));
         
     } else {
         SendEventToClient(_clientId_retador, "reto_rechazado", { nombre: global.myName });
@@ -63,9 +65,10 @@ case "reto_aceptado":
     // Así el otro sabe exactamente a dónde entrar
     ChangeRoom("duelo_" + string(global.clientId));
     
-    // También nos vamos a la room de pelea (duelo = partida normal)
+    // También nos vamos a la room de pelea (duelo = partida normal, mismo mapa que el otro)
     scr_ajustes_default();
-    room_goto(rm_stage1);
+    global.match_mapa = scr_mapa_desde_codigo("duelo_" + string(global.clientId));
+    room_goto(scr_mapa_room(global.match_mapa));
     
     show_debug_message(">>> DUELO: " + _quien + " aceptó. Iniciando sala privada.");
 break;
@@ -211,6 +214,37 @@ case "sync_reloj":
         oBrain.reloj_seg = max(0, theMessageStruct.s);
         oBrain.reloj_fin = (oBrain.reloj_seg <= 0);
     }
+break;
+
+// --- BOTS DE LA SALA PRIVADA (scr_objetivo) ---
+case "bots_sp":
+    // El lider manda como van sus bots
+    scr_botnet_recibir(theMessageStruct);
+break;
+
+case "bot_hit":
+    // Alguien le pego a un bot: el lider aplica el dano
+    if (oBrain.AmIPseudoHost && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "b") && variable_struct_exists(theMessageStruct, "m")) {
+        scr_botnet_dano(scr_botnet_buscar(theMessageStruct.b), theMessageStruct.m, senderClientId);
+    }
+break;
+
+case "bot_flag_capture":
+{
+    // Un bot agarro la bandera (igual que "flag_capture", pero el portador es el bot)
+    if (!is_struct(theMessageStruct) || !variable_struct_exists(theMessageStruct, "b")) break;
+    var _bt_eq  = string(theMessageStruct.team);
+    var _bt_inst = scr_botnet_buscar(theMessageStruct.b);
+    var _bt_flag = (_bt_eq == "AZUL") ? oFlag : oFlag2;
+    with (_bt_flag) {
+        has_flag = true;
+        sprite_index = spr_mano;
+        portador_instancia = _bt_inst;
+    }
+    var _bt_nom = (_bt_inst != noone) ? _bt_inst.Name : "UN BOT";
+    if (_bt_eq == global.myTeam) fb_banner_aliado(_bt_nom);
+    else fb_banner_robada(_bt_nom);
+}
 break;
 
 case "player_left_msg":
@@ -849,7 +883,9 @@ case "hit":
         if(health <= 0) and oPlayer.t2 == 0
         {
             oPlayer.t2 = 1;
-            SendMessageToClient(senderClientId , "point")
+            // Si me elimino un bot, no hay a quien darle el punto (scr_objetivo)
+            var _de_bot = variable_struct_exists(theMessageStruct, "bot") && theMessageStruct.bot;
+            if (!_de_bot) SendMessageToClient(senderClientId , "point")
         }
 
         if (state != PLAYERSTATE.DEAD)
@@ -1090,11 +1126,8 @@ case "finalizar_partida":
         
         var mi_equipo_num = (global.myTeam == "ROJO") ? 1 : 2;
         
-        if (global.winner_team == mi_equipo_num) {
-            scr_add_victory(); // El cliente suma sus +25 copas y XP
-        } else {
-            scr_add_loss();    // El cliente resta sus -15 copas
-        }
+        // Con bots en la sala cuenta como partida contra bots (scr_objetivo)
+        scr_botnet_premio(global.winner_team == mi_equipo_num);
         
         show_debug_message(">>> CLIENTE: Progreso personal actualizado.");
     }
@@ -1176,6 +1209,32 @@ case "fx_shot":
     t.y1 = fx_y;
     t.x2 = fx_x + lengthdir_x(len, ang);
     t.y2 = fx_y + lengthdir_y(len, ang);
+
+    // Sonido del disparo del otro (antes solo se oian los tuyos).
+    // Las armas nuevas mandan cual sonido es; las de siempre se sacan por el tipo.
+    if (global.sfx) {
+        var _snd = -1, _vol = 1, _tono = 1;
+        if (variable_struct_exists(theMessageStruct, "snd")) {
+            _snd = asset_get_index(theMessageStruct.snd);
+            if (variable_struct_exists(theMessageStruct, "vol"))  _vol  = theMessageStruct.vol;
+            if (variable_struct_exists(theMessageStruct, "tono")) _tono = theMessageStruct.tono;
+        } else {
+            switch (mid) {
+                case "gun":     _snd = snd_gun;     break;
+                case "smg":     _snd = snd_smg;     break;
+                case "escop":   _snd = snd_escop;   break;
+                case "bazooka": _snd = snd_bazooka; break;
+                case "m4":      _snd = snd_M4; _vol = 0.8; break;
+            }
+        }
+        if (_snd != -1 && asset_get_type(audio_get_name(_snd)) == asset_sound) {
+            // Si pasa fuera de tu pantalla se oye mas bajito
+            var _cam = view_camera[0];
+            var _cx = camera_get_view_x(_cam), _cy = camera_get_view_y(_cam);
+            var _ve = (fx_x > _cx - 40 && fx_x < _cx + camera_get_view_width(_cam) + 40 && fx_y > _cy - 40 && fx_y < _cy + camera_get_view_height(_cam) + 40);
+            audio_play_sound(_snd, 1, false, _vol * (_ve ? 1 : 0.35), 0, _tono * random_range(0.97, 1.03));
+        }
+    }
 }
 break;
 

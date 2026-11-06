@@ -1,17 +1,17 @@
 // ======================================================
 // RELOJ DE PARTIDA Y AJUSTES DE LA SALA (solo en línea)
 //   global.match_tiempo   segundos de partida (0 = SIN LIMITE)
-//   global.match_mapa     0 = NIVEL 1, 1 = NIVEL 2, 2 = NIVEL 3
+//   global.match_mapa     0 = NIVEL 1, 1 = NIVEL 2, 2 = NIVEL 3, 3 = ALEATORIO
 //   global.match_banderas banderas para ganar (1 a 5)
 // El reloj lo lleva el líder y lo manda a todos cada segundo ("sync_reloj").
 // Si se acaba empatado: MUERTE SUBITA, la siguiente bandera gana.
 // ======================================================
 #macro RELOJ_ROJO 30   // últimos segundos en rojo
 
-/// Valores de partida rápida: 5 minutos, nivel 1, 3 banderas.
+/// Valores de partida rápida: 5 minutos, mapa aleatorio, 3 banderas.
 function scr_ajustes_default() {
 	global.match_tiempo   = 300;
-	global.match_mapa     = 0;
+	global.match_mapa     = MAPA_ALEATORIO;
 	global.match_banderas = 3;
 }
 
@@ -21,7 +21,7 @@ function scr_ajustes_tiempos() { return [180, 300, 480, 600, 0]; }
 function scr_ajustes_texto(_fila) {
 	switch (_fila) {
 		case 0: return (global.match_tiempo <= 0) ? "SIN LIMITE" : string(global.match_tiempo div 60) + " MIN";
-		case 1: return "NIVEL " + string(global.match_mapa + 1);
+		case 1: return (global.match_mapa == MAPA_ALEATORIO) ? "ALEATORIO" : "NIVEL " + string(global.match_mapa + 1);
 		case 2: return string(global.match_banderas);
 	}
 	return "";
@@ -37,7 +37,7 @@ function scr_ajustes_cambiar(_fila, _dir) {
 			_i = (_i + _dir + array_length(_ts)) mod array_length(_ts);
 			global.match_tiempo = _ts[_i];
 		break;
-		case 1: global.match_mapa = (global.match_mapa + _dir + 3) mod 3; break;
+		case 1: global.match_mapa = (global.match_mapa + _dir + scr_mapa_total() + 1) mod (scr_mapa_total() + 1); break; // niveles + ALEATORIO
 		case 2: global.match_banderas = clamp(global.match_banderas + _dir, 1, 5); break;
 	}
 }
@@ -50,7 +50,7 @@ function scr_ajustes_struct() {
 function scr_ajustes_aplicar(_s) {
 	if (!is_struct(_s)) return;
 	if (variable_struct_exists(_s, "t") && is_numeric(_s.t)) global.match_tiempo   = max(0, round(_s.t));
-	if (variable_struct_exists(_s, "m") && is_numeric(_s.m)) global.match_mapa     = clamp(round(_s.m), 0, 2);
+	if (variable_struct_exists(_s, "m") && is_numeric(_s.m)) global.match_mapa     = clamp(round(_s.m), 0, MAPA_ALEATORIO);
 	if (variable_struct_exists(_s, "b") && is_numeric(_s.b)) global.match_banderas = clamp(round(_s.b), 1, 5);
 }
 
@@ -60,13 +60,37 @@ function scr_ajustes_enviar() {
 	with (oOtherPlayer) SendEventToClient(clientId, "sync_ajustes", _s);
 }
 
+// ------------------------------------------------------
+// MAPAS EN LINEA
+//   Para agregar un nivel nuevo: ponlo en scr_mapa_lista() y sube MAPA_ALEATORIO en 1.
+// ------------------------------------------------------
+#macro MAPA_ALEATORIO 3   // = cantidad de niveles en la lista
+
+function scr_mapa_lista() { return [rm_stage1, rm_stage2, rm_stage3]; }
+function scr_mapa_total() { return array_length(scr_mapa_lista()); }
+
 /// Room del mapa elegido.
 function scr_mapa_room(_m) {
-	switch (_m) {
-		case 1: return rm_stage2;
-		case 2: return rm_stage3;
+	var _l = scr_mapa_lista();
+	if (!is_numeric(_m) || _m < 0 || _m >= array_length(_l)) _m = 0;
+	return _l[_m];
+}
+
+/// Mapa sacado de un texto (nombre de sala). Todos los que tienen el mismo texto sacan
+/// el mismo mapa, sin mandarse mensajes y sin tocar el random del juego.
+function scr_mapa_desde_codigo(_txt) {
+	_txt = string(_txt);
+	var _h = 0;
+	for (var i = 1; i <= string_length(_txt); i++) _h = (_h * 31 + ord(string_char_at(_txt, i))) mod 1000003;
+	return _h mod scr_mapa_total();
+}
+
+/// Solo el líder: si está en ALEATORIO, elige uno ya. Devuelve el room.
+function scr_mapa_resolver() {
+	if (global.match_mapa == MAPA_ALEATORIO || global.match_mapa < 0 || global.match_mapa >= scr_mapa_total()) {
+		global.match_mapa = irandom(scr_mapa_total() - 1);
 	}
-	return rm_stage1;
+	return scr_mapa_room(global.match_mapa);
 }
 
 /// Banderas para ganar: en línea las de la sala, en local las del menú local.
@@ -226,4 +250,316 @@ function scr_ajustes_draw(_soy_lider, _sel) {
 	draw_set_colour(c_white);
 	draw_set_halign(fa_left);
 	draw_set_valign(fa_top);
+}
+
+// ------------------------------------------------------
+// BOT EN PARTIDA RAPIDA
+//   Partida rápida: el servidor te deja en la cola "auto_matchmake_N" (pantalla BUSCANDO RIVAL)
+//   hasta que haya rival. Si en unos segundos (al azar entre BOT_ESPERA_MIN y BOT_ESPERA_MAX)
+//   no hay, juegas contra un bot en un mapa al azar (versión offline del nivel).
+//   El bot se ve como un jugador: nombre al azar, elige personaje, intro VS y usa su habilidad.
+//   Da menos copas y XP.
+// ------------------------------------------------------
+#macro BOT_ESPERA_MIN 8
+#macro BOT_ESPERA_MAX 20
+
+/// Rooms offline de cada mapa (mismo orden que scr_mapa_lista)
+function scr_bot_rooms() { return [rm_stage1_offline, rm_stage2_offline, rm_stage3_offline]; }
+
+/// ¿Estoy en la cola de partida rápida esperando rival?
+function scr_bot_esperando() {
+	return global.ONLINE && room == rm_menu && instance_exists(oMenu) && oMenu.menu_state == "connecting"
+		&& variable_global_exists("roomId") && string_pos("auto_matchmake", string(global.roomId)) == 1;
+}
+
+/// Empieza la partida contra el bot
+function scr_bot_empezar() {
+	var _l = scr_bot_rooms();
+	scr_ajustes_default();
+	var _m = irandom(array_length(_l) - 1);   // mapa al azar
+	global.match_mapa = _m;
+
+	global.bot_partida = true;
+	LeaveRoom();                 // salir de la cola: el servidor ya no te empareja con nadie
+	global.ONLINE = false;       // la partida contra el bot corre como la offline
+
+	global.off_flags   = variable_global_exists("match_banderas") ? global.match_banderas : 3;
+	global.puntos_azul = 0;
+	global.puntos_rojo = 0;
+	global.winner_team = 0;
+	global.game_over   = false;
+	global.pausa       = false;
+	global.mi_listo    = false;  // eliges personaje igual que en línea
+	scr_bot_rival_nuevo();       // nombre y personaje del rival
+	with (oBrain) {
+		intro_disparada   = false;
+		timer_intro       = 60 * 60;
+		bot_espera        = 0;
+		bot_elige_t       = irandom_range(3, 9) * room_speed;   // lo que tarda el rival en elegir
+		bot_cambia_t      = 0;
+		puntos_procesados = false;
+		victory_alpha     = 0;
+		victory_index     = 0;
+		abandono_activo   = false;
+		abandono_check    = -1;
+	}
+	room_goto(_l[_m]);
+}
+
+/// Copas y XP contra el bot (menos que contra una persona)
+function scr_bot_premio(_gane) {
+	if (_gane) {
+		global.wins  += 1;
+		global.xp    += 20;
+		global.copas += 10;
+	} else {
+		global.losses += 1;
+		global.xp     += 5;
+		global.copas   = max(0, global.copas - 5);
+	}
+	while (global.xp >= 100) { global.lvl += 1; global.xp -= 100; }
+	scr_save_to_local();
+	scr_save_to_cloud();
+}
+
+/// Salir de la partida contra el bot. _buscar = true vuelve a buscar rival de una.
+function scr_bot_salir(_buscar) {
+	global.bot_partida  = false;
+	global.bot_rebuscar = _buscar;
+	global.ONLINE       = true;
+	global.game_over    = false;
+	global.pausa        = false;
+	global.puntos_azul  = 0;
+	global.puntos_rojo  = 0;
+	global.winner_team  = 0;
+	// OJO: intro_disparada y mi_listo se quedan como están. Si se ponen en false aquí,
+	// el mismo ENTER que eligió el botón crea un oPlayer antes de cambiar de room.
+	// Se reinician solos al entrar a la siguiente sala (changed_room).
+	with (oBrain) {
+		puntos_procesados = false;
+		victory_alpha     = 0;
+		victory_index     = 0;
+	}
+	room_goto(rm_menu);
+}
+
+/// Nombre y personaje al azar para el rival
+function scr_bot_rival_nuevo() {
+	var _n = ["Kevin_GT", "DaniPro", "xSniperx", "ElChamo", "Lucas07", "SofiGG", "Mateo_RD", "ValeYT",
+	          "Santi2010", "Nico_exe", "TomiMX", "Fer_21", "IsaPlays", "Bruno777", "Mia_ctf", "JuanPi",
+	          "Rodri_Z", "Camilo", "AleGamer", "Pablito", "Gabo_CR", "Tincho", "Lalo_99", "Emi_pro",
+	          "Rafa_YT", "JoseLuis", "Andy_09", "Maxi_ctf", "Kiko", "Leo_GG"];
+	var _nom = _n[irandom(array_length(_n) - 1)];
+	if (random(1) < 0.4) _nom += string(irandom_range(1, 99));
+	if (variable_global_exists("myName") && _nom == global.myName) _nom += "_";
+	global.bot_nombre   = _nom;
+	global.bot_pj       = irandom(3);
+	global.bot_pj_vista = irandom(3);   // el que "está viendo" mientras elige
+	global.bot_listo    = false;
+}
+
+/// ¿Quietos? (contra el bot: mientras eligen personaje y durante la intro VS)
+function scr_bot_congelado() {
+	return variable_global_exists("bot_partida") && global.bot_partida && instance_exists(oBrain)
+		&& (!oBrain.intro_disparada || instance_exists(oIntroVersus));
+}
+
+/// Selección de personaje contra el bot (en el Step de oBrain). Igual que en línea:
+/// el rival cambia de personaje un rato y luego queda listo. Cuando los dos están listos
+/// (o se acaba el tiempo) empieza la intro VS.
+function scr_bot_selec_step() {
+	if (!global.bot_partida || room == rm_menu || intro_disparada) exit;
+
+	if (!global.bot_listo) {
+		bot_cambia_t--;
+		if (bot_cambia_t <= 0) {
+			bot_cambia_t = irandom_range(20, 50);
+			global.bot_pj_vista = irandom(3);
+		}
+		bot_elige_t--;
+		if (bot_elige_t <= 0) {
+			global.bot_listo = true;
+			global.bot_pj_vista = global.bot_pj;
+		}
+	}
+
+	if (timer_intro > 0) timer_intro--;
+	if ((global.mi_listo && global.bot_listo) || timer_intro <= 0) {
+		global.mi_listo     = true;
+		global.bot_listo    = true;
+		global.bot_pj_vista = global.bot_pj;
+		timer_intro = -1;
+		intro_disparada = true;
+		with (oPlayer_offline) scr_bot_pj_jugador();
+		scr_trigger_intro(global.myName, global.bot_nombre);
+	}
+}
+
+/// Sprites de cada personaje (los mismos que en línea)
+function scr_bot_sprites(_c) {
+	switch (_c) {
+		case 1:  spr_idle = spr_miguel_idle;   spr_walk = spr_miguel_walk;   spr_dead = spr_miguel_dead;   break;
+		case 2:  spr_idle = spr_marina_idle;   spr_walk = spr_marina_walk;   spr_dead = spr_marina_dead;   break;
+		case 3:  spr_idle = spr_sargento_idle; spr_walk = spr_sargento_walk; spr_dead = spr_sargento_dead; break;
+		default: spr_idle = spr_player_idle;   spr_walk = spr_player_walk;   spr_dead = spr_player_dead;   break;
+	}
+}
+
+/// Tu personaje contra el bot (oPlayer_offline): stats, habilidad y sprites del que elegiste
+function scr_bot_pj_jugador() {
+	mi_clase = clamp(global.pj_selected, 0, 3);
+	scr_pj_aplicar();              // vida, velocidad, salto y habilidad (scr_personajes)
+	scr_bot_sprites(mi_clase);
+	vida_visual = health;
+	hab_hp_prev = health;
+}
+
+/// Personaje del bot (oPlayer2_local)
+function scr_bot_pj_bot() {
+	mi_clase    = clamp(global.bot_pj, 0, 3);
+	pj          = scr_pj_datos(mi_clase);
+	walksp_base = pj.vel;
+	jumpsp      = pj.salto;
+	hp_max      = pj.vida;
+	max_hp      = hp_max;
+	hp          = hp_max;
+	old_hp      = hp;
+	playerName  = global.bot_nombre;
+	Name        = playerName;
+	scr_bot_sprites(mi_clase);
+	scr_bot_hab_reset();
+}
+
+/// Limpia la habilidad del bot (al aparecer y al reaparecer)
+function scr_bot_hab_reset() {
+	hab_cd        = irandom_range(60, 180);
+	hab_cor_t     = 0;
+	hab_dash_t    = 0;
+	hab_dash_vis  = 0;
+	hab_sin_danio = 0;
+	hab_regen_acc = 0;
+	hab_hp_prev   = hp;
+}
+
+/// Habilidad y pasivas del bot (Step de oPlayer2_local)
+function scr_bot_hab_step() {
+	if (!variable_instance_exists(id, "mi_clase")) exit;
+	var _fps = game_get_speed(gamespeed_fps);
+
+	// Daño que le llegó desde el frame pasado: el impulso lo esquiva, la coraza lo baja a la mitad
+	if (hp < hab_hp_prev && !isDead) {
+		var _perdio = hab_hp_prev - hp;
+		if (hab_dash_t > 0) hp = hab_hp_prev;
+		else if (hab_cor_t > 0) hp += _perdio * (1 - HAB_CORAZA_DANO);
+		hab_sin_danio = 0;
+	}
+
+	if (hab_cd > 0) hab_cd--;
+	if (hab_dash_t > 0) hab_dash_t--;
+	if (hab_dash_vis > 0) hab_dash_vis--;
+	if (hab_cor_t > 0) hab_cor_t--;
+	hab_sin_danio++;
+
+	if (isDead || state == PLAYER2.DEAD) {
+		hab_cor_t = 0; hab_dash_t = 0; hab_dash_vis = 0;
+		hab_hp_prev = hp;
+		exit;
+	}
+
+	// PASIVA SARGENTO: si no le pegan en 5 s, se cura solo
+	if (mi_clase == 3 && hab_sin_danio > SARG_REGEN_ESPERA && hp < hp_max) {
+		hab_regen_acc += SARG_REGEN / _fps;
+		if (hab_regen_acc >= 1) {
+			var _c = floor(hab_regen_acc);
+			hab_regen_acc -= _c;
+			hp = min(hp_max, hp + _c);
+		}
+	}
+
+	// USAR LA HABILIDAD (como lo haría una persona)
+	if (hab_cd <= 0) {
+		var _dist = 99999;
+		if (instance_exists(oPlayer_offline)) {
+			var _p = instance_find(oPlayer_offline, 0);
+			if (!_p.isDead) _dist = point_distance(x, y, _p.x, _p.y);
+		}
+		var _usar = false;
+		switch (mi_clase) {
+			case 0: // ASALTO: impulso para escapar con la bandera o para entrar a pelear
+				if ((has_flag && _dist < 260) || (_dist < 200 && random(1) < 0.05)) {
+					var _dir = sign(hsp);
+					if (_dir == 0) _dir = sign(image_xscale);
+					if (_dir == 0) _dir = 1;
+					push_h = _dir * HAB_DASH_FUERZA;
+					if (vsp > 0) vsp = 0;
+					hab_dash_t = HAB_DASH_INVUL;
+					hab_dash_vis = 18;
+					fx_dust(x, bbox_bottom, 8, -_dir);
+					if (global.sfx) audio_play_sound(snd_melee, 5, false, 1, 0, 1.4);
+					_usar = true;
+				}
+			break;
+			case 1: // TANQUE: coraza cuando ya le pegaron y tiene al rival cerca
+				if (hp < hp_max * 0.75 && _dist < 350) {
+					hab_cor_t = HAB_CORAZA_T;
+					if (global.sfx) audio_play_sound(snd_shield_impact, 5, false, 1, 0, 0.6);
+					_usar = true;
+				}
+			break;
+			case 3: // SARGENTO: botiquín cuando está herido
+				if (hp < hp_max * 0.5) {
+					var _b = instance_create_layer(x, bbox_bottom - 6, "Instances", oBotiquin);
+					_b.team = team;
+					if (global.sfx) audio_play_sound(snd_ammo_pickup, 5, false, 1, 0, 0.8);
+					_usar = true;
+				}
+			break;
+			// 2 EXPLORADORA: solo sus pasivas (más rápida, carga mejor la bandera)
+		}
+		hab_cd = _usar ? round(pj.cd * _fps) : 10;   // si no la usó, lo vuelve a pensar en un ratito
+	}
+
+	hab_hp_prev = hp;
+}
+
+/// Botiquín contra el bot (Step de oBotiquin): cura al de su equipo, sea tu jugador o el bot
+function scr_bot_botiquin() {
+	var _b = id;
+	var _fps = game_get_speed(gamespeed_fps);
+	var _curo = noone;
+
+	if (team == global.myTeam) {
+		with (oPlayer_offline) {
+			if (!isDead && point_distance(_b.x, _b.y, x, y - 20) <= HAB_BOTI_RADIO + 10
+			&& variable_instance_exists(id, "max_health") && health < max_health) {
+				_b.acc += HAB_BOTI_CURA / _fps;
+				if (_b.acc >= 1) {
+					var _c = floor(_b.acc);
+					_b.acc -= _c;
+					health = min(max_health, health + _c);
+				}
+				_curo = id;
+			}
+		}
+	} else {
+		with (oPlayer2_local) {
+			if (team == _b.team && !isDead && point_distance(_b.x, _b.y, x, y - 20) <= HAB_BOTI_RADIO + 10 && hp < hp_max) {
+				_b.acc += HAB_BOTI_CURA / _fps;
+				if (_b.acc >= 1) {
+					var _c = floor(_b.acc);
+					_b.acc -= _c;
+					hp = min(hp_max, hp + _c);
+				}
+				_curo = id;
+			}
+		}
+	}
+
+	if (_curo != noone) {
+		fx_cd--;
+		if (fx_cd <= 0) {
+			fx_cd = 20;
+			instance_create_layer(_curo.x + random_range(-14, 14), _curo.y - random_range(4, 30), "Instances", oHealFX);
+		}
+	}
 }

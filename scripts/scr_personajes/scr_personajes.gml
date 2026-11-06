@@ -78,7 +78,7 @@ function scr_hab_vel_mult() {
 
 /// Asalto recarga más rápido. Sirve en scrReloadWeapon / scrStartReload (en local siempre da 1).
 function scr_pj_recarga_mult() {
-	if (object_index == oPlayer && variable_instance_exists(id, "mi_clase") && mi_clase == 0) return ASALTO_RECARGA;
+	if ((object_index == oPlayer || object_index == oPlayer_offline) && variable_instance_exists(id, "mi_clase") && mi_clase == 0) return ASALTO_RECARGA;
 	return 1;
 }
 

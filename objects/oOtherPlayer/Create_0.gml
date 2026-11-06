@@ -85,3 +85,7 @@ hab_da = false;
 hab_gf = 0;
 hab_gx = 0;
 hab_gy = 0;
+// Bots de la sala privada (scr_objetivo)
+es_bot = false;      // este jugador es un bot
+bot_local = false;   // y lo muevo yo (soy el lider)
+afk = 0;

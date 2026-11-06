@@ -4,7 +4,8 @@ x = spawn_x;
 y = spawn_y;
 
 // 2. RESETEAR ESTADO FÍSICO Y SALUD
-health = 100;
+health = variable_instance_exists(id, "max_health") ? max_health : 100;
+if (variable_instance_exists(id, "hab_cd")) { scr_hab_reset(); hab_hp_prev = health; }
 isDead = false;
 state = PLAYERSTATE2.IDLE;
 visible = true;

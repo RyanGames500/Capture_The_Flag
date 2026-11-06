@@ -8,8 +8,10 @@ function callback_ChangeRoom(new_room_id) {
     
     // Tu lógica de matchmaking de antes...
     if(string_count("auto_match_", new_room_id)){
-        scr_ajustes_default();   // partida rápida: 5 min, nivel 1, 3 banderas
-        room_goto(rm_stage1);
+        scr_ajustes_default();   // partida rápida: 5 min, 3 banderas
+        // Mapa sacado del nombre de la sala: los dos jugadores tienen el mismo nombre = mismo mapa
+        global.match_mapa = scr_mapa_desde_codigo(new_room_id);
+        room_goto(scr_mapa_room(global.match_mapa));
     }
 }
 //foto del plano

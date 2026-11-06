@@ -91,7 +91,8 @@ function fx_light(_x, _y, _r, _col, _life) {
 function fx_low_health() {
     if (!instance_exists(oPlayer) || global.game_over || room == rm_menu) return false;
     var _max = variable_instance_exists(oPlayer, "max_health") ? oPlayer.max_health : 100;
-    return (!oPlayer.isDead && health > 0 && health <= _max * FX_LOW_HEALTH);
+    var _muerto = variable_instance_exists(oPlayer, "isDead") ? oPlayer.isDead : false;
+    return (!_muerto && health > 0 && health <= _max * FX_LOW_HEALTH);
 }
 
 function fx_step() {
@@ -298,8 +299,10 @@ function opt_init() {
     if (variable_global_exists("opt")) return;
     global.opt = {
         vol: 80,        // volumen general 0..100
-        sfx: 1,         // efectos de sonido (1 si / 0 no)
-        musica: 1,      // musica (para cuando la agregues)
+        sfx: 1,         // efectos de sonido (1 si / 0 no). Ya no sale en ajustes: lo pone vol_sfx
+        musica: 1,      // musica (1 si / 0 no). Ya no sale en ajustes: lo pone vol_musica
+        vol_musica: 70, // volumen de la musica 0..100 (0 = apagada)
+        vol_sfx: 100,   // volumen de los efectos 0..100 (0 = apagados)
         pantalla: 0,    // pantalla completa (PC / HTML5)
         minimapa: 0,    // 0 esquina, 1 tira, 2 barra, 3 apagado
         ping: 1,        // mostrar ping
@@ -310,11 +313,17 @@ function opt_init() {
         mira: 0         // distancia de la mira en el celular: 0 normal, 1 lejos, 2 cerca
     };
     ini_open("ajustes.ini");
+    var _viejo = !ini_key_exists("ajustes", "vol_sfx");   // ajustes de antes de las barras de musica/efectos
     var _k = variable_struct_get_names(global.opt);
     for (var i = 0; i < array_length(_k); i++) {
         global.opt[$ _k[i]] = ini_read_real("ajustes", _k[i], global.opt[$ _k[i]]);
     }
     ini_close();
+    // Si antes los tenia en NO, que sigan apagados
+    if (_viejo) {
+        if (global.opt.sfx == 0) global.opt.vol_sfx = 0;
+        if (global.opt.musica == 0) global.opt.vol_musica = 0;
+    }
 }
 
 function opt_guardar() {
@@ -330,8 +339,12 @@ function opt_guardar() {
 function opt_apply(_inicio = false) {
     opt_init();
     audio_master_gain(global.opt.vol / 100);
-    global.sfx    = (global.opt.sfx == 1);
-    global.musica = (global.opt.musica == 1);
+    global.sfx    = (global.opt.vol_sfx > 0);
+    global.musica = (global.opt.vol_musica > 0);
+    global.music  = global.musica;
+    global.opt.sfx    = global.sfx ? 1 : 0;
+    global.opt.musica = global.musica ? 1 : 0;
+    scr_audio_volumenes();
     if (!touch_mode()) {
         if (!_inicio || os_browser == browser_not_a_browser) {
             if (window_get_fullscreen() != (global.opt.pantalla == 1)) window_set_fullscreen(global.opt.pantalla == 1);
@@ -343,8 +356,8 @@ function opt_apply(_inicio = false) {
 function opt_filas() {
     return [
         { k: "vol",       n: "VOLUMEN GENERAL",      slider: true, sec: "SONIDO", col: 0 },
-        { k: "sfx",       n: "EFECTOS DE SONIDO",    o: ["NO", "SI"], col: 0 },
-        { k: "musica",    n: "MUSICA",               o: ["NO", "SI"], col: 0 },
+        { k: "vol_musica", n: "MUSICA",              slider: true, col: 0 },
+        { k: "vol_sfx",   n: "EFECTOS DE SONIDO",    slider: true, col: 0 },
         { k: "pantalla",  n: "PANTALLA COMPLETA",    o: ["NO", "SI"], sec: "PANTALLA", col: 0 },
         { k: "minimapa",  n: "MINI MAPA",            o: ["ESQUINA", "TIRA", "BARRA", "APAGADO"], col: 0 },
         { k: "ping",      n: "MOSTRAR PING",         o: ["NO", "SI"], col: 0 },
@@ -534,4 +547,118 @@ function minimapa_draw() {
 
     draw_set_colour(c_white);
     draw_set_alpha(1);
+}
+
+
+// ======================================================
+// VOLUMEN DE MUSICA Y EFECTOS
+// Lo que se oye = volumen general x (musica o efectos) x el volumen que tiene el sonido en GameMaker.
+// La musica es todo sonido que empiece con "mus_". Lo demas son efectos.
+// ======================================================
+function scr_audio_base() {
+    if (variable_global_exists("audio_ids")) return;
+    global.audio_ids  = asset_get_ids(asset_sound);
+    global.audio_base = [];   // el volumen que le pusiste a cada sonido en GameMaker
+    global.audio_mus  = [];   // true si es musica
+    for (var i = 0; i < array_length(global.audio_ids); i++) {
+        var _id = global.audio_ids[i];
+        array_push(global.audio_base, audio_sound_get_gain(_id));
+        array_push(global.audio_mus, string_copy(audio_get_name(_id), 1, 4) == "mus_");
+    }
+}
+
+function scr_audio_volumenes() {
+    scr_audio_base();
+    var _mu = global.opt.vol_musica / 100;
+    var _sf = global.opt.vol_sfx / 100;
+    for (var i = 0; i < array_length(global.audio_ids); i++) {
+        audio_sound_gain(global.audio_ids[i], global.audio_base[i] * (global.audio_mus[i] ? _mu : _sf), 0);
+    }
+}
+
+// ======================================================
+// MUSICA: cual suena en cada momento (va en el Step de oBrain)
+//   Menu y salas ........ mus_menu (loop)
+//   Partida ............. mus_nivel1 / mus_nivel2 / mus_nivel3 (loop; si falta, usa mus_nivel1)
+//   Ultimos 30 s / muerte subita ... mus_tension (loop; si falta, sigue la del nivel)
+//   Fin de partida ...... mus_victoria o mus_derrota (una vez)
+// Entre una y otra se apaga suave. En pausa baja a la mitad. Si falta un archivo, silencio.
+// ======================================================
+#macro MUS_FADE 1000   // milisegundos para pasar de una cancion a otra
+
+function scr_musica_existe(_n) {
+    return (_n != "" && asset_get_type(_n) == asset_sound);
+}
+
+/// Devuelve [nombre, se_repite]
+function scr_musica_elegir() {
+    if (room == rm_menu) return ["mus_menu", true];
+
+    if (global.game_over) {
+        var _gana = (global.winner_team == 1) ? "ROJO" : "AZUL";
+        return [(scr_my_team() == _gana) ? "mus_victoria" : "mus_derrota", false];
+    }
+
+    if (instance_exists(oBrain)) {
+        var _tension = oBrain.reloj_fin || (oBrain.reloj_seg >= 0 && oBrain.reloj_seg <= 30);
+        if (_tension && scr_musica_existe("mus_tension")) return ["mus_tension", true];
+    }
+
+    var _rn = room_get_name(room);
+    var _p = string_pos("stage", _rn);
+    var _nivel = (_p > 0) ? string_char_at(_rn, _p + 5) : "1";
+    var _nom = "mus_nivel" + _nivel;
+    if (!scr_musica_existe(_nom)) _nom = "mus_nivel1";
+    return [_nom, true];
+}
+
+function scr_musica_step() {
+    opt_init();
+    if (!variable_global_exists("mus")) global.mus = { nombre: "", inst: -1, g: 1, viejas: [], reintento: 0, paso: -1 };
+    var _m = global.mus;
+    if (_m.paso == current_time) return;    // ya corrio este frame (lo llaman oBrain y oMenu)
+    _m.paso = current_time;
+    if (!audio_system_is_available()) return;   // en el navegador el audio arranca hasta que tocas algo
+
+    var _e = scr_musica_elegir();
+    var _n = scr_musica_existe(_e[0]) ? _e[0] : "";
+    var _g = (variable_global_exists("pausa") && global.pausa) ? 0.5 : 1;
+
+    if (_n != _m.nombre) {
+        // la que sonaba se apaga suave
+        if (_m.inst != -1 && audio_is_playing(_m.inst)) {
+            audio_sound_gain(_m.inst, 0, MUS_FADE);
+            array_push(_m.viejas, { i: _m.inst, t: current_time + MUS_FADE + 50 });
+        }
+        _m.inst = -1;
+        _m.nombre = _n;
+        _m.g = _g;
+        if (_n != "") {
+            _m.inst = audio_play_sound(asset_get_index(_n), 50, _e[1], 0);
+            audio_sound_gain(_m.inst, _g, _e[1] ? MUS_FADE : 0);   // las de ganar/perder entran de golpe
+            show_debug_message(">>> MUSICA: " + _n + "  (volumen musica " + string(global.opt.vol_musica) + "%)");
+        }
+    }
+    // Si la que se repite se corto (algo la paro o no pudo arrancar), la vuelve a poner
+    else if (_n != "" && _e[1] && (_m.inst == -1 || !audio_is_playing(_m.inst))) {
+        _m.reintento -= 1;
+        if (_m.reintento <= 0) {
+            _m.reintento = 30;
+            _m.inst = audio_play_sound(asset_get_index(_n), 50, true, 0);
+            audio_sound_gain(_m.inst, _g, MUS_FADE);
+            _m.g = _g;
+            show_debug_message(">>> MUSICA (otra vez): " + _n);
+        }
+    }
+    else if (_m.inst != -1 && _m.g != _g) {
+        audio_sound_gain(_m.inst, _g, 300);
+        _m.g = _g;
+    }
+
+    for (var i = array_length(_m.viejas) - 1; i >= 0; i--) {
+        if (current_time >= _m.viejas[i].t) {
+            audio_stop_sound(_m.viejas[i].i);
+            array_delete(_m.viejas, i, 1);
+        }
+    }
 }

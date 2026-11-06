@@ -51,7 +51,8 @@ function scrHammerCrushTarget(_victim)
             SendEventToClient(_victim.clientId, "player_squashed", {});
         }
 
-        if (instance_exists(oOtherPlayer))
-            SendEventToClient(oOtherPlayer.clientId, "kill_feed", { msg: text });
+        // A todos (antes solo al primero; con bots en la sala podia tocarle a un bot)
+        with (oOtherPlayer)
+            if (!es_bot) SendEventToClient(clientId, "kill_feed", { msg: text });
     }
 }

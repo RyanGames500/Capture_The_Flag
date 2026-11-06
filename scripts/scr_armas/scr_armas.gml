@@ -280,7 +280,7 @@ function scr_arma_generica_tiro(_w) {
 		_f.image_angle = _ang;
 		if (_w.mz == "bazooka") _f.image_xscale = 2;
 		if (global.ONLINE && instance_exists(oOtherPlayer)) {
-			var _m = { x: _bx, y: _by, ang: _ang, muzzle: _w.mz };
+			var _m = { x: _bx, y: _by, ang: _ang, muzzle: _w.mz, snd: audio_get_name(_w.snd), vol: _w.vol, tono: _w.tono };   // el sonido, para que los demas lo oigan
 			with (oOtherPlayer) SendEventToClient(clientId, "fx_shot", _m);
 		}
 	}

@@ -2,6 +2,19 @@
 // CONGELAR ACCIONES AL FINAL
 if (global.game_over) { hsp = 0; vsp = 0; exit; }
 
+// Contra el bot: quieto mientras eligen personaje y durante la intro VS
+if (scr_bot_congelado()) { hsp = 0; vsp = 0; sprite_index = spr_idle; exit; }
+
+// Contra el bot: lo que te pegaron desde el frame pasado. El impulso lo esquiva, la coraza lo baja.
+if (global.bot_partida && variable_instance_exists(id, "hab_cd")) {
+    if (health < hab_hp_prev && !isDead) {
+        var _perdi = hab_hp_prev - health;
+        if (scr_hab_esquivando()) health = hab_hp_prev;
+        else if (scr_hab_coraza_activa()) health += _perdi * (1 - HAB_CORAZA_DANO);
+        hab_sin_danio = 0;
+    }
+}
+
 // Esto debería estar en el Step de tu objeto enemigo/jugador
 if (state == PLAYERSTATE2.HIT) {
     hsp = hsp * 0.9; // Fricción: pierde 10% de velocidad cada frame
@@ -55,6 +68,12 @@ key_right = vkey(ord("D"));
 key_jump  = vkey_pressed(ord("W"));
 key_melee = vmouse_pressed(mb_right);
 
+// Contra el bot: habilidad de tu personaje en la Q y sus pasivas (scr_personajes)
+if (global.bot_partida && variable_instance_exists(id, "hab_cd")) {
+    scr_hab_step();
+    hab_hp_prev = health;
+}
+
 if (melee_cd > 0) melee_cd--;
 if (melee_active > 0) melee_active--;
 if (crush_cd > 0) crush_cd--;
@@ -69,6 +88,7 @@ if (speed_timer > 0) {
 }
 walksp = walksp_base * walksp_mult;
 walksp *= scr_arma_peso_mult();   // la Thompson pesa (scr_armas)
+walksp *= scr_hab_vel_mult();     // la coraza del Tanque pesa (contra el bot)
 
 // --- RECOIL Y RECARGA ---
 if (!vmouse(mb_left)) ak_recoil = max(0, ak_recoil - 0.6);
@@ -152,7 +172,7 @@ if (key_jump && is_grounded && (state == PLAYERSTATE2.IDLE || state == PLAYERSTA
 switch (state) {
     case PLAYERSTATE2.IDLE:
         if (canShoot && melee_active <= 0) scrPlayerWeaponUpdate_offline();
-        sprite_index = spr_player_idle;
+        sprite_index = spr_idle;
         if (key_jump && is_grounded) { vsp = jumpsp; state = PLAYERSTATE2.JUMP; }
         if (key_right || key_left) state = PLAYERSTATE2.WALK;
     break;
@@ -160,13 +180,13 @@ switch (state) {
     case PLAYERSTATE2.WALK:
         if (canShoot && melee_active <= 0) scrPlayerWeaponUpdate_offline();
 	var move = key_right - key_left;
-    var _speed_final = has_flag ? walksp * 0.7 : walksp;
+    var _speed_final = has_flag ? walksp * scr_pj_mult_bandera() : walksp;   // 0.7 normal, o la de tu personaje
 
     // SOLO camina si no está siendo empujado fuertemente
     if (abs(push_h) < 1) { 
         hsp = move * _speed_final;
     }
-        sprite_index = spr_player_walk;
+        sprite_index = spr_walk;
         if (hsp != 0) image_xscale = sign(hsp) * 1.5;
         if (hsp == 0) state = PLAYERSTATE2.IDLE;
         if (key_jump && is_grounded) { vsp = jumpsp; state = PLAYERSTATE2.JUMP; }
@@ -184,7 +204,7 @@ switch (state) {
 
     case PLAYERSTATE2.DEAD:
         hsp = 0;
-        sprite_index = spr_player_dead;
+        sprite_index = spr_dead;
         if (image_index >= image_number - 1) visible = false;
     break;
 }
@@ -196,7 +216,7 @@ switch (state) {
 // ======================================================
 
 // --- 1. ACTIVACIÓN (Disparo directo al Mouse) ---
-if (vmouse_pressed(mb_middle) && state != PLAYERSTATE2.GRAPPLE) {
+if (vmouse_pressed(mb_middle) && state != PLAYERSTATE2.GRAPPLE && !global.bot_partida) {   // contra el bot se usa el gancho de la Exploradora (Q)
     state = PLAYERSTATE2.GRAPPLE;
     grapple_hitting = false;
     grapple_is_returning = false;
@@ -334,6 +354,8 @@ if (abs(push_h) > 0.8) {
 } else {
     push_h = 0;
 }
+// Contra el bot: el gancho de la Exploradora (antes de los choques con paredes)
+if (global.bot_partida) scr_hab_mov();
 // --- PLATAFORMAS ---
 var plat = instance_place(x, y + 1, oMovingPlatform);
 if (plat != noone && vsp >= 0) {

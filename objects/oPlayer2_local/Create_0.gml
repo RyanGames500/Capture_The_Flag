@@ -150,3 +150,12 @@ nav_best = 999999;
 nav_stuck = 0;
 drop_timer = 0;
 // La red se arma sola en el primer Step, cuando ya existen todas las plataformas
+
+// Sprites. Contra el bot de partida rápida: nombre y personaje del rival (scr_reloj)
+spr_idle = spr_player_idle;
+spr_walk = spr_player_walk;
+spr_dead = spr_player_dead;
+if (variable_global_exists("bot_partida") && global.bot_partida) {
+	dificultad = 2;      // como una persona normal
+	scr_bot_pj_bot();
+}

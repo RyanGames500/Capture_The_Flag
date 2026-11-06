@@ -320,6 +320,17 @@ function scr_mina_explotar(_mina) {
 
 	if (global.ONLINE) {
 		if (scr_my_team() != _team) scr_mina_dano_local(_mx, _my, MINA_DANO, _owner);
+		// Los bots de la sala privada: el lider les hace el dano (scr_objetivo)
+		if (oBrain.AmIPseudoHost) {
+			with (oOtherPlayer) {
+				if (bot_local && !isDead && team != _team && point_distance(x, y - 16, _mx, _my) <= MINA_RADIO) {
+					scr_botnet_dano(id, { damage: MINA_DANO, killer: _owner, reason: "mina" }, -1);
+					vsp = -9;
+					push_h = (x < _mx) ? -10 : 10;
+					if (has_flag) scr_botnet_soltar(-6, 25);
+				}
+			}
+		}
 	} else {
 		with (oPlayer2_local) {
 			if (team != _team && point_distance(x, y - 16, _mx, _my) <= MINA_RADIO) {

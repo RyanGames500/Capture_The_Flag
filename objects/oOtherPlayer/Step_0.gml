@@ -1,5 +1,7 @@
 
 /// @description Put your other player code here
+// Bot de la sala privada que muevo yo (soy el lider): se mueve solo (scr_objetivo)
+if (bot_local) { scr_botnet_step(); exit; }
 try{
 if(sharedProperties!=-1){
 var SP = json_parse(sharedProperties)

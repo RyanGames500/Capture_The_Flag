@@ -1,5 +1,9 @@
 t--;
 if (t <= 0) { instance_destroy(); exit; }
+// Contra el bot (todo local): cura al de su equipo, sea tu jugador o el bot
+if (variable_global_exists("bot_partida") && global.bot_partida) { scr_bot_botiquin(); exit; }
+// Bots de la sala privada: el lider cura a los de este equipo (scr_objetivo)
+if (global.ONLINE && oBrain.AmIPseudoHost) scr_botnet_botiquin(id);
 if (team != global.myTeam || !instance_exists(oPlayer)) exit;
 
 // ¿Mi jugador está adentro? Entonces me curo yo solo, en mi juego

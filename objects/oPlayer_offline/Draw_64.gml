@@ -79,7 +79,9 @@ vida_visual = lerp(vida_visual, health, 0.2);
 draw_sprite_ext(spr_HUD_Bar_Empty, 0, _xx, _yy, _escala, _escala, 0, c_white, 1);
 var _w = sprite_get_width(spr_HUD_Bar_Health);
 var _h = sprite_get_height(spr_HUD_Bar_Health);
-draw_sprite_part_ext(spr_HUD_Bar_Health, 0, 0, 0, _w * (vida_visual/100), _h, _xx, _yy, _escala, _escala, c_white, 1);
+draw_sprite_part_ext(spr_HUD_Bar_Health, 0, 0, 0, _w * clamp(vida_visual / max(1, max_health), 0, 1), _h, _xx, _yy, _escala, _escala, c_white, 1);
+// Contra el bot: icono de tu habilidad junto a la vida (scr_personajes)
+scr_hab_hud(_xx + _w * _escala + 40, _yy + _alto_barra / 2);
 
 // Variable para saber dónde dibujar la siguiente barra
 var _current_y = _yy + _offset_y;

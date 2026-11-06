@@ -7,6 +7,6 @@ if (oBrain.AmIPseudoHost) {
         global.game_over = true;
         global.winner_team = winner;
         
-        SendEventToClient(oOtherPlayer.clientId, "finalizar_partida", { winner: winner });
+        with (oOtherPlayer) if (!es_bot) SendEventToClient(clientId, "finalizar_partida", { winner: winner });
     }
 }

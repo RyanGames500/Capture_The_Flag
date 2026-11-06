@@ -76,12 +76,44 @@ if (place_meeting(x, y, obj_wall) || place_meeting(x, y, oPlataformaPasable) || 
 	}
 }
 
+// Bala de un bot de la sala privada (la crea el lider, scr_objetivo): su equipo y su nombre son los del bot
+var _bot_bala = variable_instance_exists(id, "bot_team");
+var _mi_eq    = _bot_bala ? bot_team : global.myTeam;
+var _quien    = _bot_bala ? owner_name : global.myName;
+
+// La bala de un bot tambien le pega a mi jugador (el lider)
+if (_bot_bala && instance_exists(oPlayer)) {
+	var _pl = instance_place(x, y, oPlayer);
+	if (_pl != noone && _pl.team != bot_team && !_pl.isDead && !_pl.invulnerable && _pl.has_shield) {
+		// Traes escudo: la bala rebota y el escudo sigue (igual que con las balas de una persona)
+		var _sx = x, _sy = y;
+		instance_create_layer(_sx, _sy, "Instances", oShieldSparkFX);
+		if (global.sfx) audio_play_sound(snd_shield_impact, 20, false, 2.0);
+		with (oOtherPlayer) if (!es_bot) SendEventToClient(clientId, "fx_shield_hit", { ex: _sx, ey: _sy });
+		instance_destroy();
+		exit;
+	}
+	if (_pl != noone && _pl.team != bot_team && !_pl.isDead && !_pl.invulnerable) {
+		fx_impact_net(x, y, direction + 180, 8, false);
+		if (is_rocket) {
+			// Cohete del bot: explota como el tuyo (efecto para todos)
+			var _ex = x, _ey = y;
+			scrCreateRocketExplosion(_ex, _ey, false);
+			with (oOtherPlayer) if (!es_bot) SendEventToClient(clientId, "fx_pearl_explosion", { ex: _ex, ey: _ey, isNade: false });
+		}
+		callback_ReceivedEvent("hit", { damage: damage, killer: owner_name, reason: "pvp", angle: direction, bot: true }, BOTNET_ID_BASE);
+		instance_destroy();
+		exit;
+	}
+}
+
 var target_enemy = instance_place(x, y, oOtherPlayer);
-if (target_enemy == noone && _barrido && !_cruza_muro) target_enemy = scr_bala_rival_en_tramo(x, y, x + hspeed, y + vspeed);
+if (_bot_bala && target_enemy != noone && (target_enemy.team == _mi_eq || target_enemy == bot_src)) target_enemy = noone;
+if (target_enemy == noone && _barrido && !_cruza_muro) target_enemy = scr_bala_rival_en_tramo(x, y, x + hspeed, y + vspeed, _mi_eq);
 
 if (target_enemy != noone)
 {
-	if (variable_instance_exists(target_enemy, "team") && target_enemy.team != global.myTeam)
+	if (variable_instance_exists(target_enemy, "team") && target_enemy.team != _mi_eq)
 	{
 		if (variable_instance_exists(id, "is_box") && is_box) {
 			if (ds_list_find_index(hit_list, target_enemy) != -1) exit;
@@ -131,7 +163,7 @@ if (target_enemy != noone)
 			}
 		}
 
-		if (global.sfx) audio_play_sound(snd_hit, 20, false, 1.1);
+		if (global.sfx && !_bot_bala) audio_play_sound(snd_hit, 20, false, 1.1);
 
 		if (global.ONLINE) {
 			var _reason = (variable_instance_exists(id, "is_box") && is_box) ? "boxeo" : "pvp";
@@ -143,13 +175,13 @@ if (target_enemy != noone)
 
 			// Con coraza el que recibe solo pierde la mitad: así lo muestro yo también (scr_personajes)
 			var _dmg_ver = (variable_instance_exists(target_enemy, "hab_co") && target_enemy.hab_co) ? round(damage * HAB_CORAZA_DANO) : damage;
-			fx_damage_number(target_enemy.x, target_enemy.bbox_top - 8, _dmg_ver, is_rocket ? 2 : (_head ? 1 : 0));
+			if (!_bot_bala) fx_damage_number(target_enemy.x, target_enemy.bbox_top - 8, _dmg_ver, is_rocket ? 2 : (_head ? 1 : 0));
 			fx_impact_net(x, y, direction + 180, is_rocket ? 4 : 8, is_rocket);
 
 			scr_predict_hit(target_enemy, _dmg_ver, (_reason == "boxeo") ? 20 : 10);
 			if (_reason == "boxeo") scr_predict_push(target_enemy, _dir_golpe);
-			scr_hit_confirm(target_enemy, _head, _reason == "boxeo");
-			SendEventToClient(target_enemy.clientId, "hit", { damage: damage, killer: global.myName, reason: _reason, angle: _dir_golpe });
+			if (!_bot_bala) scr_hit_confirm(target_enemy, _head, _reason == "boxeo");   // la X y el sonido son solo para mis balas
+			SendEventToClient(target_enemy.clientId, "hit", { damage: damage, killer: _quien, reason: _reason, angle: _dir_golpe, bot: _bot_bala });
 		}
 
 		if (variable_instance_exists(id, "is_box") && is_box) {

@@ -1,5 +1,7 @@
 
 function SendMessageToClient(recieverClientId, yourMessage){
+	// A un bot de la sala privada no se le manda nada (scr_objetivo)
+	if (is_numeric(recieverClientId) && recieverClientId <= BOTNET_ID_BASE) return;
 	//format for sending info to server 
 		var Buffer = buffer_create(1, buffer_grow, 1)
 	

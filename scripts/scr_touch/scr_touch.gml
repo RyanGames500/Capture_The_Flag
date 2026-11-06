@@ -139,7 +139,7 @@ function __touch_buttons_base(_mode, _W, _H) {
 	// Botones en arco alrededor del stick de apuntar (centro en _W - 230, _H - 215), sin taparlo.
 	// ico = qué dibujo lleva (oTouchControls Draw GUI); el texto va abajo del botón.
 	var _hb;
-	if (_p != noone && _p.object_index == oPlayer && variable_instance_exists(_p, "pj")) {
+	if (_p != noone && variable_instance_exists(_p, "pj") && variable_instance_exists(_p, "hab_cd")) {
 		// Habilidad de tu personaje en línea (scr_personajes), con su color y su recarga
 		_hb = _K(_W - 470, _H - 150, 58, _p.pj.hab, [string(HAB_TECLA)]);
 		_hb.ico = string_lower(_p.pj.hab);

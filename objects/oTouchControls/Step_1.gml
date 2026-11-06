@@ -15,7 +15,8 @@ if (instance_exists(oBrain) && variable_instance_exists(oBrain, "net_estado") &&
 if (instance_exists(oBrain)) {
 	if (variable_instance_exists(oBrain, "abandono_activo") && oBrain.abandono_activo) mode = "menu";
 	if (room != rm_menu && variable_global_exists("mi_listo") && !global.mi_listo
-	&& variable_instance_exists(oBrain, "intro_disparada") && !oBrain.intro_disparada) mode = "menu";
+	&& variable_instance_exists(oBrain, "intro_disparada") && !oBrain.intro_disparada
+	&& (global.ONLINE || (variable_global_exists("bot_partida") && global.bot_partida))) mode = "menu";
 }
 
 var _btns = touch_buttons(mode, _W, _H);
