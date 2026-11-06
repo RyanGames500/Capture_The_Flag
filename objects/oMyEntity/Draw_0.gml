@@ -26,6 +26,8 @@ if (variable_instance_exists(id, "is_box") && is_box)
 // ======================================================
 else 
 {
+    // Armas con efecto: su propio dibujo (scr_armas)
+    if (variable_instance_exists(id, "efecto") && efecto != "") { scr_efx_bala_draw(efecto, x, y, direction); exit; }
     // Estela de la bala (scr_mira); los cohetes y granadas, como siempre
     var _gra = variable_instance_exists(id, "is_granada") && is_granada;
     if (!is_rocket && !_gra && speed > 0 && sprite_index != spr_bala_silenciada) scr_bala_estela(x, y, direction, min(speed * 2.2, 40));

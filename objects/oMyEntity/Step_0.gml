@@ -11,7 +11,8 @@ entityProperties = {
 	_IA       : image_angle,
 	_IB       : is_box,
 	_XB       : (is_box && instance_exists(owner)) ? owner.x : x,
-	_YB       : (is_box && instance_exists(owner)) ? owner.y - 13 : y
+	_YB       : (is_box && instance_exists(owner)) ? owner.y - 13 : y,
+	_EF       : variable_instance_exists(id, "efecto") ? efecto : ""   // armas con efecto (scr_armas)
 };
 
 if (variable_instance_exists(id, "is_box") && is_box)
@@ -101,7 +102,7 @@ if (_bot_bala && instance_exists(oPlayer)) {
 			scrCreateRocketExplosion(_ex, _ey, false);
 			with (oOtherPlayer) if (!es_bot) SendEventToClient(clientId, "fx_pearl_explosion", { ex: _ex, ey: _ey, isNade: false });
 		}
-		callback_ReceivedEvent("hit", { damage: damage, killer: owner_name, reason: "pvp", angle: direction, bot: true }, BOTNET_ID_BASE);
+		callback_ReceivedEvent("hit", scr_efx_msg({ damage: damage, killer: owner_name, reason: "pvp", angle: direction, bot: true }), BOTNET_ID_BASE);
 		instance_destroy();
 		exit;
 	}
@@ -181,7 +182,7 @@ if (target_enemy != noone)
 			scr_predict_hit(target_enemy, _dmg_ver, (_reason == "boxeo") ? 20 : 10);
 			if (_reason == "boxeo") scr_predict_push(target_enemy, _dir_golpe);
 			if (!_bot_bala) scr_hit_confirm(target_enemy, _head, _reason == "boxeo");   // la X y el sonido son solo para mis balas
-			SendEventToClient(target_enemy.clientId, "hit", { damage: damage, killer: _quien, reason: _reason, angle: _dir_golpe, bot: _bot_bala });
+			SendEventToClient(target_enemy.clientId, "hit", scr_efx_msg({ damage: damage, killer: _quien, reason: _reason, angle: _dir_golpe, bot: _bot_bala }));
 		}
 
 		if (variable_instance_exists(id, "is_box") && is_box) {

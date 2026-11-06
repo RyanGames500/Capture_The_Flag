@@ -17,7 +17,7 @@ draw_sprite_ext(
     image_xscale, 
     image_yscale, 
     image_angle, 
-    c_white, 
+    scr_arma_tinte(weapon),   // las de efecto vienen pintadas (scr_armas)
     1
 );
 

@@ -15,6 +15,9 @@ if (damage_alpha > 0) {
 // --- EFECTO DE PANTALLA AL TENER BANDERA ---
 if (has_flag) scr_bandera_gui_draw();   // efecto A (scr_fx)
 
+// Hitmarker: la X en la mira cuando le pegas al bot (igual que en linea)
+scr_hitmarker_draw();
+
 
 // Pantalla de respawn: ELIMINADO POR + cuenta regresiva (scr_fx)
 scr_respawn_draw(state == PLAYERSTATE2.DEAD);

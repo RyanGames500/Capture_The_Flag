@@ -138,6 +138,18 @@ case "SALA_LLENA":
             }
         break;
 
+case "chat_sala":
+    // Mensaje del chat de la sala privada (scr_objetivo)
+    scr_chat_recibir(theMessageStruct);
+break;
+
+case "SALA_EN_PARTIDA":
+    // Entre con el codigo pero la partida ya empezo: me salgo a mi propia sala
+    ChangeRoom(string(global.clientId));
+    if (instance_exists(oMenu)) oMenu.menu_state = "private";
+    show_message_async("LA PARTIDA YA EMPEZO. Espera a que termine para entrar a la sala.");
+break;
+
 case "sync_lobby_name":
     var _n = theMessageStruct.nombre;
     // Usamos el nombre que viene, si no viene nada ponemos "Jugador"
@@ -200,6 +212,9 @@ case "GO_TO_BATTLE":
     // El líder manda los ajustes de la sala (tiempo, mapa, banderas). Si no vienen, partida normal.
     if (is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "m")) scr_ajustes_aplicar(theMessageStruct);
     else scr_ajustes_default();
+    scr_sala_roster_fijar(theMessageStruct);   // quienes juegan (scr_objetivo)
+    // Seleccion de personaje desde cero (si quedo algo de antes, no te salia la seleccion)
+    scr_partida_estado_nuevo();   // scr_objetivo
     room_goto(scr_mapa_room(global.match_mapa));
 break;
 
@@ -839,6 +854,7 @@ case "hit":
         damage_alpha = 0.4; 
         health -= dmg;
         fx_damage_number(x, bbox_top - 8, dmg, 3);
+        scr_efx_recibir_jugador(theMessageStruct);   // zap, hielo, red o iman (scr_armas)
         // --- 🥊 LÓGICA DE BOXEO (Empuje y Bandera) ---
         if (theMessageStruct.reason == "boxeo") {
             

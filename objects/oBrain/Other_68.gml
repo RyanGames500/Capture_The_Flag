@@ -74,14 +74,17 @@ if(type == network_type_data){
 		break;
 		
 		case "changed_room":
+		scr_sala_roster_limpiar();   // sala nueva: lista y equipos nuevos (scr_objetivo)
 		// El servidor nos dice en qué equipo quedamos en esta sala ("" = sin equipo)
 		global.serverTeam = variable_struct_exists(realData, "team") ? string(realData.team) : "";            
+		if (global.serverTeam != "") global.myTeam = global.serverTeam;   // que no se quede el equipo de la partida anterior
 		if(realData.roomId == string(global.clientId)){
 			global.roomId = realData.roomId
 			callback_LeaveRoom()
 		}else{
 			global.roomId = realData.roomId
 			// Sala nueva = selección de personaje nueva para TODOS (host y no host)
+			scr_partida_estado_nuevo();   // y nada pegado de la partida anterior (scr_objetivo)
 			oBrain.intro_disparada = false;
 			oBrain.timer_intro = 60 * 60;
 			global.mi_listo = false;
@@ -133,6 +136,9 @@ case "state_update":
     }
 
     // 2. SI ES NUEVO, ASIGNAR EQUIPO POR CONTEO DE INSTANCIAS
+    // Entro alguien con el codigo a media partida: no se crea y el lider lo saca (scr_objetivo)
+    if(!found && _incomingId != global.clientId && scr_sala_bloqueado(_incomingId)) break;
+
     if(!found && _incomingId != global.clientId){
         var new_enemy = instance_create_layer(0, 0, global.OtherPlayersLayerName, oOtherPlayer);
         new_enemy.clientId = _incomingId;

@@ -177,7 +177,7 @@ function scr_rail_update() {
 		for (var k = 0; k < _nb; k++) {
 			var _b = _lista[| k];
 			if (_b.team == team) continue;
-			if (scr_dano_bot(_b, _dmg, global.myName)) {
+			if (scr_dano_bot(_b, _dmg, global.myName, false)) {
 				_golpes += 1;
 				fx_damage_number(_b.x, _b.bbox_top - 8, _dmg, 2);
 			}
@@ -334,7 +334,7 @@ function scr_mina_explotar(_mina) {
 	} else {
 		with (oPlayer2_local) {
 			if (team != _team && point_distance(x, y - 16, _mx, _my) <= MINA_RADIO) {
-				if (scr_dano_bot(id, MINA_DANO, _owner)) {
+				if (scr_dano_bot(id, MINA_DANO, _owner, false)) {
 					vsp = -9;
 					push_h = (x < _mx) ? -10 : 10;
 					fx_damage_number(x, bbox_top - 8, MINA_DANO, 2);

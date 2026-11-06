@@ -35,6 +35,7 @@ var target_y = EP._y;
 		is_box = EP._IB;
 		x_base_remote = real(EP._XB); // Guardamos la base
 		y_base_remote = real(EP._YB); // Guardamos la base
+		efecto = variable_struct_exists(EP, "_EF") ? string(EP._EF) : "";   // armas con efecto (scr_armas)
 }
 }catch(e){
 

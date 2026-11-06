@@ -12,7 +12,8 @@ function __arma(_tipo, _spr, _nombre, _datos) {
 		ammo: 10, maxAmmo: 10, frequency: 10, damage: 10, ammoType: "gun", clipSize: 30, reloadTime: room_speed * 1.2,
 		vel: 16, vida: 36, disp: 0, balas: 1, rec: 0, rec_max: 0, rafaga: 0, atraviesa: 0, cohete: false, zoom: false,
 		silenciada: false, lento: false, kick: 3, shake: 1, empuje: 0, mz: "gun",
-		snd: snd_gun, tono: 1, vol: 1, peso: 2   // peso = qué tan seguido sale en el mapa
+		snd: snd_gun, tono: 1, vol: 1, peso: 2,  // peso = qué tan seguido sale en el mapa
+		efecto: "", tinte: c_white, grav: 0, escala: 1   // armas con efecto (zap, hielo, red, iman)
 	};
 	var _n = variable_struct_get_names(_datos);
 	for (var i = 0; i < array_length(_n); i++) _w[$ _n[i]] = _datos[$ _n[i]];
@@ -48,7 +49,12 @@ function scr_armas_init() {
 		__arma("g_franco",   spr_arma_franco,     "FRANCOTIRADOR",  { damage: 80, frequency: 70, vel: 30, vida: 36, disp: 0, ammo: 5, kick: 8, shake: 5, empuje: 4, zoom: true, ammoType: "sniper", mz: "bazooka", reloadTime: _rs * 2, snd: snd_M4, tono: 0.5, vol: 1, peso: 1 }),
 		__arma("g_antimat",  spr_arma_antimaterial, "ANTIMATERIAL", { damage: 100, frequency: 95, vel: 32, vida: 36, disp: 0, ammo: 3, kick: 10, shake: 7, empuje: 8, zoom: true, atraviesa: 2, ammoType: "sniper", mz: "bazooka", reloadTime: _rs * 2.5, snd: snd_antimaterial, tono: 1, vol: 1, peso: 1 }),
 		// --- LANZACOHETES ---
-		__arma("g_rpg",      spr_arma_rpg,        "RPG",            { damage: 60, frequency: 85, vel: 4, vida: 160, disp: 0, ammo: 2, kick: 9, shake: 6, empuje: 6, cohete: true, ammoType: "heavy", mz: "bazooka", reloadTime: _rs * 2.5, snd: snd_rpg, tono: 1, vol: 1, peso: 1 })
+		__arma("g_rpg",      spr_arma_rpg,        "RPG",            { damage: 60, frequency: 85, vel: 4, vida: 160, disp: 0, ammo: 2, kick: 9, shake: 6, empuje: 6, cohete: true, ammoType: "heavy", mz: "bazooka", reloadTime: _rs * 2.5, snd: snd_rpg, tono: 1, vol: 1, peso: 1 }),
+		// --- CON EFECTO (tumban la bandera). Pocos usos y lentas para que no sean injustas ---
+		__arma("g_zap",      spr_arma_luger,      "ZAP",            { damage: 12, frequency: 150, vel: 6,  vida: 70, disp: 0, ammo: 4,  kick: 4, shake: 2, efecto: "zap",   tinte: make_color_rgb(120, 225, 255), escala: 1.6, ammoType: "heavy", snd: snd_gun, tono: 1.8, vol: 0.7, peso: 2 }),
+		__arma("g_hielo",    spr_arma_uzi,        "CONGELADOR",     { damage: 8,  frequency: 14,  vel: 13, vida: 24, disp: 2, ammo: 12, kick: 2, shake: 1, efecto: "hielo", tinte: make_color_rgb(190, 235, 255), ammoType: "heavy", mz: "smg", snd: snd_smg, tono: 1.6, vol: 0.6, peso: 2 }),
+		__arma("g_red",      spr_arma_recortada,  "LANZARREDES",    { damage: 5,  frequency: 80,  vel: 9,  vida: 90, disp: 0, ammo: 2,  kick: 5, shake: 2, efecto: "red",   tinte: make_color_rgb(235, 228, 205), grav: 0.32, escala: 1.5, ammoType: "heavy", mz: "escop", snd: snd_escop, tono: 1.4, vol: 0.6, peso: 2 }),
+		__arma("g_iman",     spr_arma_deagle,     "IMAN",           { damage: 6,  frequency: 60,  vel: 22, vida: 11, disp: 0, ammo: 3,  kick: 4, shake: 2, efecto: "iman",  tinte: make_color_rgb(255, 90, 150), ammoType: "heavy", snd: snd_M4, tono: 1.9, vol: 0.6, peso: 2 })
 	];
 }
 
@@ -86,14 +92,20 @@ function scr_arma_al_azar(_nivel = 0) {
 		case 3: _ops = [
 			[__arma_nueva("g_rpg"), 3], [_b.weapon_struct_bazooka, 3], [_b.weapon_struct_rail, 3],
 			[__arma_nueva("g_franco"), 2], [__arma_nueva("g_antimat"), 1]
-		]; break;
+		];
+		// Las de efecto solo en linea (el modo practica sin internet no las sabe usar)
+		if (global.ONLINE) array_push(_ops, [__arma_nueva("g_zap"), 2], [__arma_nueva("g_hielo"), 2], [__arma_nueva("g_red"), 2], [__arma_nueva("g_iman"), 2]);
+		break;
 		default:
 			_ops = [
 				[_b.weapon_struct_pistola, 3], [_b.weapon_struct_escopeta, 3], [_b.weapon_struct_smg, 3],
 				[_b.weapon_struct_bazooka, 3], [_b.weapon_struct_box, 3], [_b.weapon_struct_m4, 3],
 				[_b.weapon_struct_rail, 2], [_b.weapon_struct_mina, 2]
 			];
-			for (var i = 0; i < array_length(global.armas_nuevas); i++) array_push(_ops, [global.armas_nuevas[i], global.armas_nuevas[i].peso]);
+			for (var i = 0; i < array_length(global.armas_nuevas); i++) {
+				if (global.armas_nuevas[i].efecto != "" && !global.ONLINE) continue;   // las de efecto solo en linea
+				array_push(_ops, [global.armas_nuevas[i], global.armas_nuevas[i].peso]);
+			}
 		break;
 	}
 	return variable_clone(__al_azar_con_peso(_ops, _b.weapon_struct_pistola));
@@ -271,6 +283,12 @@ function scr_arma_generica_tiro(_w) {
 			if (!global.ONLINE) _b.damage_rocket = _w.damage * damage_boost;
 		}
 		if (damage_boost > 1) _b.image_blend = c_red;
+		// Armas con efecto: la bala lleva su efecto, la red cae en arco y el zap es mas grande
+		if (variable_struct_exists(_w, "efecto") && _w.efecto != "") {
+			_b.efecto = _w.efecto;
+			if (_w.grav > 0) { _b.gravity = _w.grav; _b.gravity_direction = 270; }
+			if (_w.escala != 1) { _b.image_xscale = _w.escala; _b.image_yscale = _w.escala; }
+		}
 	}
 
 	// Destello y efecto para los demás (las silenciadas no tienen)
@@ -295,4 +313,302 @@ function scr_arma_generica_tiro(_w) {
 	if (!infinite_ammo) _w.ammo -= 1;
 	guns[weapon.index] = _w;
 	if (_w.ammo <= 0) scrReloadWeapon();
+}
+
+// ======================================================
+// ARMAS CON EFECTOS: ZAP, CONGELADOR, LANZARREDES, IMAN
+// Si le pegan al que lleva la bandera, se le cae (menos en los 1.5 s despues de agarrarla).
+// Los dibujos son con codigo (no hay sprites nuevos). Solo salen en linea (salas, partida rapida).
+//   1 ZAP: bolita electrica lenta, aturde 1 s (no se mueve ni dispara), brillo celeste.
+//   2 CONGELADOR: cada golpe lo hace mas lento; al 3er golpe queda congelado 1 s.
+//   3 LANZARREDES: red en arco; atrapado 1.2 s (no se mueve, si dispara).
+//   4 IMAN: rayo corto que lo jala hacia ti; la bandera cae a tus pies.
+// Codigos que viajan por la red (_EF): 0 nada, 1 aturdido, 2 lento, 3 congelado, 4 atrapado.
+// ======================================================
+#macro EFX_ZAP_T      60     // frames aturdido por el zap
+#macro EFX_CONGELA_T  60     // frames congelado (3er golpe de hielo)
+#macro EFX_HIELO_T    150    // cuanto dura lo lento si no le vuelven a pegar
+#macro EFX_HIELO_LENTO 0.22  // cada golpe de hielo le quita esto de velocidad
+#macro EFX_RED_T      72     // frames atrapado en la red
+#macro EFX_INMUNE     90     // 1.5 s despues de agarrar la bandera no te la pueden tumbar
+#macro EFX_IMAN_FUERZA 16    // que tan fuerte jala el iman
+#macro EFX_COL_ZAP    make_color_rgb(120, 225, 255)
+#macro EFX_COL_HIELO  make_color_rgb(190, 235, 255)
+#macro EFX_COL_RED    make_color_rgb(235, 228, 205)
+#macro EFX_COL_IMAN   make_color_rgb(255, 90, 150)
+
+/// Color del arma (las de efecto vienen pintadas para que se distingan)
+function scr_arma_tinte(_w) {
+	if (is_struct(_w) && variable_struct_exists(_w, "tinte")) return _w.tinte;
+	return c_white;
+}
+
+function scr_efx_init() {
+	if (!variable_instance_exists(id, "efx_stun")) {
+		efx_stun = 0;
+		efx_stun_tipo = 0;
+		efx_red = 0;
+		efx_hielo_n = 0;
+		efx_hielo_t = 0;
+		efx_inm = 0;
+		efx_tenia = false;
+	}
+}
+
+/// Cada frame (jugador y bots): baja los tiempos y da la inmunidad al agarrar la bandera
+function scr_efx_step() {
+	scr_efx_init();
+	if (isDead) {
+		efx_stun = 0; efx_red = 0; efx_hielo_n = 0; efx_hielo_t = 0; efx_inm = 0; efx_tenia = false;
+		return;
+	}
+	if (efx_stun > 0) efx_stun--;
+	if (efx_red > 0) efx_red--;
+	if (efx_hielo_t > 0) { efx_hielo_t--; if (efx_hielo_t <= 0) efx_hielo_n = 0; }
+	if (has_flag && !efx_tenia) efx_inm = EFX_INMUNE;
+	efx_tenia = has_flag;
+	if (efx_inm > 0) efx_inm--;
+}
+
+function scr_efx_aturdido() { scr_efx_init(); return efx_stun > 0; }
+function scr_efx_atrapado() { scr_efx_init(); return efx_stun > 0 || efx_red > 0; }
+
+/// Cuanto camina (hielo lo hace lento)
+function scr_efx_vel_mult() {
+	scr_efx_init();
+	return max(0.3, 1 - EFX_HIELO_LENTO * efx_hielo_n);
+}
+
+/// Aturdido o en la red: no camina ni salta (va despues de leer las teclas)
+function scr_efx_controles() {
+	if (!scr_efx_atrapado()) return;
+	key_left = false;
+	key_right = false;
+	key_jump = false;
+}
+
+/// El codigo que ven los demas
+function scr_efx_codigo() {
+	scr_efx_init();
+	if (efx_stun > 0) return efx_stun_tipo;
+	if (efx_red > 0) return 4;
+	if (efx_hielo_n > 0) return 2;
+	return 0;
+}
+
+/// Le pega un efecto. Devuelve { soltar, x, y }: si hay que tirar la bandera y donde.
+/// _ax, _ay = donde esta el que disparo (para el iman).
+function scr_efx_aplicar(_ef, _ax, _ay) {
+	scr_efx_init();
+	var _r = { soltar: false, x: x, y: y - 25 };
+	var _tumba = false;
+	switch (_ef) {
+		case "zap":
+			efx_stun = EFX_ZAP_T;
+			efx_stun_tipo = 1;
+			_tumba = true;
+			if (global.sfx) audio_play_sound(snd_shield_impact, 20, false, 0.8, 0, 1.6);
+		break;
+		case "hielo":
+			efx_hielo_n++;
+			efx_hielo_t = EFX_HIELO_T;
+			if (efx_hielo_n >= 3) {
+				efx_hielo_n = 0;
+				efx_hielo_t = 0;
+				efx_stun = EFX_CONGELA_T;
+				efx_stun_tipo = 3;
+				_tumba = true;
+				if (global.sfx) audio_play_sound(snd_shield_impact, 20, false, 0.8, 0, 0.7);
+			}
+		break;
+		case "red":
+			efx_red = EFX_RED_T;
+			_tumba = true;
+		break;
+		case "iman":
+			var _d = point_direction(x, y, _ax, _ay);
+			push_h = lengthdir_x(EFX_IMAN_FUERZA, _d);
+			vsp = -3;
+			_tumba = true;
+			_r.x = _ax;
+			_r.y = _ay - 20;
+		break;
+	}
+	_r.soltar = _tumba && has_flag && efx_inm <= 0;
+	return _r;
+}
+
+/// Tu jugador recibe el golpe con efecto (callback_ReceivedEvent, "hit")
+function scr_efx_recibir_jugador(_m) {
+	if (!is_struct(_m) || !variable_struct_exists(_m, "ef")) return;
+	var _ef = string(_m.ef);
+	if (_ef == "") return;
+	var _ax = variable_struct_exists(_m, "ax") ? real(_m.ax) : x;
+	var _ay = variable_struct_exists(_m, "ay") ? real(_m.ay) : y;
+	var _r = scr_efx_aplicar(_ef, _ax, _ay);
+	if (_r.soltar) scr_efx_soltar_jugador(_r.x, _r.y);
+}
+
+/// Se te cae la bandera por un efecto (igual que con el guante)
+function scr_efx_soltar_jugador(_px, _py) {
+	has_flag = false;
+	var _obj_bandera = (global.myTeam == "AZUL") ? oFlag : oFlag2;
+	with (_obj_bandera) {
+		has_flag = false;
+		portador_instancia = noone;
+		x = _px;
+		y = _py;
+		velocidad_caida = -6;
+	}
+	with (oOtherPlayer) {
+		if (es_bot) continue;
+		SendEventToClient(clientId, "flag_dropped", { team: global.myTeam, dropX: _px, dropY: _py });
+	}
+	fb_toast("TE TUMBARON LA BANDERA", "Quedo en el suelo", FB_ORO);
+}
+
+/// Datos del efecto para el mensaje "hit" de una bala (oMyEntity)
+function scr_efx_msg(_m) {
+	if (!variable_instance_exists(id, "efecto") || efecto == "") return _m;
+	_m.ef = efecto;
+	var _o = (variable_instance_exists(id, "owner_id") && instance_exists(owner_id)) ? owner_id : id;
+	_m.ax = round(_o.x);
+	_m.ay = round(_o.y);
+	// Chispazo donde pego
+	var _c = scr_efx_color(efecto);
+	fx_light(x, y, 40, _c, 14);
+	fx_sparks(x, y, direction + 180, 10, false);
+	return _m;
+}
+
+function scr_efx_color(_ef) {
+	switch (_ef) {
+		case "zap":   return EFX_COL_ZAP;
+		case "hielo": return EFX_COL_HIELO;
+		case "red":   return EFX_COL_RED;
+		case "iman":  return EFX_COL_IMAN;
+	}
+	return c_white;
+}
+
+/// El codigo de efecto que hay que dibujar en un oOtherPlayer (bot del lider o lo que llego por la red)
+function scr_efx_vis() {
+	if (variable_instance_exists(id, "bot_local") && bot_local) return scr_efx_codigo();
+	if (variable_instance_exists(id, "efx_vis")) return efx_vis;
+	return 0;
+}
+
+/// El color del arma de un oOtherPlayer
+function scr_efx_wti() {
+	if (variable_instance_exists(id, "bot_local") && bot_local && variable_instance_exists(id, "bot_w") && is_struct(bot_w) && variable_struct_exists(bot_w, "tinte")) return bot_w.tinte;
+	if (variable_instance_exists(id, "WTI")) return WTI;
+	return c_white;
+}
+
+/// Rayitos alrededor de un rectangulo
+function __efx_rayos(_x1, _y1, _x2, _y2, _n, _col) {
+	draw_set_colour(_col);
+	for (var i = 0; i < _n; i++) {
+		var _px = random_range(_x1, _x2), _py = random_range(_y1, _y2);
+		var _ang = random(360);
+		for (var k = 0; k < 3; k++) {
+			var _nx = _px + lengthdir_x(6, _ang + random_range(-50, 50));
+			var _ny = _py + lengthdir_y(6, _ang + random_range(-50, 50));
+			draw_line_width(_px, _py, _nx, _ny, 1.5);
+			_px = _nx; _py = _ny;
+		}
+	}
+}
+
+/// Dibuja el efecto encima del personaje (va al final de su Draw)
+function scr_efx_draw_cuerpo(_c) {
+	if (_c <= 0 || !visible) return;
+	var _x1 = bbox_left - 3, _y1 = bbox_top - 3, _x2 = bbox_right + 3, _y2 = bbox_bottom + 1;
+	var _t = current_time / 1000;
+	switch (_c) {
+		case 1: // aturdido (zap)
+			gpu_set_blendmode(bm_add);
+			draw_sprite_ext(sprite_index, image_index, x, y, image_xscale, image_yscale, image_angle, EFX_COL_ZAP, 0.55 + 0.25 * sin(_t * 30));
+			draw_set_alpha(0.9);
+			__efx_rayos(_x1, _y1, _x2, _y2, 4, EFX_COL_ZAP);
+			gpu_set_blendmode(bm_normal);
+		break;
+		case 2: // lento (hielo)
+			gpu_set_blendmode(bm_add);
+			draw_sprite_ext(sprite_index, image_index, x, y, image_xscale, image_yscale, image_angle, EFX_COL_HIELO, 0.35);
+			gpu_set_blendmode(bm_normal);
+			draw_set_alpha(0.8);
+			draw_set_colour(EFX_COL_HIELO);
+			for (var i = 0; i < 3; i++) {
+				var _ax = x + sin(_t * 2 + i * 2.1) * 12, _ay = _y1 + ((_t * 20 + i * 11) mod (_y2 - _y1));
+				draw_rectangle(_ax, _ay, _ax + 1, _ay + 1, false);
+			}
+		break;
+		case 3: // congelado
+			draw_set_alpha(0.45);
+			draw_set_colour(EFX_COL_HIELO);
+			draw_rectangle(_x1 - 2, _y1 - 2, _x2 + 2, _y2, false);
+			draw_set_alpha(0.9);
+			draw_set_colour(c_white);
+			draw_rectangle(_x1 - 2, _y1 - 2, _x2 + 2, _y2, true);
+			draw_line(_x1 + 2, _y1 + 4, _x1 + 7, _y1 + 12);
+			draw_line(_x2 - 3, _y1 + 8, _x2 - 7, _y1 + 18);
+		break;
+		case 4: // atrapado (red)
+			draw_set_alpha(0.9);
+			draw_set_colour(EFX_COL_RED);
+			for (var _xx = _x1 - 2; _xx <= _x2 + 2; _xx += 6) draw_line(_xx, _y1 - 2, _xx + 2, _y2);
+			for (var _yy = _y1 - 2; _yy <= _y2; _yy += 6) draw_line(_x1 - 2, _yy, _x2 + 2, _yy + 1);
+		break;
+	}
+	draw_set_alpha(1);
+	draw_set_colour(c_white);
+}
+
+/// Dibuja la bala de un arma con efecto (oMyEntity y oOtherPlayersEntity)
+function scr_efx_bala_draw(_ef, _x, _y, _dir) {
+	var _t = current_time / 1000;
+	switch (_ef) {
+		case "zap":
+			gpu_set_blendmode(bm_add);
+			draw_set_colour(EFX_COL_ZAP);
+			draw_set_alpha(0.35);
+			draw_circle(_x, _y, 11 + sin(_t * 25) * 2, false);
+			draw_set_alpha(1);
+			draw_circle(_x, _y, 5, false);
+			__efx_rayos(_x - 8, _y - 8, _x + 8, _y + 8, 3, EFX_COL_ZAP);
+			gpu_set_blendmode(bm_normal);
+		break;
+		case "hielo":
+			draw_set_colour(EFX_COL_HIELO);
+			draw_line_width(_x, _y, _x - lengthdir_x(10, _dir), _y - lengthdir_y(10, _dir), 3);
+			draw_set_colour(c_white);
+			draw_line_width(_x, _y, _x - lengthdir_x(5, _dir), _y - lengthdir_y(5, _dir), 1.5);
+		break;
+		case "red":
+			draw_set_colour(EFX_COL_RED);
+			var _a = _t * 400;
+			for (var i = -1; i <= 1; i++) {
+				draw_line(_x + lengthdir_x(9, _a) + lengthdir_x(i * 5, _a + 90), _y + lengthdir_y(9, _a) + lengthdir_y(i * 5, _a + 90),
+				          _x - lengthdir_x(9, _a) + lengthdir_x(i * 5, _a + 90), _y - lengthdir_y(9, _a) + lengthdir_y(i * 5, _a + 90));
+				draw_line(_x + lengthdir_x(9, _a + 90) + lengthdir_x(i * 5, _a), _y + lengthdir_y(9, _a + 90) + lengthdir_y(i * 5, _a),
+				          _x - lengthdir_x(9, _a + 90) + lengthdir_x(i * 5, _a), _y - lengthdir_y(9, _a + 90) + lengthdir_y(i * 5, _a));
+			}
+		break;
+		case "iman":
+			gpu_set_blendmode(bm_add);
+			draw_set_colour(EFX_COL_IMAN);
+			var _px = _x, _py = _y;
+			for (var k = 1; k <= 6; k++) {
+				var _nx = _x - lengthdir_x(k * 6, _dir) + lengthdir_x(sin(_t * 40 + k) * 3, _dir + 90);
+				var _ny = _y - lengthdir_y(k * 6, _dir) + lengthdir_y(sin(_t * 40 + k) * 3, _dir + 90);
+				draw_set_alpha(1 - k / 7);
+				draw_line_width(_px, _py, _nx, _ny, 3);
+				_px = _nx; _py = _ny;
+			}
+			gpu_set_blendmode(bm_normal);
+		break;
+	}
+	draw_set_alpha(1);
+	draw_set_colour(c_white);
 }

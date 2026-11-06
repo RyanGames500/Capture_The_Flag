@@ -143,6 +143,8 @@ your sharedProperties
 		Name = string(SP._NAME);
 		weapon.angle = real(SP._ANG)
 		WSI = (SP._WSI);
+		efx_vis = variable_struct_exists(SP, "_EF") ? real(SP._EF) : 0;      // efecto encima (scr_armas)
+		WTI = variable_struct_exists(SP, "_WT") ? real(SP._WT) : c_white;    // color del arma
 		ammo = SP._AMMO;
 		reloading = SP._REL;
 		recoil_kick = real(SP._RK);

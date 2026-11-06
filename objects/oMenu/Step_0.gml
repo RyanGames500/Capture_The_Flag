@@ -573,8 +573,13 @@ if (menu_state == "verifying" && vkey_pressed(vk_escape)) {
     menu_state = "private";
 }
 
+// --- CHAT DE LA SALA (scr_objetivo): si esta abierto, ENTER manda y ESC lo cierra ---
+var _chat_tomo = scr_chat_step();
+var _chat_abierto = _chat_tomo || global.chat.abierto;
+
 // --- SALIR DE LA SALA PRIVADA (con confirmacion) ---
 var _lobby_input_ok = true;
+if (_chat_abierto) _lobby_input_ok = false;   // con el chat abierto no se empieza ni se expulsa
 if (menu_state == "lobby_espera") {
     var _sgw = display_get_gui_width();
     var _sgh = display_get_gui_height();
@@ -587,6 +592,7 @@ if (menu_state == "lobby_espera") {
         // Abrir la ventanita: ESC o el boton SALIR de arriba a la izquierda
         var _pedir = vkey_pressed(vk_escape);
         if (_sclick && point_in_rectangle(_sgx, _sgy, 20 * _su, 20 * _su, 170 * _su, 64 * _su)) _pedir = true;
+        if (_chat_abierto) _pedir = false;   // ESC cerro el chat, no abre esta ventanita
         if (_pedir) {
             confirmar_salida = true;
             salir_sel = 1; // por defecto: NO, QUEDARME
@@ -699,6 +705,8 @@ if (oBrain.AmIPseudoHost) {
             // Ya no hay que esperar a que se llene: los espacios vacios los juegan bots (scr_objetivo)
             var _dest = scr_mapa_resolver();  // si es ALEATORIO, el líder elige aquí (una sola vez)
             var _aj = scr_ajustes_struct();   // ya lleva el mapa elegido: todos van al mismo
+            scr_sala_roster_fijar(_aj);       // quienes juegan: nadie mas entra a media partida (scr_objetivo)
+            scr_partida_estado_nuevo();       // seleccion de personaje desde cero (scr_objetivo)
             global.botnet_defs = scr_sala_bots();
             with(oOtherPlayer) {
                 if (!es_bot) SendEventToClient(clientId, "GO_TO_BATTLE", _aj);

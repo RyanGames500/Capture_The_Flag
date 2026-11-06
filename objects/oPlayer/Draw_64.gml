@@ -131,7 +131,7 @@ draw_set_halign(fa_center);
 
 if (w != noone && is_struct(w)) {
     // --- DIBUJAR ARMA ---
-    draw_sprite_ext(w.sprite, 0, _centro_x, _centro_y, _escala_hud - 1, _escala_hud - 1, 0, c_white, 1);
+    draw_sprite_ext(w.sprite, 0, _centro_x, _centro_y, _escala_hud - 1, _escala_hud - 1, 0, scr_arma_tinte(w), 1);
 
     // --- MUNICIÓN CON SEGURO ---
     var _res_val = reserve[$ w.ammoType];

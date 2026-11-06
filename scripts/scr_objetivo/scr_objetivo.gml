@@ -333,8 +333,11 @@ function scr_botnet_crear_todos() {
 		var _d = global.botnet_defs[i];
 		var _b = instance_create_layer(0, 0, global.OtherPlayersLayerName, oOtherPlayer);
 		_b.clientId = _d.i;
+		// h = nombre de persona (partida rapida); si no, como siempre "BOT ..."
+		var _nom = (variable_struct_exists(_d, "h") && _d.h) ? _d.n : "BOT " + _d.n;
+		var _pj = variable_struct_exists(_d, "pj") ? _d.pj : irandom(3);
 		with (_b) {
-			scr_botnet_init(_d.t, "BOT " + _d.n, irandom(3));
+			scr_botnet_init(_d.t, _nom, _pj);
 			bot_rol = _d.r;
 		}
 	}
@@ -486,7 +489,8 @@ function scr_botnet_sp() {
 		_NAME: Name, _ANG: round(weapon.angle), _WSI: WSI, _AMMO: ammo, _ATYPE: bot_w.tipo,
 		_REL: reloading, _RK: recoil_kick, _RA: recoil_angle, _MELEE: melee_active,
 		_TEAM: team, _SH: false, _MH: max_health, _PJ: bot_pj, _BOT: true,
-		_HCO: (bot_cor_t > 0), _HDA: (bot_dash_vis > 0), _HGF: 0, _HGX: round(x), _HGY: round(y)
+		_HCO: (bot_cor_t > 0), _HDA: (bot_dash_vis > 0), _HGF: 0, _HGX: round(x), _HGY: round(y),
+		_EF: scr_efx_codigo(), _WT: bot_w.tinte   // efecto encima y color del arma (scr_armas)
 	};
 }
 
@@ -562,16 +566,23 @@ function scr_botnet_step() {
 		return;
 	}
 
-	// --- GOLPEADO: unos frames sin control ---
+	// --- GOLPEADO ---
+	// Bala normal: se ve el golpe pero sigue moviendose y disparando (igual que tu jugador).
+	// Solo pierde el control cuando lo avientan (guante, mina, caja): ahi manda el empuje.
 	var _aturdido = false;
+	scr_efx_step();                          // zap, hielo, red (scr_armas)
+	if (scr_efx_aturdido()) _aturdido = true;
 	if (hit_bloqueo_timer > 0) {
 		hit_bloqueo_timer--;
-		hsp *= 0.9;
 		state = PLAYERSTATE.HIT;
-		_aturdido = true;
+		if (abs(push_h) >= 1) {
+			hsp *= 0.9;
+			_aturdido = true;
+		}
 	}
 
 	if (_activo && !_aturdido) scr_botnet_pensar();
+	if (scr_efx_atrapado()) { key_left = false; key_right = false; key_jump = false; }   // en la red no camina
 	if (!_activo) weapon.angle = (image_xscale > 0) ? 0 : 180;
 
 	// --- MOVIMIENTO (igual que el bot del modo local) ---
@@ -587,6 +598,7 @@ function scr_botnet_step() {
 		var _move = key_right - key_left;
 		var _vel = has_flag ? walksp * bot_datos.bandera : walksp;
 		if (bot_cor_t > 0) _vel *= HAB_CORAZA_VEL;   // la coraza pesa
+		_vel *= scr_efx_vel_mult();                  // el congelador lo pone lento
 		if (abs(push_h) < 1) hsp = _move * _vel;
 		if (hsp != 0) image_xscale = sign(hsp) * 1.5;
 		if (key_jump && is_grounded) { vsp = jumpsp; is_grounded = false; }
@@ -792,13 +804,15 @@ function scr_botnet_arma_datos(_w) {
 	var _d = {
 		tipo: string(_w.type2), spr: _w.sprite, dano: _w.damage, cada: max(3, _w.frequency), max: max(1, _w.maxAmmo),
 		vel: 16, vida: 40, disp: 1.5, balas: 1, rafaga: 0, cohete: false, acel: false, atraviesa: 0,
-		mz: "gun", bala: sprBullet_gun, snd: snd_gun, tono: 1, vol: 0.7
+		mz: "gun", bala: sprBullet_gun, snd: snd_gun, tono: 1, vol: 0.7,
+		efecto: "", tinte: c_white, grav: 0, escala: 1   // armas con efecto (scr_armas)
 	};
 	if (scr_arma_es_generica(_w)) {
 		_d.vel = _w.vel; _d.vida = _w.vida; _d.disp = max(1, _w.disp); _d.balas = _w.balas; _d.rafaga = _w.rafaga;
 		_d.atraviesa = _w.atraviesa; _d.mz = _w.mz; _d.snd = _w.snd; _d.tono = _w.tono; _d.vol = _w.vol * 0.7;
 		_d.bala = _w.silenciada ? spr_bala_silenciada : ((_w.balas > 1) ? sprBullet_escop : sprBullet_smg);
 		if (_w.cohete) { _d.cohete = true; _d.acel = true; _d.bala = sprBullet_bazooka; }
+		if (variable_struct_exists(_w, "efecto")) { _d.efecto = _w.efecto; _d.tinte = _w.tinte; _d.grav = _w.grav; _d.escala = _w.escala; }
 		return _d;
 	}
 	switch (_d.tipo) {
@@ -872,6 +886,11 @@ function scr_botnet_disparar(_de_rafaga = false) {
 		if (_d.cohete) {
 			_b.is_rocket = true;
 			if (_d.acel) { _b.acel = 1.06; _b.vel_max = 16; }
+		}
+		if (_d.efecto != "") {
+			_b.efecto = _d.efecto;
+			if (_d.grav > 0) { _b.gravity = _d.grav; _b.gravity_direction = 270; }
+			if (_d.escala != 1) { _b.image_xscale = _d.escala; _b.image_yscale = _d.escala; }
 		}
 	}
 
@@ -1036,6 +1055,14 @@ function scr_botnet_dano(_b, _m, _from) {
 		state = PLAYERSTATE.HIT;
 		image_index = 0;
 
+		// Armas con efecto: zap, hielo, red o iman (scr_armas)
+		if (variable_struct_exists(_m, "ef") && is_string(_m.ef) && _m.ef != "") {
+			var _ax = variable_struct_exists(_m, "ax") ? real(_m.ax) : x;
+			var _ay = variable_struct_exists(_m, "ay") ? real(_m.ay) : y;
+			var _r = scr_efx_aplicar(_m.ef, _ax, _ay);
+			if (_r.soltar) scr_botnet_soltar(-6, 25, _r.x, _r.y);
+		}
+
 		// Guante: lo avienta y suelta la bandera (igual que a ti)
 		if (_why == "boxeo") {
 			var _ang = variable_struct_exists(_m, "angle") ? real(_m.angle) : 0;
@@ -1050,11 +1077,11 @@ function scr_botnet_dano(_b, _m, _from) {
 }
 
 /// Suelta la bandera donde esta.
-function scr_botnet_soltar(_vy, _alto) {
+function scr_botnet_soltar(_vy, _alto, _px = undefined, _py = undefined) {
 	has_flag = false;
 	var _f = (team == "AZUL") ? oFlag : oFlag2;
-	var _dx = x;
-	var _dy = y - _alto;
+	var _dx = is_undefined(_px) ? x : _px;          // el iman la deja en otro lado (scr_armas)
+	var _dy = is_undefined(_py) ? y - _alto : _py;
 	with (_f) {
 		has_flag = false;
 		portador_instancia = noone;
@@ -1176,6 +1203,7 @@ function scr_botnet_morir() {
 /// Reaparece en su base con vida llena y un rato sin que le peguen.
 function scr_botnet_revivir() {
 	isDead = false;
+	scr_efx_init(); efx_stun = 0; efx_red = 0; efx_hielo_n = 0; efx_hielo_t = 0;   // sin efectos al revivir (scr_armas)
 	hp = max_health;
 	state = PLAYERSTATE.IDLE;
 	visible = true;
@@ -1288,7 +1316,453 @@ function scr_fin_es_privada() {
 /// Los botones de la pantalla de fin de partida.
 function scr_fin_opciones() {
 	if (variable_global_exists("bot_partida") && global.bot_partida) return ["BUSCAR RIVAL", "SALIR"];
+	if (scr_botq_activa()) return ["BUSCAR RIVAL", "SALIR"];   // partida rapida contra el bot nuevo
 	if (!global.ONLINE) return ["REINTENTAR", "SALIR"];
 	if (scr_fin_es_privada()) return ["SALIR"];
 	return ["ENVIAR SOLICITUD", "SALIR"];
+}
+
+// ======================================================
+// SALA PRIVADA: EQUIPOS PAREJOS Y NADIE ENTRA A MEDIA PARTIDA
+// El lider reparte los equipos (ya no se juntan 3 en uno) y los manda junto con los ajustes.
+// Al empezar, se guarda quienes estan (la lista). Si alguien entra con el codigo a media
+// partida, el lider le avisa "SALA_EN_PARTIDA" y se sale solo.
+// ======================================================
+
+/// El lider reparte los equipos. Devuelve [[clientId, "AZUL"/"ROJO"], ...]
+function scr_sala_equipos_calc() {
+	if (!variable_global_exists("sala_eq") || !is_struct(global.sala_eq)) global.sala_eq = {};
+	var _max = (variable_global_exists("max_players_allowed") && global.max_players_allowed >= 2) ? global.max_players_allowed : 2;
+	var _cupo = max(1, _max div 2);
+
+	// Personas: el lider primero, luego en el orden en que entraron (clientId)
+	var _otros = [];
+	var _pref = {};
+	_pref[$ string(global.clientId)] = (variable_global_exists("serverTeam") && global.serverTeam != "") ? global.serverTeam : "AZUL";
+	with (oOtherPlayer) {
+		if (es_bot || clientId < 0) continue;
+		array_push(_otros, clientId);
+		_pref[$ string(clientId)] = lobby_team;
+	}
+	array_sort(_otros, true);
+	var _ids = [global.clientId];
+	for (var i = 0; i < array_length(_otros); i++) array_push(_ids, _otros[i]);
+
+	var _nuevo = {};
+	var _cuenta = { AZUL: 0, ROJO: 0 };
+	// 1) Cada quien se queda en su equipo si cabe (el que ya tenia, o el que le dio el servidor)
+	for (var i = 0; i < array_length(_ids); i++) {
+		var _k = string(_ids[i]);
+		var _t = variable_struct_exists(global.sala_eq, _k) ? global.sala_eq[$ _k] : _pref[$ _k];
+		if ((_t == "AZUL" || _t == "ROJO") && _cuenta[$ _t] < _cupo) {
+			_nuevo[$ _k] = _t;
+			_cuenta[$ _t] += 1;
+		}
+	}
+	// 2) Los que no cupieron van al equipo con menos gente
+	for (var i = 0; i < array_length(_ids); i++) {
+		var _k = string(_ids[i]);
+		if (variable_struct_exists(_nuevo, _k)) continue;
+		var _t = (_cuenta.ROJO < _cuenta.AZUL) ? "ROJO" : "AZUL";
+		_nuevo[$ _k] = _t;
+		_cuenta[$ _t] += 1;
+	}
+	global.sala_eq = _nuevo;
+	global.serverTeam = _nuevo[$ string(global.clientId)];
+	global.myTeam = global.serverTeam;
+	// En mi pantalla los demas quedan de una vez en su equipo (para la sala y los bots)
+	with (oOtherPlayer) {
+		if (es_bot || clientId < 0) continue;
+		var _kk = string(clientId);
+		if (variable_struct_exists(_nuevo, _kk)) lobby_team = _nuevo[$ _kk];
+	}
+
+	var _lista = [];
+	for (var i = 0; i < array_length(_ids); i++) array_push(_lista, [_ids[i], _nuevo[$ string(_ids[i])]]);
+	return _lista;
+}
+
+/// Pone los equipos que mando el lider (en todos los demas)
+function scr_sala_equipos_aplicar(_eq) {
+	if (!is_array(_eq)) return;
+	for (var i = 0; i < array_length(_eq); i++) {
+		var _p = _eq[i];
+		if (!is_array(_p) || array_length(_p) < 2) continue;
+		var _cid = real(_p[0]);
+		var _t = string(_p[1]);
+		if (_t != "AZUL" && _t != "ROJO") continue;
+		if (_cid == global.clientId) { global.serverTeam = _t; global.myTeam = _t; }
+		else with (oOtherPlayer) if (clientId == _cid) lobby_team = _t;
+	}
+}
+
+/// Al empezar la partida: quienes juegan (los que entren despues no pueden)
+function scr_sala_roster_fijar(_aj) {
+	global.sala_roster = [];
+	global.sala_rechazados = {};
+	if (!is_struct(_aj) || !variable_struct_exists(_aj, "eq") || !is_array(_aj.eq)) return;
+	for (var i = 0; i < array_length(_aj.eq); i++) {
+		var _p = _aj.eq[i];
+		if (is_array(_p) && array_length(_p) >= 1) array_push(global.sala_roster, real(_p[0]));
+	}
+}
+
+/// Se borra la lista al cambiar de sala del servidor
+function scr_sala_roster_limpiar() {
+	scr_chat_reset();   // el chat es de cada sala
+	global.sala_roster = [];
+	global.sala_rechazados = {};
+	global.sala_eq = {};
+}
+
+/// Un jugador nuevo aparece en plena partida y no estaba en la lista: no se crea,
+/// y el lider le dice que se salga (una sola vez). Devuelve true si hay que ignorarlo.
+function scr_sala_bloqueado(_cid) {
+	if (room == rm_menu) return false;
+	if (!variable_global_exists("sala_roster") || !is_array(global.sala_roster) || array_length(global.sala_roster) == 0) return false;
+	for (var i = 0; i < array_length(global.sala_roster); i++) if (global.sala_roster[i] == _cid) return false;
+	if (oBrain.AmIPseudoHost) {
+		if (!variable_global_exists("sala_rechazados") || !is_struct(global.sala_rechazados)) global.sala_rechazados = {};
+		var _k = string(_cid);
+		if (!variable_struct_exists(global.sala_rechazados, _k)) {
+			global.sala_rechazados[$ _k] = true;
+			SendEventToClient(_cid, "SALA_EN_PARTIDA", {});
+		}
+	}
+	return true;
+}
+
+// ======================================================
+// CHAT DE LA SALA PRIVADA (opcion B): boton CHAT abajo a la derecha con contador,
+// y un panel al lado con los mensajes, la caja para escribir y frases rapidas.
+// PC: T o clic en CHAT para abrir, ENTER manda, ESC cierra.
+// Celular: tocar CHAT abre el teclado; OK manda; ATRAS o la X cierra.
+// Todo el texto queda en ASCII (las tildes se quitan).
+// ======================================================
+#macro CHAT_MAX_LETRAS 60
+#macro CHAT_MAX_MSGS   30
+
+function scr_chat_init() {
+	if (!variable_global_exists("chat") || !is_struct(global.chat)) {
+		global.chat = { lista: [], abierto: false, nuevos: 0, cd: 0, gente: {} };
+	}
+}
+
+/// Se vacia al cambiar de sala del servidor
+function scr_chat_reset() {
+	global.chat = { lista: [], abierto: false, nuevos: 0, cd: 0, gente: {} };
+}
+
+/// Solo ASCII: quita tildes y lo que no se puede dibujar
+function scr_chat_limpiar(_t) {
+	_t = string(_t);
+	var _de = "áéíóúÁÉÍÓÚñÑüÜ¿¡";
+	var _a  = "aeiouAEIOUnNuU?!";
+	var _r = "";
+	for (var i = 1; i <= string_length(_t); i++) {
+		var _c = string_char_at(_t, i);
+		var _o = ord(_c);
+		if (_o >= 32 && _o < 127) { _r += _c; continue; }
+		var _p = string_pos(_c, _de);
+		if (_p > 0) _r += string_char_at(_a, _p);
+	}
+	return string_copy(_r, 1, CHAT_MAX_LETRAS);
+}
+
+function __chat_push(_n, _t, _eq) {
+	scr_chat_init();
+	array_push(global.chat.lista, { n: _n, t: _t, eq: _eq });
+	if (array_length(global.chat.lista) > CHAT_MAX_MSGS) array_delete(global.chat.lista, 0, 1);
+}
+
+/// Manda un mensaje a todos los de la sala (los bots no)
+function scr_chat_enviar(_t) {
+	scr_chat_init();
+	_t = scr_chat_limpiar(_t);
+	if (string_length(string_trim(_t)) == 0) return;
+	if (global.chat.cd > 0) return;          // que no hagan spam
+	global.chat.cd = 20;
+	var _n = scr_chat_limpiar(global.myName);
+	var _eq = scr_my_team();
+	__chat_push(_n, _t, _eq);
+	var _m = { n: _n, t: _t, eq: _eq };
+	with (oOtherPlayer) if (!es_bot) SendEventToClient(clientId, "chat_sala", _m);
+}
+
+/// Llega un mensaje (callback_ReceivedEvent, "chat_sala")
+function scr_chat_recibir(_m) {
+	if (!is_struct(_m) || !variable_struct_exists(_m, "t")) return;
+	scr_chat_init();
+	var _n = variable_struct_exists(_m, "n") ? scr_chat_limpiar(_m.n) : "?";
+	var _eq = variable_struct_exists(_m, "eq") ? string(_m.eq) : "";
+	__chat_push(_n, scr_chat_limpiar(_m.t), _eq);
+	if (!global.chat.abierto) global.chat.nuevos++;
+	if (global.sfx) audio_play_sound(snd_ammo_pickup, 1, false, 0.35, 0, 1.4);
+}
+
+function scr_chat_frases() { return ["LISTO!", "ESPEREN", "YA VOY", "GG", "QUE MAPA?", "EMPIEZA YA"]; }
+
+/// Medidas del boton y del panel (las mismas en el Step y en el Draw)
+/// En PC la caja de texto va abajo. En el celular va arriba (el teclado tapa la mitad de abajo)
+/// y el boton CHAT queda arriba a la derecha (abajo estan los botones OK y ATRAS).
+function scr_chat_geo() {
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	var _u = clamp(min(_gw / 1280, _gh / 720), 0.6, 1.6);
+	var _tm = touch_mode();
+	var _pw = 470 * _u;
+	var _px = _gw - _pw;
+	var _g = { u: _u, gw: _gw, gh: _gh, tactil: _tm,
+		bw: 150 * _u, bh: 44 * _u, bx: _gw - 170 * _u, by: _tm ? 130 * _u : _gh - 64 * _u,
+		px: _px, pw: _pw,
+		xx: _gw - 44 * _u, xy: 14 * _u, xs: 30 * _u,           // la X
+		ix: _px + 16 * _u, iw: _pw - 32 * _u, ih: 46 * _u,     // caja de texto
+		chips: []
+	};
+	var _cw = (_pw - 32 * _u - 16 * _u) / 3, _ch = 40 * _u;
+	var _cy0;
+	if (_tm) {
+		_g.iy = 130 * _u;                                  // caja arriba
+		_cy0 = _g.iy + _g.ih + 10 * _u;                   // frases debajo de la caja
+		_g.mt = _cy0 + _ch * 2 + 8 * _u + 14 * _u;        // mensajes debajo (el mas nuevo arriba)
+		_g.mb = _gh - 16 * _u;
+	} else {
+		_cy0 = _gh - 16 * _u - _ch * 2 - 8 * _u;          // frases abajo del todo
+		_g.iy = _cy0 - 12 * _u - _g.ih;                   // caja arriba de las frases
+		_g.mt = 60 * _u;
+		_g.mb = _g.iy - 10 * _u;                          // mensajes arriba (el mas nuevo abajo)
+	}
+	for (var i = 0; i < 6; i++) {
+		var _cx = _px + 16 * _u + (i mod 3) * (_cw + 8 * _u);
+		var _cy = _cy0 + (i div 3) * (_ch + 8 * _u);
+		array_push(_g.chips, [_cx, _cy, _cw, _ch]);
+	}
+	return _g;
+}
+
+/// Va en el Step de oMenu (sala de espera). Devuelve true si el chat uso las teclas este frame
+/// (asi ENTER no empieza la partida y ESC no abre "SALIR DE LA SALA?").
+function scr_chat_step() {
+	scr_chat_init();
+	var _c = global.chat;
+	if (_c.cd > 0) _c.cd--;
+	var _en_sala = (instance_exists(oMenu) && oMenu.menu_state == "lobby_espera");
+	if (!_en_sala) {
+		if (_c.abierto) { _c.abierto = false; if (touch_mode()) keyboard_virtual_hide(); }
+		return false;
+	}
+
+	// Avisos: quien entro y quien salio
+	var _ahora = {};
+	with (oOtherPlayer) {
+		if (es_bot || clientId < 0) continue;
+		if (Name == "" || Name == "Cargando...") continue;
+		_ahora[$ string(clientId)] = Name;
+	}
+	var _k = variable_struct_get_names(_ahora);
+	for (var i = 0; i < array_length(_k); i++) if (!variable_struct_exists(_c.gente, _k[i])) __chat_push("", scr_chat_limpiar(_ahora[$ _k[i]]) + " ENTRO A LA SALA", "");
+	var _k2 = variable_struct_get_names(_c.gente);
+	for (var i = 0; i < array_length(_k2); i++) if (!variable_struct_exists(_ahora, _k2[i])) __chat_push("", scr_chat_limpiar(_c.gente[$ _k2[i]]) + " SALIO DE LA SALA", "");
+	_c.gente = _ahora;
+
+	if (oMenu.confirmar_salida) return false;
+	var _g = scr_chat_geo();
+	var _mx = device_mouse_x_to_gui(0), _my = device_mouse_y_to_gui(0);
+	var _tap = device_mouse_check_button_pressed(0, mb_left);
+
+	if (!_c.abierto) {
+		var _abrir = keyboard_check_pressed(ord("T"));
+		if (_tap && point_in_rectangle(_mx, _my, _g.bx, _g.by, _g.bx + _g.bw, _g.by + _g.bh)) _abrir = true;
+		if (_abrir) {
+			_c.abierto = true;
+			_c.nuevos = 0;
+			keyboard_string = "";
+			if (touch_mode()) keyboard_virtual_show(kbv_type_default, kbv_returnkey_send, kbv_autocapitalize_none, false);
+			return true;
+		}
+		return false;
+	}
+
+	// --- Abierto ---
+	_c.nuevos = 0;
+	if (string_length(keyboard_string) > CHAT_MAX_LETRAS) keyboard_string = string_copy(keyboard_string, 1, CHAT_MAX_LETRAS);
+
+	var _cerrar = vkey_pressed(vk_escape);
+	if (_tap && point_in_rectangle(_mx, _my, _g.xx - 6 * _g.u, _g.xy - 6 * _g.u, _g.xx + _g.xs, _g.xy + _g.xs)) _cerrar = true;
+	if (_tap && point_in_rectangle(_mx, _my, _g.bx, _g.by, _g.bx + _g.bw, _g.by + _g.bh) && _mx < _g.px) _cerrar = true;
+	if (_cerrar) {
+		_c.abierto = false;
+		keyboard_string = "";
+		if (touch_mode()) keyboard_virtual_hide();
+		return true;
+	}
+
+	if (vkey_pressed(vk_enter)) {
+		scr_chat_enviar(keyboard_string);
+		keyboard_string = "";
+	}
+	if (_tap) {
+		if (touch_mode() && point_in_rectangle(_mx, _my, _g.ix, _g.iy, _g.ix + _g.iw, _g.iy + _g.ih)) {
+			keyboard_virtual_show(kbv_type_default, kbv_returnkey_send, kbv_autocapitalize_none, false);
+		}
+		var _fr = scr_chat_frases();
+		for (var i = 0; i < array_length(_g.chips); i++) {
+			var _r = _g.chips[i];
+			if (point_in_rectangle(_mx, _my, _r[0], _r[1], _r[0] + _r[2], _r[1] + _r[3])) scr_chat_enviar(_fr[i]);
+		}
+	}
+	return true;
+}
+
+/// Va en el Draw GUI de oMenu (sala de espera), antes de la ventanita de SALIR
+function scr_chat_draw() {
+	scr_chat_init();
+	var _c = global.chat;
+	var _g = scr_chat_geo();
+	var _u = _g.u;
+	var _tinta = make_color_rgb(11, 15, 26);
+	var _oro   = make_color_rgb(255, 212, 71);
+	var _gris  = make_color_rgb(169, 180, 208);
+	var _azul  = make_color_rgb(79, 176, 255);
+	var _rojo  = make_color_rgb(255, 107, 122);
+	draw_set_font(fnt_menu);
+	draw_set_valign(fa_middle);
+
+	if (!_c.abierto) {
+		// Boton CHAT con contador de mensajes nuevos
+		ctf_ui_para(_g.bx, _g.by, _g.bw, _g.bh, 10 * _u, _tinta, 0.92, false);
+		ctf_ui_para(_g.bx, _g.by, _g.bw, _g.bh, 10 * _u, _oro, 0.9, true);
+		draw_set_halign(fa_center);
+		draw_set_color(_oro);
+		draw_text_transformed(_g.bx + _g.bw / 2 - ((_c.nuevos > 0) ? 14 * _u : 0), _g.by + _g.bh / 2 - 2 * _u, "CHAT", 0.7 * _u, 0.7 * _u, 0);
+		if (_c.nuevos > 0) {
+			var _bx = _g.bx + _g.bw / 2 + 38 * _u, _by = _g.by + _g.bh / 2;
+			draw_set_color(make_color_rgb(255, 75, 92));
+			draw_circle(_bx, _by, 13 * _u, false);
+			draw_set_color(c_white);
+			draw_set_font(fnt_small);
+			draw_text_transformed(_bx, _by, string(min(_c.nuevos, 99)), 0.6 * _u, 0.6 * _u, 0);
+		}
+		if (!touch_mode()) {
+			draw_set_font(fnt_small);
+			draw_set_color(_gris); draw_set_alpha(0.5);
+			draw_text_transformed(_g.bx + _g.bw / 2, _g.by - 12 * _u, "[T]", 0.55 * _u, 0.55 * _u, 0);
+			draw_set_alpha(1);
+		}
+		draw_set_halign(fa_left);
+		draw_set_valign(fa_top);
+		draw_set_color(c_white);
+		return;
+	}
+
+	// --- Panel ---
+	draw_set_alpha(0.97);
+	draw_set_color(make_color_rgb(14, 20, 36));
+	draw_rectangle(_g.px, 0, _g.gw, _g.gh, false);
+	draw_set_alpha(1);
+	draw_set_color(_oro);
+	draw_rectangle(_g.px, 0, _g.px + 2 * _u, _g.gh, false);
+
+	// Titulo y X
+	draw_set_halign(fa_left);
+	draw_set_color(_oro);
+	draw_text_transformed(_g.px + 16 * _u, 30 * _u, "CHAT DE LA SALA", 0.9 * _u, 0.9 * _u, 0);
+	draw_set_halign(fa_center);
+	draw_text_transformed(_g.xx + _g.xs / 2 - 3 * _u, _g.xy + _g.xs / 2, "X", 0.75 * _u, 0.75 * _u, 0);
+
+	// Mensajes: en PC el mas nuevo abajo (junto a la caja); en el celular el mas nuevo arriba
+	// (letra grande: fnt_menu, la chica casi no se leia)
+	draw_set_font(fnt_menu);
+	draw_set_halign(fa_left);
+	draw_set_valign(fa_top);
+	var _s = 0.85 * _u;
+	var _w = _g.pw - 32 * _u;
+	var _yy = _g.tactil ? _g.mt : _g.mb;
+	for (var i = array_length(_c.lista) - 1; i >= 0; i--) {
+		var _m = _c.lista[i];
+		var _sis = (_m.n == "");
+		var _hn = _sis ? 0 : string_height("A") * _s;
+		var _ht = string_height_ext(_sis ? "* " + _m.t : _m.t, -1, _w / _s) * _s;
+		var _h = _hn + _ht + 8 * _u;
+		var _y0;
+		if (_g.tactil) {
+			if (_yy + _h > _g.mb) break;
+			_y0 = _yy;
+			_yy += _h;
+		} else {
+			if (_yy - _h < _g.mt) break;
+			_yy -= _h;
+			_y0 = _yy;
+		}
+		if (_sis) {
+			draw_set_color(_gris); draw_set_alpha(0.7);
+			draw_text_ext_transformed(_g.px + 16 * _u, _y0, "* " + _m.t, -1, _w / _s, _s, _s, 0);
+			draw_set_alpha(1);
+		} else {
+			draw_set_color((_m.eq == "ROJO") ? _rojo : _azul);
+			draw_text_transformed(_g.px + 16 * _u, _y0, _m.n + ":", _s, _s, 0);
+			draw_set_color(c_white);
+			draw_text_ext_transformed(_g.px + 16 * _u, _y0 + _hn, _m.t, -1, _w / _s, _s, _s, 0);
+		}
+	}
+	if (array_length(_c.lista) == 0) {
+		draw_set_color(_gris); draw_set_alpha(0.5);
+		draw_text_transformed(_g.px + 16 * _u, _g.tactil ? _g.mt : _g.mb - 20 * _u, "Todavia no hay mensajes", _s, _s, 0);
+		draw_set_alpha(1);
+	}
+
+	// Caja de texto con el cursor parpadeando
+	ctf_ui_para(_g.ix, _g.iy, _g.iw, _g.ih, 6 * _u, make_color_rgb(20, 28, 48), 1, false);
+	ctf_ui_para(_g.ix, _g.iy, _g.iw, _g.ih, 6 * _u, _gris, 0.5, true);
+	draw_set_valign(fa_middle);
+	var _txt = scr_chat_limpiar(keyboard_string);
+	var _cur = ((current_time div 500) mod 2 == 0) ? "_" : "";
+	if (_txt == "") {
+		draw_set_color(_gris); draw_set_alpha(0.5);
+		draw_text_transformed(_g.ix + 10 * _u, _g.iy + _g.ih / 2, touch_mode() ? "Toca para escribir..." : "Escribe y presiona ENTER...", _s, _s, 0);
+		draw_set_alpha(1);
+	} else {
+		// Si es largo, se ve el final
+		var _ver = _txt;
+		while (string_length(_ver) > 1 && string_width(_ver + "_") * _s > _g.iw - 20 * _u) _ver = string_delete(_ver, 1, 1);
+		draw_set_color(c_white);
+		draw_text_transformed(_g.ix + 10 * _u, _g.iy + _g.ih / 2, _ver + _cur, _s, _s, 0);
+	}
+
+	// Frases rapidas
+	var _fr = scr_chat_frases();
+	draw_set_halign(fa_center);
+	for (var i = 0; i < array_length(_g.chips); i++) {
+		var _r = _g.chips[i];
+		ctf_ui_para(_r[0], _r[1], _r[2], _r[3], 6 * _u, make_color_rgb(26, 36, 64), 1, false);
+		ctf_ui_para(_r[0], _r[1], _r[2], _r[3], 6 * _u, _oro, 0.35, true);
+		draw_set_color(_oro);
+		draw_text_transformed(_r[0] + _r[2] / 2, _r[1] + _r[3] / 2, _fr[i], 0.75 * _u, 0.75 * _u, 0);
+	}
+
+	draw_set_halign(fa_left);
+	draw_set_valign(fa_top);
+	draw_set_color(c_white);
+	draw_set_alpha(1);
+}
+
+/// Partida nueva desde cero: que no se quede nada de la anterior (fin de partida, festejo,
+/// "listo", intro...). Si algo quedaba pegado, a algunos no les salia la seleccion de personaje.
+function scr_partida_estado_nuevo() {
+	global.game_over   = false;
+	global.pausa       = false;
+	global.puntos_azul = 0;
+	global.puntos_rojo = 0;
+	global.winner_team = 0;
+	global.mi_listo    = false;
+	if (variable_global_exists("fest") && is_struct(global.fest)) global.fest.t = 0;
+	if (instance_exists(oBrain)) with (oBrain) {
+		intro_disparada   = false;
+		timer_intro       = 60 * 60;
+		victory_alpha     = 0;
+		victory_index     = 0;
+		puntos_procesados = false;
+		abandono_activo   = false;
+		abandono_check    = -1;
+	}
+	if (instance_exists(oIntroVersus)) instance_destroy(oIntroVersus);
 }

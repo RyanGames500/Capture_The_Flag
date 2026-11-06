@@ -26,7 +26,7 @@
   ],
   "name":"spr_sargento_walk",
   "nineSlice":null,
-  "origin":4,
+  "origin":9,
   "parent":{
     "name":"pj4",
     "path":"folders/Sprites/Player/pj4.yy",
@@ -88,7 +88,7 @@
     "visibleRange":null,
     "volume":1.0,
     "xorigin":16,
-    "yorigin":20,
+    "yorigin":22,
   },
   "swatchColours":null,
   "swfPrecision":0.5,

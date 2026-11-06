@@ -1,4 +1,11 @@
 function callback_LeaveRoom(){
+    // Partida rapida sin rival: ya estoy solo en mi sala, arranca contra el bot nuevo (scr_reloj)
+    if (variable_global_exists("botq_pendiente") && global.botq_pendiente) {
+        scr_botq_arrancar();
+        return;
+    }
+    global.botq = false;
+
     // Ya no hay bots de sala privada (scr_objetivo)
     global.botnet_defs = [];
     global.botnet_partida = false;

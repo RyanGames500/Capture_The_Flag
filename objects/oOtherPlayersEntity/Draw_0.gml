@@ -12,6 +12,8 @@ if (variable_instance_exists(id, "is_box") && is_box)
 }
 else 
 {
+    // Armas con efecto: su propio dibujo (scr_armas)
+    if (variable_instance_exists(id, "efecto") && efecto != "") { scr_efx_bala_draw(efecto, x, y, direction); exit; }
     // Balas o Rockets normales (las balas con su estela, scr_mira)
     if (!is_rocket && (sprite_index == sprBullet_gun || sprite_index == sprBullet_smg || sprite_index == sprBullet_escop)) scr_bala_estela(x, y, direction, 24);
     draw_self();
