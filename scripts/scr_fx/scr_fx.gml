@@ -368,8 +368,8 @@ function opt_filas() {
         { k: "btn_tam",   n: "TAMANO DE BOTONES",    o: ["NORMAL", "GRANDE", "CHICO"], sec: "CONTROLES DEL CELULAR", col: 1 },
         { k: "btn_alpha", n: "VISIBILIDAD BOTONES",  slider: true, col: 1 },
         { k: "mira",      n: "DISTANCIA DE LA MIRA", o: ["NORMAL", "LEJOS", "CERCA"], col: 1 },
-        { k: "mic_modo",  n: "MICROFONO",            o: ["MANTENER", "ABIERTO"], sec: "VOZ (SALAS PRIVADAS)", col: 1 },
-        { k: "vol_voz",   n: "VOLUMEN DE VOZ",       slider: true, col: 1 }
+        // El microfono ya no tiene opcion: siempre es tocar para prender / tocar para apagar (scr_objetivo)
+        { k: "vol_voz",   n: "VOLUMEN DE VOZ",       slider: true, sec: "VOZ (SALAS PRIVADAS)", col: 1 }
     ];
 }
 
@@ -618,6 +618,7 @@ function scr_musica_elegir() {
     if (room == rm_menu) return ["mus_menu", true];
 
     if (global.game_over) {
+        if (global.winner_team == 3) return ["mus_victoria", false];   // EMPATE
         var _gana = (global.winner_team == 1) ? "ROJO" : "AZUL";
         return [(scr_my_team() == _gana) ? "mus_victoria" : "mus_derrota", false];
     }
@@ -714,11 +715,21 @@ function scr_fin_festejo_step() {
         _f.col  = _azul ? make_color_rgb(61, 157, 240) : make_color_rgb(229, 72, 77);
         _f.gana = _azul ? "GANA AZUL" : "GANA ROJO";
         _f.txt  = (instance_exists(oBrain) && oBrain.reloj_fin) ? "TIEMPO!" : "CAPTURA!";
+        var _empate = (global.winner_team == 3);
+        if (_empate) {
+            // EMPATE: la camara va al centro, entre las dos bases, y el confeti es azul y rojo
+            var _ba = instance_find(obj_base_blue, 0), _br = instance_find(obj_base_red, 0);
+            if (_ba != noone && _br != noone) { _f.x = (_ba.x + _br.x) / 2; _f.y = (_ba.y + _br.y) / 2; }
+            else { _f.x = room_width / 2; _f.y = room_height / 2; }
+            _f.col  = make_color_rgb(242, 182, 50);
+            _f.gana = "EMPATE";
+            _f.txt  = "TIEMPO!";
+        }
         _f.conf = [];
         var _oro = make_color_rgb(242, 182, 50);
         repeat (70) {
             array_push(_f.conf, { x: random(1), y: -random(0.6), v: random_range(0.004, 0.010),
-                c: choose(_f.col, _f.col, _oro, c_white), r: random(360), w: random_range(-9, 9), s: random_range(0.7, 1.3) });
+                c: _empate ? choose(make_color_rgb(61, 157, 240), make_color_rgb(229, 72, 77), _oro, c_white) : choose(_f.col, _f.col, _oro, c_white), r: random(360), w: random_range(-9, 9), s: random_range(0.7, 1.3) });
         }
         scrCamShake(5);
     }

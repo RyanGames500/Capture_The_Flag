@@ -17,14 +17,19 @@ if (esPackDeGranadas)
     other.taken = true;
     other.visible = false;
     
+    // Un solo tipo a la vez: si es de otro tipo, te quedas con 3 de las nuevas (scr_armas, GRANADAS)
+    var _gt = (variable_instance_exists(_otherID, "gtipo")) ? _otherID.gtipo : "";
+    if (!variable_instance_exists(id, "granada_tipo")) granada_tipo = "";
+    if (_gt != granada_tipo) { granadas = 0; granada_tipo = _gt; }
     granadas += 3; 
-    fb_toast("+3 GRANADAS", "Clic derecho para lanzar", c_orange);
+    fb_toast("+3 " + scr_granada_nombre(_gt), "Clic derecho para lanzar", (_gt == "") ? c_orange : scr_granada_col(_gt));
     if (global.sfx) audio_play_sound(snd_ammo_pickup, 1, false);
 } 
 else 
 {
-    if (guns[weapon.index] == noone) exit;
-    var w = guns[weapon.index];
+    // La que traes en la mano o tu otra arma (scr_armas, SEGUNDA ARMA)
+    var w = scr_arma_para_municion();
+    if (w == noone) exit;
     var t = w.ammoType;
     if (t == "" || is_undefined(t)) exit;
 
@@ -46,7 +51,7 @@ else
     // Usamos la variable local _amt que guardamos arriba
     reserve[$ t] = min(cur + _amt, maxReserve);
 
-    if (!reloading && guns[weapon.index].ammo <= 0) scrReloadWeapon(); 
+    if (!reloading && guns[weapon.index] != noone && guns[weapon.index].ammo <= 0) scrReloadWeapon(); 
     if (global.sfx) audio_play_sound(snd_ammo_pickup, 1, false);
 }
 

@@ -316,6 +316,17 @@ function scr_botnet_buscar(_bid) {
 
 /// Lo llama SendEventToClient cuando el destino es un bot. Solo importan los golpes.
 function scr_botnet_evento(_bid, _ev, _m) {
+	// Granada cegadora: el bot se queda sin ver (sin pensar ni disparar) un rato
+	if (_ev == "cegar") {
+		if (oBrain.AmIPseudoHost) {
+			var _bc = scr_botnet_buscar(_bid);
+			if (_bc != noone) with (_bc) { scr_efx_init2(); efx_ciego_t = max(efx_ciego_t, real(_m.t)); }
+		} else {
+			var _hc = oBrain.pseudoHostClientId;
+			if (is_numeric(_hc) && _hc >= 0 && _hc != global.clientId) SendEventToClient(_hc, "bot_cegar", { b: _bid, m: _m });
+		}
+		return;
+	}
 	if (_ev != "hit") return;
 	if (oBrain.AmIPseudoHost) {
 		scr_botnet_dano(scr_botnet_buscar(_bid), _m, global.clientId);
@@ -571,7 +582,7 @@ function scr_botnet_step() {
 	// Solo pierde el control cuando lo avientan (guante, mina, caja): ahi manda el empuje.
 	var _aturdido = false;
 	scr_efx_step();                          // zap, hielo, red (scr_armas)
-	if (scr_efx_aturdido()) _aturdido = true;
+	if (scr_efx_aturdido() || scr_efx_ciego()) _aturdido = true;   // aturdido o cegado
 	if (hit_bloqueo_timer > 0) {
 		hit_bloqueo_timer--;
 		state = PLAYERSTATE.HIT;
@@ -794,7 +805,7 @@ function scr_botnet_arma_cerca(_max) {
 /// Las armas que sabe usar el bot (todas menos el guante, el railgun y la mina).
 function scr_botnet_arma_sirve(_w) {
 	if (!is_struct(_w) || !variable_struct_exists(_w, "type2")) return false;
-	if (scr_arma_es_generica(_w)) return true;
+	if (scr_arma_es_generica(_w)) return !(variable_struct_exists(_w, "efecto") && _w.efecto == "machete");   // el machete no lo sabe usar
 	var _t = string(_w.type2);
 	return (_t == "gun" || _t == "smg" || _t == "m4" || _t == "escop" || _t == "bazooka");
 }
@@ -1059,7 +1070,7 @@ function scr_botnet_dano(_b, _m, _from) {
 		if (variable_struct_exists(_m, "ef") && is_string(_m.ef) && _m.ef != "") {
 			var _ax = variable_struct_exists(_m, "ax") ? real(_m.ax) : x;
 			var _ay = variable_struct_exists(_m, "ay") ? real(_m.ay) : y;
-			var _r = scr_efx_aplicar(_m.ef, _ax, _ay);
+			var _r = scr_efx_aplicar(_m.ef, _ax, _ay, _from, variable_struct_exists(_m, "killer") ? string(_m.killer) : "", false);
 			if (_r.soltar) scr_botnet_soltar(-6, 25, _r.x, _r.y);
 		}
 
@@ -1391,6 +1402,8 @@ function scr_sala_equipos_aplicar(_eq) {
 		var _cid = real(_p[0]);
 		var _t = string(_p[1]);
 		if (_t != "AZUL" && _t != "ROJO") continue;
+		if (!variable_global_exists("sala_eq") || !is_struct(global.sala_eq)) global.sala_eq = {};
+		global.sala_eq[$ string(_cid)] = _t;   // asi todos saben el equipo de cada quien (scr_sala_equipo_de)
 		if (_cid == global.clientId) { global.serverTeam = _t; global.myTeam = _t; }
 		else with (oOtherPlayer) if (clientId == _cid) lobby_team = _t;
 	}
@@ -1411,9 +1424,11 @@ function scr_sala_roster_fijar(_aj) {
 function scr_sala_roster_limpiar() {
 	scr_chat_reset();   // el chat es de cada sala
 	scr_voz_apagar();   // y la voz tambien (scr_objetivo, CHAT DE VOZ)
+	global.voz.abierto_on = false;   // en cada sala el micro empieza APAGADO
 	global.sala_roster = [];
 	global.sala_rechazados = {};
 	global.sala_eq = {};
+	global.sala_listo = false;   // en la sala nueva hay que volver a dar LISTO
 }
 
 /// Un jugador nuevo aparece en plena partida y no estaba en la lista: no se crea,
@@ -1749,6 +1764,7 @@ function scr_chat_draw() {
 /// Partida nueva desde cero: que no se quede nada de la anterior (fin de partida, festejo,
 /// "listo", intro...). Si algo quedaba pegado, a algunos no les salia la seleccion de personaje.
 function scr_partida_estado_nuevo() {
+	global.sala_listo  = false;   // al volver a la sala hay que dar LISTO otra vez
 	global.game_over   = false;
 	global.pausa       = false;
 	global.puntos_azul = 0;
@@ -1820,8 +1836,12 @@ function scr_sel_crear_jugador() {
 // ======================================================
 // CHAT DE VOZ (SOLO SALAS PRIVADAS)
 // - Sala de espera: hablan todos. Partida: solo te escucha tu equipo.
-// - AJUSTES > MICROFONO: MANTENER (V o el boton HABLAR) o ABIERTO (un toque lo prende/apaga).
-//   En ABIERTO solo se manda cuando de verdad hablas (si hay silencio no se gasta internet).
+// - El microfono empieza APAGADO (al abrir el juego y al entrar a cada sala).
+//   Un toque lo prende y otro lo apaga (boton del micro o la V). Ya no hay "mantener para hablar".
+//   Solo se manda cuando de verdad hablas (si hay silencio no se gasta internet).
+// - Si lo dejaste prendido en la sala, en la partida sigue prendido pero solo te oye tu equipo.
+//   Si no tienes companeros (1 vs 1 o puros bots) no se graba nada.
+// - Bocina: deja de oir a todos (en la sala, en la pausa o con la B).
 // - Se graba con el microfono, se baja a 8000 Hz 16 bits mono y se manda cada ~0.2 s en base64
 //   a cada jugador que debe oirte (este servidor manda de uno en uno, por eso es un envio por persona).
 // - Cada jugador que habla tiene su propia cola de audio en mi aparato.
@@ -1844,7 +1864,7 @@ function scr_voz_init() {
 		on: false, canal: -1, rate: 16000, fmt: buffer_s16, fijo: -1, fijo_tam: 0, pend: -1,
 		env: 0, rec: 0, vol: 0, pico_t: 0, err: "",
 		colas: {}, hablan: {}, mute: {},
-		abierto_on: true, perm_pedido: false,
+		abierto_on: false, oir: true, perm_pedido: false,   // el micro empieza APAGADO
 		panel: false, toque: false
 	};
 }
@@ -1903,7 +1923,7 @@ function scr_voz_yo_hablo() {
 	scr_voz_init();
 	opt_init();
 	if (!global.voz.on) return false;
-	return (global.opt.mic_modo == 0) || (global.voz.pico_t > 0);
+	return (global.voz.pico_t > 0);
 }
 
 function scr_voz_empezar() {
@@ -1948,7 +1968,7 @@ function scr_voz_mandar() {
 	buffer_seek(_v.pend, buffer_seek_start, 0);
 	if (_len <= 0) return;
 	opt_init();
-	if (global.opt.mic_modo == 1 && _v.pico_t <= 0) return;   // ABIERTO y en silencio: no se manda
+	if (_v.pico_t <= 0) return;   // en silencio: no se manda
 	var _d = buffer_base64_encode(_v.pend, 0, _len);
 	var _m = { a: global.clientId, d: _d };
 	var _l = scr_voz_destinos();
@@ -2005,6 +2025,7 @@ function scr_voz_recibir(_m, _de) {
 		if (!is_struct(_m) || !variable_struct_exists(_m, "d") || !is_string(_m.d)) return;
 		var _k = string(_de);
 		if (variable_struct_exists(global.voz.mute, _k) && global.voz.mute[$ _k]) return;   // lo silencie
+		if (!scr_voz_oir()) return;                                                           // bocina apagada
 		// base64 -> buffer "grow"; la cola solo acepta buffers FIJOS: se copia
 		var _b = buffer_base64_decode(_m.d);
 		var _sz = buffer_get_size(_b);
@@ -2144,27 +2165,24 @@ function scr_voz_step() {
 		var _chat = _sala && variable_global_exists("chat") && is_struct(global.chat) && global.chat.abierto;
 		var _g = scr_voz_geo();
 
-		// --- Que quiere el jugador: tecla V, boton HABLAR del celular (partida) o el de la sala ---
-		var _hold = false, _tap = false;
+		// --- Que quiere el jugador: V o el boton del micro (tocar = prender/apagar), B o la bocina ---
+		var _tap = false, _tap_b = false;
 		if (!_chat) {
-			_hold = keyboard_check(ord("V"));
-			_tap  = keyboard_check_pressed(ord("V"));
+			_tap   = keyboard_check_pressed(ord("V"));
+			_tap_b = keyboard_check_pressed(ord("B"));
 		}
 		if (!_sala) {
-			_hold = _hold || __touch_held(string(ord("V")));
-			_tap  = _tap  || __touch_pressed(string(ord("V")));
+			_tap   = _tap   || __touch_pressed(string(ord("V")));
+			_tap_b = _tap_b || __touch_pressed(string(ord("B")));
 		} else if (!_chat && !(instance_exists(oMenu) && oMenu.confirmar_salida)) {
-			var _bx2 = _g.hx + _g.hw, _by2 = _g.hy + _g.hh;
-			if (__voz_toca(_g.hx, _g.hy, _bx2, _by2, false)) { _hold = true; _v.toque = true; }
-			if (__voz_toca(_g.hx, _g.hy, _bx2, _by2, true))  { _tap = true; _v.toque = true; }
+			var _ic = scr_voz_iconos_geo(_g);
+			if (__voz_toca(_ic.mx1, _ic.y1, _ic.mx2, _ic.y2, true)) { _tap = true; _v.toque = true; }
+			if (__voz_toca(_ic.bx1, _ic.y1, _ic.bx2, _ic.y2, true)) { _tap_b = true; _v.toque = true; }
 		}
-		var _quiere;
-		if (global.opt.mic_modo == 0) {
-			_quiere = _hold;
-		} else {
-			if (_tap) _v.abierto_on = !_v.abierto_on;
-			_quiere = _v.abierto_on;
-		}
+		if (_tap) _v.abierto_on = !_v.abierto_on;
+		if (_tap_b) scr_voz_oir_cambiar();
+		// Sin companeros (1 vs 1 o puros bots) no se graba: no hay a quien hablarle
+		var _quiere = _v.abierto_on && scr_voz_hay_quien();
 		if (_quiere && !_v.on) scr_voz_empezar();
 		if (!_quiere && _v.on) scr_voz_parar();
 
@@ -2173,6 +2191,10 @@ function scr_voz_step() {
 		if (_ver_panel && !_chat && !(instance_exists(oMenu) && oMenu.confirmar_salida)) {
 			var _abierto = _sala ? _v.panel : true;
 			if (_sala && __voz_toca(_g.x, _g.y, _g.x + _g.w, _g.y + _g.h, true)) { _v.panel = !_v.panel; _v.toque = true; }
+			else if (!_sala && __voz_toca(_g.x + _g.pw - 130 * _g.u, 120 * _g.u, _g.x + _g.pw - 6 * _g.u, 120 * _g.u + 30 * _g.u, true)) {
+				// En la pausa: bocina para dejar de oir a todos
+				scr_voz_oir_cambiar(); _v.toque = true;
+			}
 			else if (_abierto) {
 				var _l = scr_voz_lista();
 				var _y0 = _sala ? _g.y + _g.h + _g.hh + 18 * _g.u : 120 * _g.u;
@@ -2297,21 +2319,23 @@ function scr_voz_draw_panel() {
 		var _txt = (_quien != "") ? string_copy(_quien, 1, 14) + " HABLA" : (_v.panel ? "VOZ (CERRAR)" : "VOZ (ABRIR)");
 		draw_text_transformed(_g.x + 32 * _u, _g.y + _g.h / 2, _txt, 0.55 * _u, 0.55 * _u, 0);
 
-		// Boton HABLAR (mantener / prender-apagar segun AJUSTES)
+		// Iconos redondos: MICRO (tocar = prender / apagar) y BOCINA (oir / no oir a nadie)
 		var _motivo = scr_voz_motivo();
-		var _activo = _v.on;
-		var _col = (_motivo != "") ? make_color_rgb(90, 90, 100) : (_activo ? make_color_rgb(78, 200, 120) : _oro);
-		draw_set_alpha(0.9); draw_set_colour(_tinta);
-		draw_roundrect_ext(_g.hx, _g.hy, _g.hx + _g.hw, _g.hy + _g.hh, 10, 10, false);
-		draw_set_alpha(1); draw_set_colour(_col);
-		draw_roundrect_ext(_g.hx, _g.hy, _g.hx + _g.hw, _g.hy + _g.hh, 10, 10, true);
-		__voz_mic(_g.hx + 22 * _u, _g.hy + _g.hh / 2, 1.1 * _u, _col, 1);
-		var _bt;
-		if (_motivo != "") _bt = "SIN VOZ";
-		else if (global.opt.mic_modo == 0) _bt = touch_mode() ? "MANTENER" : "MANTENER V";
-		else _bt = _v.abierto_on ? "MIC ENCENDIDO" : "MIC APAGADO";
-		draw_set_colour(_col);
-		draw_text_transformed(_g.hx + 42 * _u, _g.hy + _g.hh / 2, _bt, 0.55 * _u, 0.55 * _u, 0);
+		var _ic = scr_voz_iconos_geo(_g);
+		var _verde = make_color_rgb(78, 200, 120), _gris = make_color_rgb(136, 135, 128);
+		var _mon = _v.abierto_on && _motivo == "";
+		__voz_icono(_ic.mcx, _ic.cy, _ic.r, (_motivo != "") ? make_color_rgb(90, 90, 100) : (_mon ? _verde : _gris), _mon, "mic", _u);
+		__voz_icono(_ic.bcx, _ic.cy, _ic.r, scr_voz_oir() ? _verde : _gris, scr_voz_oir(), "bocina", _u);
+		draw_set_font(fnt_small);
+		draw_set_halign(fa_center); draw_set_valign(fa_top);
+		draw_set_colour(_mon ? make_color_rgb(123, 224, 143) : make_color_rgb(207, 211, 224));
+		var _bt = (_motivo != "") ? "SIN VOZ" : (_mon ? "MIC ENCENDIDO" : "MIC APAGADO");
+		if (!touch_mode() && _motivo == "") _bt += " [V]";
+		draw_text_transformed(_ic.mcx, _ic.cy + _ic.r + 4 * _u, _bt, 0.5 * _u, 0.5 * _u, 0);
+		draw_set_colour(scr_voz_oir() ? make_color_rgb(123, 224, 143) : make_color_rgb(207, 211, 224));
+		draw_text_transformed(_ic.bcx, _ic.cy + _ic.r + 4 * _u, scr_voz_oir() ? "ESCUCHAR" : "SILENCIO", 0.5 * _u, 0.5 * _u, 0);
+		draw_set_halign(fa_left); draw_set_valign(fa_middle);
+		var _col = make_color_rgb(169, 180, 208);
 		if (_motivo != "") {
 			draw_set_colour(make_color_rgb(169, 180, 208)); draw_set_alpha(0.7);
 			draw_set_font(fnt_small);
@@ -2330,6 +2354,14 @@ function scr_voz_draw_panel() {
 	draw_set_font(fnt_menu);
 	draw_set_halign(fa_left); draw_set_valign(fa_middle);
 	draw_text_transformed(_g.x + 10 * _u, _y0 + 15 * _u, _sala ? "VOZ DE LA SALA" : "VOZ DE TU EQUIPO", 0.6 * _u, 0.6 * _u, 0);
+	if (!_sala) {
+		// Bocina en la pausa: dejar de oir a todos
+		var _oi = scr_voz_oir();
+		__voz_bocina(_g.x + _g.pw - 116 * _u, _y0 + 15 * _u, 0.9 * _u, _oi ? make_color_rgb(123, 224, 143) : make_color_rgb(255, 107, 122), _oi);
+		draw_set_halign(fa_left);
+		draw_set_colour(_oi ? make_color_rgb(169, 180, 208) : make_color_rgb(255, 107, 122));
+		draw_text_transformed(_g.x + _g.pw - 100 * _u, _y0 + 15 * _u, _oi ? "SILENCIAR TODO" : "SILENCIADOS", 0.5 * _u, 0.5 * _u, 0);
+	}
 	for (var i = 0; i < array_length(_l); i++) {
 		__voz_fila(_g.x + 4 * _u, _y0 + 30 * _u + i * _g.fila, _g.pw - 8 * _u, _g.fila - 4 * _u, _l[i], _u);
 	}
@@ -2360,7 +2392,7 @@ function scr_voz_en_zona(_mx, _my) {
 	scr_voz_init();
 	var _g = scr_voz_geo();
 	if (point_in_rectangle(_mx, _my, _g.x, _g.y, _g.x + _g.w, _g.y + _g.h)) return true;
-	if (point_in_rectangle(_mx, _my, _g.hx, _g.hy, _g.hx + _g.hw, _g.hy + _g.hh)) return true;
+	if (point_in_rectangle(_mx, _my, _g.hx, _g.hy, _g.hx + _g.hw, _g.hy + _g.hh + 16 * _g.u)) return true;
 	if (global.voz.panel) {
 		var _y0 = _g.y + _g.h + _g.hh + 18 * _g.u;
 		var _ph = 30 * _g.u + array_length(scr_voz_lista()) * _g.fila + 6 * _g.u;
@@ -2383,4 +2415,322 @@ function scr_voz_baja_musica() {
 	if (!variable_struct_exists(global.voz, "duck_t") || global.voz.duck_t <= 0) return 1;
 	if (!scr_voz_activa()) return 1;
 	return VOZ_MUSICA;
+}
+
+/// Equipo de un jugador que acaba de aparecer: el que trae en sus datos (_TEAM),
+/// o el que repartio el lider en la sala. "" si todavia no se sabe.
+function scr_sala_equipo_de(_cid, _sp_txt) {
+	try {
+		if (is_string(_sp_txt) && _sp_txt != "") {
+			var _sp = json_parse(_sp_txt);
+			if (is_struct(_sp) && variable_struct_exists(_sp, "_TEAM")) {
+				var _t = string(_sp._TEAM);
+				if (_t == "AZUL" || _t == "ROJO") return _t;
+			}
+		}
+	} catch (_e) {}
+	if (variable_global_exists("sala_eq") && is_struct(global.sala_eq)) {
+		var _k = string(_cid);
+		if (variable_struct_exists(global.sala_eq, _k)) return global.sala_eq[$ _k];
+	}
+	return "";
+}
+
+// ======================================================
+// SALA PRIVADA: CAMBIAR DE EQUIPO (opcion B: tocar un lugar con BOT del otro equipo)
+// El lider decide: si en ese equipo hay lugar, te pasa y manda los equipos a todos.
+// ======================================================
+function scr_sala_cambiar_equipo(_cid, _t) {
+	if (_t != "AZUL" && _t != "ROJO") return false;
+	var _s = scr_sala_slots();
+	var _lista = (_t == "AZUL") ? _s.azul : _s.rojo;
+	var _humanos = 0;
+	for (var i = 0; i < array_length(_lista); i++) if (_lista[i].tipo != "bot") _humanos++;
+	if (_humanos >= _s.cupo) return false;   // ya esta lleno de personas
+	if (!variable_global_exists("sala_eq") || !is_struct(global.sala_eq)) global.sala_eq = {};
+	global.sala_eq[$ string(_cid)] = _t;
+	if (_cid == global.clientId) { global.serverTeam = _t; global.myTeam = _t; }
+	else with (oOtherPlayer) if (clientId == _cid) lobby_team = _t;
+	scr_ajustes_enviar();   // lleva los equipos nuevos a todos
+	return true;
+}
+
+/// En la sala: ¿toco un lugar con BOT del otro equipo? Pide el cambio. Devuelve true si lo toco.
+function scr_sala_toque_cambio(_mx, _my) {
+	if (!scr_fin_es_privada()) return false;
+	var _yo = scr_my_team();
+	var _otro = (_yo == "AZUL") ? "ROJO" : "AZUL";
+	var _s = scr_sala_slots();
+	var _lista = (_otro == "AZUL") ? _s.azul : _s.rojo;
+	for (var k = 0; k < array_length(_lista); k++) {
+		if (_lista[k].tipo != "bot") continue;
+		var _pos = scr_sala_slot_pos(_otro == "ROJO", k);
+		if (point_in_rectangle(_mx, _my, _pos[0], _pos[1], _pos[0] + 400, _pos[1] + 60)) {
+			if (oBrain.AmIPseudoHost) scr_sala_cambiar_equipo(global.clientId, _otro);
+			else SendEventToClient(oBrain.pseudoHostClientId, "pedir_equipo", { t: _otro });
+			if (global.sfx) audio_play_sound(snd_scroll, 1, false);
+			return true;
+		}
+	}
+	return false;
+}
+
+// ======================================================
+// SELECCION SINCRONIZADA: que nadie se quede pegado en "ELIGE TU PERSONAJE"
+// 1) En sala privada el lider no arranca hasta que esten todos los de la lista (o se acabe el tiempo).
+// 2) El lider manda cada segundo "estado_partida". Si a alguien se le perdio el aviso de que
+//    empezo (cargo lento el mapa), lo recibe aqui y entra: si no eligio, le sale la seleccion
+//    tarde (scr_sel_tarde) y aparece en su base.
+// ======================================================
+
+/// Ya estan en el mapa todos los que empezaron en la sala? (fuera de sala privada siempre true)
+function scr_sala_roster_presentes() {
+	if (!variable_global_exists("sala_roster") || !is_array(global.sala_roster)) return true;
+	for (var i = 0; i < array_length(global.sala_roster); i++) {
+		var _cid = global.sala_roster[i];
+		if (_cid == global.clientId || scr_botnet_es_id(_cid)) continue;
+		var _esta = false;
+		with (oOtherPlayer) if (clientId == _cid) _esta = true;
+		if (!_esta) return false;
+	}
+	return true;
+}
+
+/// Va en el Step de oBrain: el lider avisa cada segundo
+function scr_sala_estado_step() {
+	if (!global.ONLINE || room == rm_menu || !oBrain.AmIPseudoHost) return;
+	if (!variable_instance_exists(id, "estado_cd")) estado_cd = 0;
+	estado_cd--;
+	if (estado_cd > 0) return;
+	estado_cd = room_speed;
+	var _m = { intro: intro_disparada, t: timer_intro };
+	with (oOtherPlayer) if (!es_bot) SendEventToClient(clientId, "estado_partida", _m);
+}
+
+/// Lo que recibe cada jugador
+function scr_sala_estado_recibir(_m) {
+	if (!is_struct(_m) || room == rm_menu || oBrain.AmIPseudoHost) return;
+	if (!variable_struct_exists(_m, "intro")) return;
+	if (_m.intro && !oBrain.intro_disparada && !(variable_global_exists("game_over") && global.game_over)) {
+		// Ya empezo y yo no me entere: entro (si no tengo personaje, me sale la seleccion tarde)
+		show_debug_message(">>> SELECCION: el lider ya empezo y no me llego el aviso, entro");
+		global.fase_seleccion = false;
+		oBrain.intro_disparada = true;
+		oBrain.timer_intro = -1;
+		scr_trigger_intro("", "");
+	}
+	else if (!_m.intro && !oBrain.intro_disparada && variable_struct_exists(_m, "t") && is_numeric(_m.t) && _m.t > 0) {
+		oBrain.timer_intro = _m.t;   // mismo reloj de seleccion que el lider
+	}
+}
+
+// ======================================================
+// BOTON LISTO EN LA SALA PRIVADA (como Free Fire)
+// Cada persona (menos el lider) da LISTO. El lider solo puede EMPEZAR cuando todos estan listos.
+// Los bots siempre cuentan como listos. Si cambias de equipo, se te quita el LISTO.
+// Cada uno manda su LISTO a todos (al tocarlo y cada 2 segundos, por si alguien entro despues
+// o cambio el lider). Va en oMenu Step / Draw_64 y en callback_ReceivedEvent ("sala_listo").
+// ======================================================
+
+function scr_sala_listo_init() {
+	if (!variable_global_exists("sala_listo")) global.sala_listo = false;
+	if (!variable_global_exists("sala_listo_eq")) global.sala_listo_eq = "";
+}
+
+/// Le digo a todos si estoy listo
+function scr_sala_listo_mandar() {
+	scr_sala_listo_init();
+	var _m = { l: global.sala_listo };
+	with (oOtherPlayer) if (!es_bot) SendEventToClient(clientId, "sala_listo", _m);
+}
+
+function scr_sala_listo_poner(_v) {
+	scr_sala_listo_init();
+	global.sala_listo = _v;
+	scr_sala_listo_mandar();
+	show_debug_message(">>> SALA: estoy listo = " + string(_v));
+}
+
+/// Esta listo otro jugador de la sala?
+function scr_sala_listo_de(_cid) {
+	var _ok = false;
+	with (oOtherPlayer) if (clientId == _cid && variable_instance_exists(id, "sala_listo") && sala_listo) _ok = true;
+	return _ok;
+}
+
+/// Cuantas personas faltan por dar LISTO (para el lider; sin contar bots ni al lider)
+function scr_sala_faltan_listos() {
+	var _n = 0;
+	with (oOtherPlayer) {
+		if (es_bot) continue;
+		if (!variable_instance_exists(id, "sala_listo") || !sala_listo) _n++;
+	}
+	return _n;
+}
+
+/// Lo recibe cada uno cuando otro cambia su LISTO
+function scr_sala_listo_recibir(_cid, _m) {
+	if (room != rm_menu || !is_struct(_m) || !variable_struct_exists(_m, "l")) return;
+	var _v = (_m.l == true);
+	with (oOtherPlayer) if (clientId == _cid) sala_listo = _v;
+}
+
+/// Cada step en la sala (lo llama oMenu)
+function scr_sala_listo_step() {
+	scr_sala_listo_init();
+	if (!variable_instance_exists(id, "listo_cd")) listo_cd = 0;
+	if (!variable_instance_exists(id, "listo_aviso_t")) listo_aviso_t = 0;
+	if (listo_aviso_t > 0) listo_aviso_t--;
+
+	// Si me cambiaron de equipo, se me quita el LISTO
+	var _eq = (variable_global_exists("serverTeam")) ? string(global.serverTeam) : "";
+	if (_eq != global.sala_listo_eq) {
+		global.sala_listo_eq = _eq;
+		if (global.sala_listo) scr_sala_listo_poner(false);
+	}
+
+	// El lider no necesita LISTO (el es el que le da a EMPEZAR)
+	if (oBrain.AmIPseudoHost) { global.sala_listo = false; return; }
+
+	// Lo repito cada 2 segundos por si alguien entro despues o cambio el lider
+	listo_cd--;
+	if (listo_cd <= 0) {
+		listo_cd = room_speed * 2;
+		scr_sala_listo_mandar();
+	}
+}
+
+/// EMPATE: no se ganan ni se pierden trofeos, solo +10 XP por jugar (en sala privada nada)
+function scr_empate_premio() {
+	if (scr_fin_es_privada()) return;
+	global.xp += 10;
+	while (global.xp >= 100) { global.lvl += 1; global.xp -= 100; }
+	scr_save_to_local();
+	scr_save_to_cloud();
+	show_debug_message(">>> FIN: EMPATE, +10 XP");
+}
+
+/// Borde del panel mitad azul (izquierda) y mitad roja (derecha) para el EMPATE (oBrain Draw_64)
+function scr_borde_mitades(_x1, _y1, _x2, _y2, _r, _cl, _cr, _ancho) {
+	var _mx = (_x1 + _x2) / 2;
+	// Puntos de la mitad derecha: arriba al centro -> esquina -> lado -> esquina -> abajo al centro
+	var _p = [[_mx, _y1], [_x2 - _r, _y1]];
+	for (var a = 90; a >= 0; a -= 15) array_push(_p, [_x2 - _r + lengthdir_x(_r, a), _y1 + _r + lengthdir_y(_r, a)]);
+	array_push(_p, [_x2, _y2 - _r]);
+	for (var a = 0; a >= -90; a -= 15) array_push(_p, [_x2 - _r + lengthdir_x(_r, a), _y2 - _r + lengthdir_y(_r, a)]);
+	array_push(_p, [_mx, _y2]);
+	for (var i = 0; i < array_length(_p) - 1; i++) {
+		var _a = _p[i], _b = _p[i + 1];
+		draw_set_color(_cr);
+		draw_line_width(_a[0], _a[1], _b[0], _b[1], _ancho);
+		draw_set_color(_cl);   // espejo a la izquierda
+		draw_line_width(2 * _mx - _a[0], _a[1], 2 * _mx - _b[0], _b[1], _ancho);
+	}
+}
+
+// ------------------------------------------------------
+// VOZ: micro de tocar (prender / apagar), bocina y 1 vs 1
+// ------------------------------------------------------
+
+/// ¿Hay alguien que me pueda oir? En la sala si; en la partida solo si tengo companeros humanos
+function scr_voz_hay_quien() {
+	if (room == rm_menu) return true;
+	return array_length(scr_voz_destinos()) > 0;
+}
+
+/// ¿Estoy oyendo a los demas? (bocina)
+function scr_voz_oir() {
+	scr_voz_init();
+	return !variable_struct_exists(global.voz, "oir") || global.voz.oir;
+}
+
+/// Prender / apagar la bocina (al apagarla se callan todos de una)
+function scr_voz_oir_cambiar() {
+	scr_voz_init();
+	var _v = global.voz;
+	_v.oir = !scr_voz_oir();
+	if (!_v.oir) {
+		var _k = variable_struct_get_names(_v.colas);
+		for (var i = 0; i < array_length(_k); i++) {
+			var _c = _v.colas[$ _k[i]];
+			if (_c.snd >= 0) { audio_stop_sound(_c.snd); _c.snd = -1; _c.n = 0; }
+		}
+		_v.hablan = {};
+	}
+}
+
+/// Donde van los 2 iconos redondos de la sala (en el lugar del boton HABLAR de antes)
+function scr_voz_iconos_geo(_g) {
+	var _u = _g.u;
+	var _r = 20 * _u;
+	var _cy = _g.hy + _r + 2 * _u;
+	var _mcx = _g.hx + _r + 4 * _u;
+	var _bcx = _mcx + _r * 2 + 40 * _u;
+	return { r: _r, cy: _cy, mcx: _mcx, bcx: _bcx, y1: _cy - _r - 4 * _u, y2: _cy + _r + 16 * _u,
+		mx1: _mcx - _r - 6 * _u, mx2: _mcx + _r + 6 * _u, bx1: _bcx - _r - 6 * _u, bx2: _bcx + _r + 6 * _u };
+}
+
+/// Bocina chiquita (con ondas si se oye, con X si no)
+function __voz_bocina(_x, _y, _s, _col, _on) {
+	draw_set_colour(_col);
+	draw_rectangle(_x - 7 * _s, _y - 3 * _s, _x - 3 * _s, _y + 3 * _s, false);
+	draw_triangle(_x - 3 * _s, _y - 3 * _s, _x + 3 * _s, _y - 8 * _s, _x - 3 * _s, _y + 3 * _s, false);
+	draw_triangle(_x - 3 * _s, _y + 3 * _s, _x + 3 * _s, _y - 8 * _s, _x + 3 * _s, _y + 8 * _s, false);
+	if (_on) {
+		for (var a = -40; a < 40; a += 10) {
+			draw_line_width(_x + 5 * _s + lengthdir_x(4 * _s, a), _y + lengthdir_y(4 * _s, a), _x + 5 * _s + lengthdir_x(4 * _s, a + 10), _y + lengthdir_y(4 * _s, a + 10), 1.5 * _s);
+			draw_line_width(_x + 5 * _s + lengthdir_x(8 * _s, a), _y + lengthdir_y(8 * _s, a), _x + 5 * _s + lengthdir_x(8 * _s, a + 10), _y + lengthdir_y(8 * _s, a + 10), 1.5 * _s);
+		}
+	} else {
+		draw_set_colour(make_color_rgb(255, 107, 122));
+		draw_line_width(_x + 6 * _s, _y - 5 * _s, _x + 14 * _s, _y + 5 * _s, 2 * _s);
+		draw_line_width(_x + 14 * _s, _y - 5 * _s, _x + 6 * _s, _y + 5 * _s, 2 * _s);
+	}
+}
+
+/// Icono redondo de la sala: circulo oscuro con borde de color, y micro o bocina adentro
+function __voz_icono(_x, _y, _r, _col, _on, _tipo, _u) {
+	draw_set_alpha(0.9);
+	draw_set_colour(make_color_rgb(11, 15, 26));
+	draw_circle(_x, _y, _r, false);
+	draw_set_alpha(1);
+	draw_set_colour(_col);
+	draw_circle(_x, _y, _r, true);
+	draw_circle(_x, _y, _r - 1, true);
+	if (_tipo == "mic") {
+		__voz_mic(_x, _y, 1.3 * _u, _col, 1);
+		if (!_on) {   // micro tachado
+			draw_set_colour(make_color_rgb(255, 107, 122));
+			draw_line_width(_x - 9 * _u, _y - 10 * _u, _x + 9 * _u, _y + 10 * _u, 2.5 * _u);
+		}
+	} else {
+		__voz_bocina(_x - 3 * _u, _y, 1.2 * _u, _col, _on);
+	}
+	draw_set_colour(c_white);
+}
+
+/// Donde van el micro y la bocina chiquitos en la partida: debajo de tus barras, a la izquierda.
+/// Si te sale otra barra (escudo, velocidad...) bajan solos (oPlayer Draw_64 guarda voz_hud_y).
+function scr_voz_hud_pos() {
+	var _r = 20;
+	var _y = 104 + 8 + _r;   // debajo de la barra de vida
+	if (instance_exists(oPlayer) && variable_instance_exists(oPlayer, "voz_hud_y")) _y = oPlayer.voz_hud_y - 8 + _r;
+	return { r: _r, y: _y, mx: 40 + _r, bx: 40 + _r * 3 + 12 };
+}
+
+/// En la PC (sin botones de pantalla) se dibujan igual, con la tecla abajo (oPlayer Draw_64)
+function scr_voz_hud() {
+	if (touch_mode() || !scr_voz_activa()) return;
+	scr_voz_init();
+	var _p = scr_voz_hud_pos();
+	var _verde = make_color_rgb(78, 200, 120), _gris = make_color_rgb(136, 135, 128);
+	var _mok = global.voz.abierto_on && scr_voz_hay_quien() && scr_voz_motivo() == "";
+	__voz_icono(_p.mx, _p.y, _p.r, _mok ? _verde : _gris, _mok, "mic", 0.8);
+	__voz_icono(_p.bx, _p.y, _p.r, scr_voz_oir() ? _verde : _gris, scr_voz_oir(), "bocina", 0.8);
+	draw_set_font(fnt_small);
+	draw_set_halign(fa_center); draw_set_valign(fa_top);
+	draw_set_colour(c_white);
+	draw_text_transformed(_p.mx, _p.y + _p.r + 2, "V", 0.5, 0.5, 0);
+	draw_text_transformed(_p.bx, _p.y + _p.r + 2, "B", 0.5, 0.5, 0);
+	draw_set_halign(fa_left);
 }

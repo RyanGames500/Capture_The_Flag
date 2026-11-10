@@ -111,6 +111,10 @@ function scr_reloj_reset() {
 	reloj_seg = -1;
 	reloj_frames = 0;
 	reloj_fin = false;
+	ms_seg = -1;        // muerte subita: segundos que quedan (-1 = no hay)
+	ms_frames = 0;
+	ms_aviso_t = 0;     // aviso grande de MUERTE SUBITA (opcion B)
+	ms_aviso_hecho = false;
 }
 
 /// Va en el Step de oBrain.
@@ -120,6 +124,7 @@ function scr_reloj_step() {
 		return;
 	}
 	if (global.game_over) return;
+	scr_ms_aviso_step();                                      // aviso grande de MUERTE SUBITA (lo ve cada uno)
 	if (global.match_tiempo <= 0) return;                     // SIN LIMITE
 	if (!intro_disparada || instance_exists(oIntroVersus)) return;   // empieza cuando termina la intro
 	if (!AmIPseudoHost) return;                               // los invitados solo muestran lo que manda el líder
@@ -129,7 +134,24 @@ function scr_reloj_step() {
 		reloj_frames = 0;
 		scr_reloj_enviar();
 	}
-	if (reloj_fin) return;
+	if (reloj_fin) {
+		// MUERTE SUBITA: si van empatados, 60 segundos para que alguien anote. Si nadie anota: EMPATE
+		if (!variable_instance_exists(id, "ms_seg")) { ms_seg = -1; ms_frames = 0; }
+		if (global.puntos_azul != global.puntos_rojo) return;
+		if (ms_seg < 0) {
+			ms_seg = MUERTE_SUBITA_SEG;
+			ms_frames = 0;
+			scr_reloj_enviar();
+			return;
+		}
+		ms_frames += 1;
+		if (ms_frames >= room_speed && ms_seg > 0) {
+			ms_frames = 0;
+			ms_seg = max(0, ms_seg - 1);
+			scr_reloj_enviar();
+		}
+		return;
+	}
 
 	reloj_frames += 1;
 	if (reloj_frames >= room_speed) {
@@ -141,7 +163,7 @@ function scr_reloj_step() {
 }
 
 function scr_reloj_enviar() {
-	var _s = { s: reloj_seg };
+	var _s = { s: reloj_seg, ms: (variable_instance_exists(id, "ms_seg") ? ms_seg : -1) };
 	with (oOtherPlayer) SendEventToClient(clientId, "sync_reloj", _s);
 }
 
@@ -158,7 +180,7 @@ function scr_reloj_draw(_cx, _cy) {
 	var _txt, _col, _s = 1;
 
 	if (reloj_fin && _empate) {
-		_txt = "MUERTE SUBITA";
+		_txt = "MUERTE SUBITA " + scr_muerte_subita_txt();
 		_col = ((current_time div 300) mod 2 == 0) ? c_red : c_yellow;
 	} else {
 		var _m = reloj_seg div 60;
@@ -414,7 +436,7 @@ function scr_bot_rival_nuevo() {
 	var _n = ["Kevin_GT", "DaniPro", "xSniperx", "ElChamo", "Lucas07", "SofiGG", "Mateo_RD", "ValeYT",
 	          "Santi2010", "Nico_exe", "TomiMX", "Fer_21", "IsaPlays", "Bruno777", "Mia_ctf", "JuanPi",
 	          "Rodri_Z", "Camilo", "AleGamer", "Pablito", "Gabo_CR", "Tincho", "Lalo_99", "Emi_pro",
-	          "Rafa_YT", "JoseLuis", "Andy_09", "Maxi_ctf", "Kiko", "Leo_GG"];
+	          "Rafa_YT", "JoseLuis", "Andy_09", "Maxi_ctf", "Kiko", "Leo_GG","ELRUBIUS_OMG"];
 	var _nom = _n[irandom(array_length(_n) - 1)];
 	if (random(1) < 0.4) _nom += string(irandom_range(1, 99));
 	if (variable_global_exists("myName") && _nom == global.myName) _nom += "_";
@@ -628,4 +650,112 @@ function scr_bot_botiquin() {
 			instance_create_layer(_curo.x + random_range(-14, 14), _curo.y - random_range(4, 30), "Instances", oHealFX);
 		}
 	}
+}
+
+// ------------------------------------------------------
+// MUERTE SUBITA Y EMPATE
+// Se acaba el tiempo empatados -> 60 segundos de muerte subita (la siguiente bandera gana).
+// Si nadie anota, la partida termina en EMPATE (winner_team = 3): nadie gana ni pierde.
+// ------------------------------------------------------
+#macro MUERTE_SUBITA_SEG 60
+
+/// Ya se acabaron los segundos de muerte subita? (lo usa el lider)
+function scr_muerte_subita_acabo() {
+	if (!instance_exists(oBrain)) return false;
+	return variable_instance_exists(oBrain, "ms_seg") && oBrain.ms_seg == 0;
+}
+
+/// "0:45" de la muerte subita (vacio si todavia no llega el dato)
+function scr_muerte_subita_txt() {
+	if (!instance_exists(oBrain) || !variable_instance_exists(oBrain, "ms_seg") || oBrain.ms_seg < 0) return "";
+	var _s = oBrain.ms_seg;
+	return string(_s div 60) + ":" + (((_s mod 60) < 10) ? "0" : "") + string(_s mod 60);
+}
+
+/// Quien gana por banderas: 0 nadie, 1 rojo, 2 azul.
+/// Si los dos llegan al limite a la vez y van iguales, nadie todavia (se sigue jugando).
+function scr_ganador_por_banderas(_lim) {
+	var _r = (global.puntos_rojo >= _lim);
+	var _a = (global.puntos_azul >= _lim);
+	if (_r && !_a) return 1;
+	if (_a && !_r) return 2;
+	if (_a && _r && global.puntos_rojo != global.puntos_azul) return (global.puntos_rojo > global.puntos_azul) ? 1 : 2;
+	return 0;
+}
+
+// ------------------------------------------------------
+// AVISO GRANDE DE MUERTE SUBITA (opcion B): el texto cae de golpe, rebota,
+// la pantalla tiembla y los bordes laten en rojo. Dura ~2.6 s. Cada pantalla lo hace sola.
+// ------------------------------------------------------
+#macro MS_AVISO_FRAMES 156   // 2.6 segundos a 60 fps
+
+function scr_ms_aviso_step() {
+	if (!variable_instance_exists(id, "ms_aviso_t")) { ms_aviso_t = 0; ms_aviso_hecho = false; }
+	if (ms_aviso_t > 0) ms_aviso_t--;
+	var _entra = reloj_fin && (global.puntos_azul == global.puntos_rojo) && !global.game_over;
+	if (_entra && !ms_aviso_hecho) {
+		ms_aviso_hecho = true;
+		ms_aviso_t = MS_AVISO_FRAMES;
+		scrCamShake(6);
+	}
+}
+
+/// Va en el Draw GUI de oBrain
+function scr_ms_aviso_draw() {
+	if (!variable_instance_exists(id, "ms_aviso_t") || ms_aviso_t <= 0 || global.game_over) return;
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	var _p = 1 - ms_aviso_t / MS_AVISO_FRAMES;   // 0 -> 1
+	var _rojo = make_color_rgb(229, 72, 77);
+
+	// Bordes rojos que laten
+	var _va;
+	if (_p < 0.1) _va = _p / 0.1;
+	else if (_p < 0.85) _va = 0.65 + 0.35 * abs(sin(current_time / 160));
+	else _va = 0.65 * (1 - (_p - 0.85) / 0.15);
+	var _g = min(_gw, _gh) * 0.12;   // grosor del borde
+	draw_set_color(_rojo);
+	for (var k = 0; k < 24; k++) {
+		var _i = k * _g / 24;
+		draw_set_alpha(_va * 0.55 * power(1 - k / 24, 2));
+		draw_rectangle(_i, _i, _gw - _i, _gh - _i, true);
+		draw_rectangle(_i + 1, _i + 1, _gw - _i - 1, _gh - _i - 1, true);
+	}
+
+	// Texto: cae de golpe desde grande, rebota y al final crece y se desvanece
+	var _sc, _a;
+	if (_p < 0.12) { var _e = 1 - power(1 - _p / 0.12, 3); _sc = 3 - 2.1 * _e; _a = _p / 0.12; }
+	else if (_p < 0.18) { _sc = 0.9 + 0.15 * ((_p - 0.12) / 0.06); _a = 1; }
+	else if (_p < 0.24) { _sc = 1.05 - 0.05 * ((_p - 0.18) / 0.06); _a = 1; }
+	else if (_p < 0.85) { _sc = 1; _a = 1; }
+	else { var _q = (_p - 0.85) / 0.15; _sc = 1 + 0.4 * _q; _a = 1 - _q; }
+
+	draw_set_font(fnt_menu);
+	draw_set_halign(fa_center);
+	draw_set_valign(fa_middle);
+	var _t = "MUERTE SUBITA!";
+	var _base = (_gw * 0.7) / max(1, string_width(_t));   // que ocupe ~70% del ancho
+	var _s = _base * _sc;
+	var _cx = _gw / 2, _cy = _gh / 2 - _gh * 0.04;
+	draw_set_alpha(_a);
+	draw_set_color(c_black);
+	draw_text_transformed(_cx + 4, _cy + 4, _t, _s, _s, 0);
+	draw_set_color(c_white);
+	for (var o = 0; o < 4; o++) draw_text_transformed(_cx + ((o < 2) ? -2 : 2), _cy + ((o mod 2 == 0) ? -2 : 2), _t, _s, _s, 0);
+	draw_set_color(_rojo);
+	draw_text_transformed(_cx, _cy, _t, _s, _s, 0);
+
+	if (_p > 0.12) {
+		var _t2 = "LA SIGUIENTE BANDERA GANA";
+		var _s2 = _s * 0.4;
+		var _cy2 = _cy + string_height(_t) * _s * 0.6;
+		draw_set_color(c_black);
+		draw_text_transformed(_cx + 2, _cy2 + 2, _t2, _s2, _s2, 0);
+		draw_set_color(c_white);
+		draw_text_transformed(_cx, _cy2, _t2, _s2, _s2, 0);
+	}
+
+	draw_set_alpha(1);
+	draw_set_color(c_white);
+	draw_set_halign(fa_left);
+	draw_set_valign(fa_top);
 }

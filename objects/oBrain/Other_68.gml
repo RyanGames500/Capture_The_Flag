@@ -144,20 +144,23 @@ case "state_update":
         new_enemy.clientId = _incomingId;
         new_enemy.sharedProperties = realData.SP;
         new_enemy.entities = realData.entities;
-        // --- MÉTODO DE CONTEO SIMPLE ---
-        // Contamos cuántos jugadores hay en total (otros + tú mismo)
-        var total_jugadores = instance_number(oOtherPlayer) + 1;
-        
-        // Si el total es par, es ROJO. Si es impar, es AZUL.
-        // Esto siempre los va a alternar: 1º Azul, 2º Rojo, 3º Azul, 4º Rojo...
-        if (total_jugadores % 2 == 0) {
-            new_enemy.team = "ROJO";
+        // --- SU EQUIPO DE VERDAD (scr_objetivo) ---
+        // Antes se adivinaba contando jugadores (1º azul, 2º rojo...) y contaba tambien a los
+        // bots: salia el equipo equivocado. Ahora: el que manda en sus datos, o el que repartio
+        // el lider en la sala; si todavia no se sabe, se cuenta como antes.
+        var _eq_real = scr_sala_equipo_de(_incomingId, realData.SP);
+        if (_eq_real != "") {
+            new_enemy.team = _eq_real;
+            new_enemy.lobby_team = _eq_real;
         } else {
-            new_enemy.team = "AZUL";
+            var total_jugadores = instance_number(oOtherPlayer) + 1;
+            new_enemy.team = (total_jugadores % 2 == 0) ? "ROJO" : "AZUL";
         }
 
-        // LÓGICA DE HOST
-        if (oBrain.AmIPseudoHost) {
+        // LÓGICA DE HOST: alguien llego mientras se elige personaje -> se espera de nuevo.
+        // Ya NO se reinicia la seleccion si la partida ya empezo (si alguien se reconectaba,
+        // al lider le volvia a salir la seleccion en plena partida).
+        if (oBrain.AmIPseudoHost && !oBrain.intro_disparada) {
             oBrain.timer_intro = 60 * 60; 
             oBrain.intro_disparada = false; 
             global.fase_seleccion = true;

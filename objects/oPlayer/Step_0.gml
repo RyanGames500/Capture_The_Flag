@@ -183,6 +183,9 @@ if (global.ONLINE && spawn_lock > 0)
 	if (variable_instance_exists(id, "latest_y")) latest_y = y;
 }
 
+// Cambiar entre tus 2 armas: E, rueda del mouse o tocar el cuadro chico (scr_armas, SEGUNDA ARMA)
+scr_arma_cambio_step();
+
 var canShoot = (!has_flag) && (state != PLAYERSTATE.DEAD);
 if (scr_efx_aturdido()) canShoot = false;   // aturdido o congelado: no dispara
 
@@ -239,6 +242,11 @@ if (vmouse_pressed(mb_right) && !scr_efx_aturdido())
 		var dir = point_direction(x, y - 16, aim_x(), aim_y());
 		var fuerza = 8;
 
+		// Electrica o cegadora: misma granada pero con su efecto (scr_armas, GRANADAS)
+		if (variable_instance_exists(id, "granada_tipo") && granada_tipo != "") {
+			scr_granada_lanzar_efecto(granada_tipo, dir);
+			if (granadas <= 0) granada_tipo = "";
+		} else {
 		var gx = x + lengthdir_x(15, dir);
 		var gy = y - 16 + lengthdir_y(15, dir);
 
@@ -255,6 +263,7 @@ if (vmouse_pressed(mb_right) && !scr_efx_aturdido())
 
 		nade.hsp = lengthdir_x(fuerza, dir);
 		nade.vsp = lengthdir_y(fuerza, dir) - 2;
+		}
 	}
 	else {
 		if (melee_cd <= 0 && state != PLAYERSTATE.DEAD)

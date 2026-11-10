@@ -267,6 +267,9 @@ if (global.pausa && !global.game_over) {
     scr_voz_draw_panel();
 }
 
+// --- AVISO GRANDE DE MUERTE SUBITA (opcion B, scr_reloj) ---
+if (room != rm_menu) scr_ms_aviso_draw();
+
 // --- 4. PANTALLA DE RESULTADOS (diseno A: GANASTE / PERDISTE, marcador, equipos, premio) ---
 if (global.game_over && !abandono_activo)
 {
@@ -286,6 +289,8 @@ if (global.game_over && !abandono_activo)
     var _gana_eq = (global.winner_team == 1) ? "ROJO" : "AZUL";
     var _gane    = (_mi_eq == _gana_eq);
     var _col_ganador = (_gana_eq == "ROJO") ? _rojo_c : _azul_c;
+    var _empate  = (global.winner_team == 3);   // EMPATE: nadie gana (scr_reloj)
+    if (_empate) { _gane = false; _col_ganador = _oro_c; }
     var _en_linea = global.ONLINE;
     var _con_bots = global.bot_partida || (variable_global_exists("botnet_partida") && global.botnet_partida);
 
@@ -320,15 +325,20 @@ if (global.game_over && !abandono_activo)
     draw_roundrect_ext(mid_x - p_w/2 + 10, p_y1 + 10, mid_x + p_w/2 + 10, p_y1 + p_h + 10, 30, 30, false);
     draw_set_color(make_color_rgb(26, 30, 43));
     draw_roundrect_ext(mid_x - p_w/2, p_y1, mid_x + p_w/2, p_y1 + p_h, 30, 30, false);
+    if (_empate) {
+        // Borde mitad azul y mitad roja (scr_objetivo)
+        scr_borde_mitades(mid_x - p_w/2, p_y1, mid_x + p_w/2, p_y1 + p_h, 30, _azul_c, _rojo_c, 2);
+    } else {
     draw_set_color(_col_ganador);
     draw_roundrect_ext(mid_x - p_w/2, p_y1, mid_x + p_w/2, p_y1 + p_h, 30, 30, true);
     draw_roundrect_ext(mid_x - p_w/2 + 1, p_y1 + 1, mid_x + p_w/2 - 1, p_y1 + p_h - 1, 29, 29, true);
+    }
 
     // Particulas
     for (var p = 0; p < 8; p++) {
         var angle = (get_timer() / 5000 + (p * 45)) % 360;
         var dist = p_w / 2 + 20 + (sin(get_timer() / 100000) * 14);
-        draw_circle_color(mid_x + lengthdir_x(dist, angle), mid_y + lengthdir_y(dist * 0.8, angle), 3 * victory_alpha, _col_ganador, c_white, false);
+        draw_circle_color(mid_x + lengthdir_x(dist, angle), mid_y + lengthdir_y(dist * 0.8, angle), 3 * victory_alpha, _empate ? ((p mod 2 == 0) ? _azul_c : _rojo_c) : _col_ganador, c_white, false);
     }
 
     draw_set_halign(fa_center);
@@ -341,14 +351,29 @@ if (global.game_over && !abandono_activo)
     draw_text_transformed(mid_x, _cy, "FIN DE LA PARTIDA", 0.75, 0.75, 0);
     _cy += 52;
     draw_set_font(fnt_menu);
+    if (_empate) {
+        // "EMP" en azul y "ATE" en rojo
+        var _es = 2.4 * pulse;
+        var _w1 = string_width("EMP") * _es, _w2 = string_width("ATE") * _es;
+        var _ex = mid_x - (_w1 + _w2) / 2;
+        draw_set_halign(fa_left);
+        draw_set_color(c_black);
+        draw_text_transformed(_ex + 3, _cy + 3, "EMPATE", _es, _es, 0);
+        draw_set_color(_azul_c);
+        draw_text_transformed(_ex, _cy, "EMP", _es, _es, 0);
+        draw_set_color(_rojo_c);
+        draw_text_transformed(_ex + _w1, _cy, "ATE", _es, _es, 0);
+        draw_set_halign(fa_center);
+    } else {
     draw_set_color(c_black);
     draw_text_transformed(mid_x + 3, _cy + 3, _gane ? "GANASTE!" : "PERDISTE", 2.4 * pulse, 2.4 * pulse, 0);
     draw_set_color(_gane ? _oro_c : make_color_rgb(207, 211, 224));
     draw_text_transformed(mid_x, _cy, _gane ? "GANASTE!" : "PERDISTE", 2.4 * pulse, 2.4 * pulse, 0);
+    }
     _cy += 52;
     draw_set_font(fnt_small);
-    draw_set_color(_col_ganador);
-    draw_text_transformed(mid_x, _cy, "VICTORIA " + _gana_eq, 1, 1, 0);
+    draw_set_color(_empate ? make_color_rgb(207, 211, 224) : _col_ganador);
+    draw_text_transformed(mid_x, _cy, _empate ? "NADIE GANA" : ("VICTORIA " + _gana_eq), 1, 1, 0);
 
     // Marcador: tus banderas a cada lado y el numero en medio
     _cy += 64;
@@ -395,7 +420,8 @@ if (global.game_over && !abandono_activo)
     if (_con_premio && victory_alpha > 0.8) {
         _cy += 20;
         var _t1, _t2, _c1;
-        if (_gane) { _t1 = _con_bots ? "+10 TROFEOS" : "+25 TROFEOS"; _t2 = _con_bots ? "+20 XP" : "+50 XP"; _c1 = _oro_c; }
+        if (_empate) { _t1 = "0 TROFEOS"; _t2 = "+10 XP"; _c1 = _gris_c; }
+        else if (_gane) { _t1 = _con_bots ? "+10 TROFEOS" : "+25 TROFEOS"; _t2 = _con_bots ? "+20 XP" : "+50 XP"; _c1 = _oro_c; }
         else       { _t1 = _con_bots ? "-5 TROFEOS"  : "-15 TROFEOS"; _t2 = "+5 XP"; _c1 = _rojo_c; }
         draw_set_font(fnt_menu);
         draw_set_color(_c1);
