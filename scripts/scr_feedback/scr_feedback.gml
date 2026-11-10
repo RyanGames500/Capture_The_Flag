@@ -10,6 +10,7 @@ function fb_init() {
 	global.fb_banner   = undefined;
 	global.fb_score    = undefined;
 	global.fb_toasts   = [];
+	global.fb_toast_cola = [];   // los que esperan turno (se ven maximo 2)
 	global.fb_edge     = 0;
 	global.fb_edge_max = 1;
 	global.fb_edge_col = FB_ROJO;
@@ -17,6 +18,7 @@ function fb_init() {
 
 function fb_ok() {
 	if (!variable_global_exists("fb_toasts")) fb_init();
+	if (!variable_global_exists("fb_toast_cola")) global.fb_toast_cola = [];
 	return true;
 }
 
@@ -83,13 +85,14 @@ function fb_anotacion(_team, _nombre) {
 }
 
 // ------------------------------------------------------
-// D · AVISOS CHICOS (tarjetas a la derecha, donde estaba el kill feed)
+// D · AVISOS CHICOS: abajo al centro, suben desde abajo. Maximo 2 a la vez; los demas esperan en fila.
 // ------------------------------------------------------
 /// _icono: "flag", "kill", "trap", "arma", "star", "info"
 function fb_toast(_titulo, _sub, _col, _icono = "flag") {
 	fb_ok();
-	array_insert(global.fb_toasts, 0, { titulo: string(_titulo), sub: string(_sub), col: _col, icono: _icono, t: 0, dur: round(fb_fps() * 3) });
-	if (array_length(global.fb_toasts) > 4) array_resize(global.fb_toasts, 4);
+	array_push(global.fb_toast_cola, { titulo: string(_titulo), sub: string(_sub), col: _col, icono: _icono, t: 0, dur: round(fb_fps() * FB_AVISO_SEG) });
+	// Si se juntan muchos, se tiran los mas viejos de la fila
+	while (array_length(global.fb_toast_cola) > FB_AVISO_COLA) array_delete(global.fb_toast_cola, 0, 1);
 }
 
 /// Los textos del kill feed (bajas, trampas, abandonos) como tarjeta. Lo llama scrAddKillFeed en línea.
@@ -120,6 +123,11 @@ function fb_step() {
 		var _it = global.fb_toasts[i];
 		_it.t++;
 		if (_it.t >= _it.dur) array_delete(global.fb_toasts, i, 1);
+	}
+	// Entra el siguiente de la fila cuando hay lugar (maximo 2 a la vez)
+	while (array_length(global.fb_toasts) < FB_AVISO_MAX && array_length(global.fb_toast_cola) > 0) {
+		array_push(global.fb_toasts, global.fb_toast_cola[0]);
+		array_delete(global.fb_toast_cola, 0, 1);
 	}
 }
 
@@ -425,7 +433,7 @@ function fb_draw_marcador(_mx, _y) {
 	var _txt = "VS", _col = FB_ORO, _sc = 1.4;
 	if (scr_reloj_visible()) {
 		if (oBrain.reloj_fin && global.puntos_azul == global.puntos_rojo) {
-			_txt = "MUERTE SUBITA"; _sc = 0.7;
+			_txt = "MUERTE SUBITA " + scr_muerte_subita_txt(); _sc = 0.6;
 			_col = ((current_time div 300) mod 2 == 0) ? FB_ROJO : FB_ORO;
 		} else {
 			var _m = oBrain.reloj_seg div 60, _s = oBrain.reloj_seg mod 60;
@@ -553,10 +561,11 @@ function fb_draw_gui() {
 		draw_set_alpha(1);
 	}
 
-	// --- D · Avisos chicos: a la derecha, donde estaba el kill feed. Entran desde el borde. ---
-	var _ty = 200;
-	var _xr = _gw - 16;
-	for (var j = 0; j < array_length(global.fb_toasts); j++) {
+	// --- D · Avisos chicos: abajo al centro, una linea, suben desde abajo. El mas nuevo va abajo. ---
+	fb_avisos_draw(_gw, _gh);
+	for (var j = 0; j < 0; j++) {   // (el diseno viejo de tarjetas a la derecha ya no se usa)
+		var _ty = 200;
+		var _xr = _gw - 16;
 		var _it = global.fb_toasts[j];
 		var _p2 = _it.t / _it.dur;
 		draw_set_font(fnt_menu);
@@ -953,5 +962,52 @@ function fb_indicadores_bot() {
 	draw_set_alpha(1);
 	draw_set_color(c_white);
 	draw_set_halign(fa_left);
+	draw_set_valign(fa_top);
+}
+
+// ------------------------------------------------------
+// AVISOS NUEVOS: pastillita de una linea abajo al centro (entre los joysticks)
+// ------------------------------------------------------
+#macro FB_AVISO_MAX  2      // cuantos se ven a la vez
+#macro FB_AVISO_COLA 6      // cuantos pueden esperar en fila
+#macro FB_AVISO_SEG  2.4    // cuanto dura cada uno
+
+function fb_avisos_draw(_gw, _gh) {
+	// Mismo estilo de tarjeta de siempre (rayita de color, cuadrito con icono, barrita de tiempo), en una linea
+	var _n = array_length(global.fb_toasts);
+	if (_n == 0) return;
+	var _h = 44;
+	var _base = _gh - 24 - _h;   // arriba de la tarjeta de abajo
+	for (var j = 0; j < _n; j++) {
+		var _it = global.fb_toasts[j];
+		var _fila = _n - 1 - j;   // el ultimo que entro va abajo (fila 0)
+		var _p = _it.t / _it.dur;
+		var _a = 1, _dy = 0;
+		if (_p < 0.1) { var _q = _p / 0.1; _a = _q; _dy = (1 - fb_ease_out(_q)) * 40; }
+		else if (_p > 0.88) _a = (1 - _p) / 0.12;
+		draw_set_font(fnt_menu);
+		var _w = string_width(_it.titulo) + 74;
+		var _x1 = _gw / 2 - _w / 2;
+		var _y1 = _base - _fila * (_h + 8) + _dy;
+		draw_set_alpha(0.3 * _a);
+		draw_set_color(c_black);
+		draw_roundrect_ext(_x1, _y1 + 4, _x1 + _w, _y1 + _h + 4, 12, 12, false);
+		draw_set_alpha(0.92 * _a);
+		draw_set_color(FB_TINTA);
+		draw_roundrect_ext(_x1, _y1, _x1 + _w, _y1 + _h, 12, 12, false);
+		draw_set_alpha(_a);
+		draw_set_color(_it.col);
+		draw_rectangle(_x1, _y1 + 6, _x1 + 6, _y1 + _h - 6, false);
+		draw_roundrect_ext(_x1 + 16, _y1 + _h / 2 - 14, _x1 + 44, _y1 + _h / 2 + 14, 7, 7, false);
+		fb_icono(_it.icono, _x1 + 30, _y1 + _h / 2);
+		draw_set_color(_it.col);
+		draw_rectangle(_x1 + 12, _y1 + _h - 4, _x1 + 12 + (_w - 24) * (1 - _p), _y1 + _h - 2, false);
+		draw_set_halign(fa_left);
+		draw_set_valign(fa_middle);
+		draw_set_font(fnt_menu);
+		draw_set_color(c_white);
+		draw_text(_x1 + 54, _y1 + _h / 2, _it.titulo);
+	}
+	draw_set_alpha(1);
 	draw_set_valign(fa_top);
 }

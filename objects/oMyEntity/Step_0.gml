@@ -15,6 +15,9 @@ entityProperties = {
 	_EF       : variable_instance_exists(id, "efecto") ? efecto : ""   // armas con efecto (scr_armas)
 };
 
+// Granada electrica o cegadora: va en arco y explota al chocar (scr_armas, ARMAS NUEVAS 2)
+if (variable_instance_exists(id, "efecto") && scr_efx_es_bomba(efecto)) { scr_efx_bomba_step(); exit; }
+
 if (variable_instance_exists(id, "is_box") && is_box)
 {
 	if (!instance_exists(owner)) { instance_destroy(); exit; }

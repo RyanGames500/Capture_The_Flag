@@ -13,7 +13,8 @@ function __arma(_tipo, _spr, _nombre, _datos) {
 		vel: 16, vida: 36, disp: 0, balas: 1, rec: 0, rec_max: 0, rafaga: 0, atraviesa: 0, cohete: false, zoom: false,
 		silenciada: false, lento: false, kick: 3, shake: 1, empuje: 0, mz: "gun",
 		snd: snd_gun, tono: 1, vol: 1, peso: 2,  // peso = qué tan seguido sale en el mapa
-		efecto: "", tinte: c_white, grav: 0, escala: 1   // armas con efecto (zap, hielo, red, iman)
+		efecto: "", tinte: c_white, grav: 0, escala: 1,  // armas con efecto (zap, hielo, red, iman)
+		giro: 0, pesada: 1                               // ametralladora: frames que gira antes de disparar / que tan lento caminas
 	};
 	var _n = variable_struct_get_names(_datos);
 	for (var i = 0; i < array_length(_n); i++) _w[$ _n[i]] = _datos[$ _n[i]];
@@ -54,7 +55,13 @@ function scr_armas_init() {
 		__arma("g_zap",      spr_arma_luger,      "ZAP",            { damage: 12, frequency: 150, vel: 6,  vida: 70, disp: 0, ammo: 4,  kick: 4, shake: 2, efecto: "zap",   tinte: make_color_rgb(120, 225, 255), escala: 1.6, ammoType: "heavy", snd: snd_gun, tono: 1.8, vol: 0.7, peso: 2 }),
 		__arma("g_hielo",    spr_arma_uzi,        "CONGELADOR",     { damage: 8,  frequency: 14,  vel: 13, vida: 24, disp: 2, ammo: 12, kick: 2, shake: 1, efecto: "hielo", tinte: make_color_rgb(190, 235, 255), ammoType: "heavy", mz: "smg", snd: snd_smg, tono: 1.6, vol: 0.6, peso: 2 }),
 		__arma("g_red",      spr_arma_recortada,  "LANZARREDES",    { damage: 5,  frequency: 80,  vel: 9,  vida: 90, disp: 0, ammo: 2,  kick: 5, shake: 2, efecto: "red",   tinte: make_color_rgb(235, 228, 205), grav: 0.32, escala: 1.5, ammoType: "heavy", mz: "escop", snd: snd_escop, tono: 1.4, vol: 0.6, peso: 2 }),
-		__arma("g_iman",     spr_arma_deagle,     "IMAN",           { damage: 6,  frequency: 60,  vel: 22, vida: 11, disp: 0, ammo: 3,  kick: 4, shake: 2, efecto: "iman",  tinte: make_color_rgb(255, 90, 150), ammoType: "heavy", snd: snd_M4, tono: 1.9, vol: 0.6, peso: 2 })
+		__arma("g_iman",     spr_arma_deagle,     "IMAN",           { damage: 6,  frequency: 60,  vel: 22, vida: 11, disp: 0, ammo: 3,  kick: 4, shake: 2, efecto: "iman",  tinte: make_color_rgb(255, 90, 150), ammoType: "heavy", snd: snd_M4, tono: 1.9, vol: 0.6, peso: 2 }),
+		// --- NUEVAS 2 (ver ARMAS NUEVAS 2 abajo) ---
+		__arma("g_machete",  spr_arma_silenciada, "MACHETE",        { damage: 35, frequency: 28, ammo: 999, efecto: "machete", tinte: make_color_rgb(205, 215, 225), ammoType: "", kick: 0, shake: 2, snd: snd_melee, peso: 2 }),
+		__arma("g_bomba_e",  spr_granada,         "GRANADA ELECTRICA", { damage: 10, frequency: 45, vel: 9, vida: 120, ammo: 2, efecto: "bomba_elec", grav: 0.3, silenciada: true, tinte: make_color_rgb(120, 225, 255), ammoType: "heavy", kick: 2, shake: 1, snd: snd_melee, tono: 1.3, vol: 0.6, peso: 2 }),
+		__arma("g_bomba_l",  spr_granada,         "GRANADA CEGADORA", { damage: 0, frequency: 45, vel: 9, vida: 120, ammo: 2, efecto: "bomba_luz", grav: 0.3, silenciada: true, tinte: make_color_rgb(255, 250, 200), ammoType: "heavy", kick: 2, shake: 1, snd: snd_melee, tono: 1.5, vol: 0.6, peso: 2 }),
+		__arma("g_fuego",    spr_arma_rpg,        "LANZALLAMAS",    { damage: 3, frequency: 3, vel: 6, vida: 18, disp: 14, balas: 2, ammo: 100, efecto: "fuego", tinte: make_color_rgb(255, 140, 30), ammoType: "heavy", kick: 0, shake: 0.3, mz: "smg", snd: snd_smg, tono: 0.5, vol: 0.2, peso: 2 }),
+		__arma("g_minigun",  spr_arma_thompson,   "AMETRALLADORA",  { damage: 9, frequency: 3, vel: 18, vida: 40, disp: 4, ammo: 100, rec: 0.5, rec_max: 8, kick: 2, shake: 0.6, giro: 30, pesada: 0.75, tinte: make_color_rgb(150, 150, 165), ammoType: "smg", mz: "smg", snd: snd_smg, tono: 0.7, vol: 0.6, reloadTime: _rs * 3, peso: 2 })
 	];
 }
 
@@ -82,19 +89,25 @@ function scr_arma_al_azar(_nivel = 0) {
 			[__arma_nueva("g_luger"), 3], [__arma_nueva("g_glock"), 3], [__arma_nueva("g_silen"), 2],
 			[__arma_nueva("g_uzi"), 3], [__arma_nueva("g_mp5"), 3], [__arma_nueva("g_mp5s"), 2],
 			[__arma_nueva("g_mp40"), 3], [__arma_nueva("g_thompson"), 2]
-		]; break;
+		];
+		if (global.ONLINE) array_push(_ops, [__arma_nueva("g_machete"), 2]);   // machete solo en linea
+		break;
 		case 2: _ops = [
 			[_b.weapon_struct_m4, 3], [_b.weapon_struct_escopeta, 3],
 			[__arma_nueva("g_carabina"), 3], [__arma_nueva("g_ak47"), 3], [__arma_nueva("g_g36"), 3],
 			[__arma_nueva("g_scar"), 2], [__arma_nueva("g_fal"), 2], [__arma_nueva("g_recortada"), 2],
 			[__arma_nueva("g_deagle"), 1], [__arma_nueva("g_revolver"), 1], [_b.weapon_struct_mina, 2]
-		]; break;
+		];
+		// Las granadas electrica y cegadora ya no son armas: salen en los packs de granadas (scr_armas, GRANADAS)
+		if (global.ONLINE) array_push(_ops, [__arma_nueva("g_fuego"), 2]);
+		break;
 		case 3: _ops = [
 			[__arma_nueva("g_rpg"), 3], [_b.weapon_struct_bazooka, 3], [_b.weapon_struct_rail, 3],
 			[__arma_nueva("g_franco"), 2], [__arma_nueva("g_antimat"), 1]
 		];
 		// Las de efecto solo en linea (el modo practica sin internet no las sabe usar)
 		if (global.ONLINE) array_push(_ops, [__arma_nueva("g_zap"), 2], [__arma_nueva("g_hielo"), 2], [__arma_nueva("g_red"), 2], [__arma_nueva("g_iman"), 2]);
+		array_push(_ops, [__arma_nueva("g_minigun"), 2]);   // ametralladora: en todos lados
 		break;
 		default:
 			_ops = [
@@ -104,6 +117,7 @@ function scr_arma_al_azar(_nivel = 0) {
 			];
 			for (var i = 0; i < array_length(global.armas_nuevas); i++) {
 				if (global.armas_nuevas[i].efecto != "" && !global.ONLINE) continue;   // las de efecto solo en linea
+				if (scr_efx_es_bomba(global.armas_nuevas[i].efecto)) continue;       // las granadas salen en los packs
 				array_push(_ops, [global.armas_nuevas[i], global.armas_nuevas[i].peso]);
 			}
 		break;
@@ -211,8 +225,10 @@ function scr_arma_es_generica(_w) {
 /// La Thompson pesa: caminas un poco más lento con ella.
 function scr_arma_peso_mult() {
 	var _w = guns[weapon.index];
-	if (scr_arma_es_generica(_w) && _w.lento) return 0.85;
-	return 1;
+	if (!scr_arma_es_generica(_w)) return 1;
+	var _m = _w.lento ? 0.85 : 1;
+	if (variable_struct_exists(_w, "pesada")) _m *= _w.pesada;   // la ametralladora pesa mas
+	return _m;
 }
 
 /// Disparo de las armas nuevas. Lo llaman scrPlayerWeaponUpdate y _offline.
@@ -228,6 +244,13 @@ function scr_arma_generica_update() {
 			else rafaga_quedan = 0;
 		}
 		return;
+	}
+
+	// Ametralladora: el canon gira un ratito antes de disparar
+	if (variable_struct_exists(_w, "giro") && _w.giro > 0) {
+		if (!variable_instance_exists(id, "giro_t")) giro_t = 0;
+		if (vmouse(mb_left)) { if (giro_t < _w.giro) { giro_t++; return; } }
+		else giro_t = 0;
 	}
 
 	if (!vmouse(mb_left) || weapon.frequency > 0) return;
@@ -246,6 +269,8 @@ function scr_arma_generica_update() {
 
 /// Un tiro (con todas sus balas, si es escopeta)
 function scr_arma_generica_tiro(_w) {
+	// Machete: no dispara, golpea en arco (ARMAS NUEVAS 2)
+	if (variable_struct_exists(_w, "efecto") && _w.efecto == "machete") { scr_machete_golpe(_w); return; }
 	var _ang = weapon.angle;
 	var _p = scr_arma_punta(22 + sprite_get_width(_w.sprite));   // la punta del cañón según lo largo del arma
 	var _bx = _p[0], _by = _p[1];
@@ -358,9 +383,16 @@ function scr_efx_init() {
 /// Cada frame (jugador y bots): baja los tiempos y da la inmunidad al agarrar la bandera
 function scr_efx_step() {
 	scr_efx_init();
+	scr_efx_init2();
 	if (isDead) {
 		efx_stun = 0; efx_red = 0; efx_hielo_n = 0; efx_hielo_t = 0; efx_inm = 0; efx_tenia = false;
+		efx_fuego_t = 0; efx_ciego_t = 0;
 		return;
+	}
+	if (efx_ciego_t > 0) efx_ciego_t--;
+	if (efx_fuego_t > 0) {   // quemandose: dano poquito a poquito
+		efx_fuego_t--;
+		if (efx_fuego_t mod EFX_FUEGO_CADA == 0) scr_efx_quemar();
 	}
 	if (efx_stun > 0) efx_stun--;
 	if (efx_red > 0) efx_red--;
@@ -392,13 +424,15 @@ function scr_efx_codigo() {
 	scr_efx_init();
 	if (efx_stun > 0) return efx_stun_tipo;
 	if (efx_red > 0) return 4;
+	scr_efx_init2();
+	if (efx_fuego_t > 0) return 5;
 	if (efx_hielo_n > 0) return 2;
 	return 0;
 }
 
 /// Le pega un efecto. Devuelve { soltar, x, y }: si hay que tirar la bandera y donde.
 /// _ax, _ay = donde esta el que disparo (para el iman).
-function scr_efx_aplicar(_ef, _ax, _ay) {
+function scr_efx_aplicar(_ef, _ax, _ay, _de = -1, _quien = "", _bot = false) {
 	scr_efx_init();
 	var _r = { soltar: false, x: x, y: y - 25 };
 	var _tumba = false;
@@ -425,6 +459,13 @@ function scr_efx_aplicar(_ef, _ax, _ay) {
 			efx_red = EFX_RED_T;
 			_tumba = true;
 		break;
+		case "fuego":
+			scr_efx_init2();
+			efx_fuego_t = EFX_FUEGO_T;
+			efx_fuego_de = _de;
+			efx_fuego_quien = _quien;
+			efx_fuego_bot = _bot;
+		break;
 		case "iman":
 			var _d = point_direction(x, y, _ax, _ay);
 			push_h = lengthdir_x(EFX_IMAN_FUERZA, _d);
@@ -445,7 +486,10 @@ function scr_efx_recibir_jugador(_m) {
 	if (_ef == "") return;
 	var _ax = variable_struct_exists(_m, "ax") ? real(_m.ax) : x;
 	var _ay = variable_struct_exists(_m, "ay") ? real(_m.ay) : y;
-	var _r = scr_efx_aplicar(_ef, _ax, _ay);
+	var _de = variable_struct_exists(_m, "de") ? real(_m.de) : -1;
+	var _qn = variable_struct_exists(_m, "killer") ? string(_m.killer) : "";
+	var _bt = variable_struct_exists(_m, "bot") ? _m.bot : false;
+	var _r = scr_efx_aplicar(_ef, _ax, _ay, _de, _qn, _bt);
 	if (_r.soltar) scr_efx_soltar_jugador(_r.x, _r.y);
 }
 
@@ -474,6 +518,7 @@ function scr_efx_msg(_m) {
 	var _o = (variable_instance_exists(id, "owner_id") && instance_exists(owner_id)) ? owner_id : id;
 	_m.ax = round(_o.x);
 	_m.ay = round(_o.y);
+	_m.de = (variable_instance_exists(id, "bot_team") && variable_instance_exists(_o, "clientId")) ? _o.clientId : global.clientId;   // quien fue (para la quemadura)
 	// Chispazo donde pego
 	var _c = scr_efx_color(efecto);
 	fx_light(x, y, 40, _c, 14);
@@ -487,6 +532,9 @@ function scr_efx_color(_ef) {
 		case "hielo": return EFX_COL_HIELO;
 		case "red":   return EFX_COL_RED;
 		case "iman":  return EFX_COL_IMAN;
+		case "fuego": return EFX_COL_FUEGO;
+		case "bomba_elec": return EFX_COL_ZAP;
+		case "bomba_luz":  return c_white;
 	}
 	return c_white;
 }
@@ -554,6 +602,17 @@ function scr_efx_draw_cuerpo(_c) {
 			draw_line(_x1 + 2, _y1 + 4, _x1 + 7, _y1 + 12);
 			draw_line(_x2 - 3, _y1 + 8, _x2 - 7, _y1 + 18);
 		break;
+		case 5: // quemandose
+			gpu_set_blendmode(bm_add);
+			draw_sprite_ext(sprite_index, image_index, x, y, image_xscale, image_yscale, image_angle, EFX_COL_FUEGO, 0.35 + 0.2 * sin(_t * 20));
+			for (var i = 0; i < 4; i++) {
+				var _fx = random_range(_x1, _x2), _fy = random_range(_y1, _y1 + (_y2 - _y1) * 0.6);
+				draw_set_alpha(0.8);
+				draw_set_colour(choose(EFX_COL_FUEGO, make_color_rgb(255, 210, 60)));
+				draw_rectangle(_fx, _fy, _fx + 2, _fy + 3, false);
+			}
+			gpu_set_blendmode(bm_normal);
+		break;
 		case 4: // atrapado (red)
 			draw_set_alpha(0.9);
 			draw_set_colour(EFX_COL_RED);
@@ -595,6 +654,25 @@ function scr_efx_bala_draw(_ef, _x, _y, _dir) {
 				          _x - lengthdir_x(9, _a + 90) + lengthdir_x(i * 5, _a), _y - lengthdir_y(9, _a + 90) + lengthdir_y(i * 5, _a));
 			}
 		break;
+		case "fuego":
+			gpu_set_blendmode(bm_add);
+			draw_set_alpha(0.7);
+			draw_set_colour(EFX_COL_FUEGO);
+			draw_circle(_x, _y, 4 + random(3), false);
+			draw_set_colour(make_color_rgb(255, 220, 80));
+			draw_circle(_x, _y, 2, false);
+			gpu_set_blendmode(bm_normal);
+		break;
+		case "bomba_elec":
+		case "bomba_luz":
+			draw_set_colour(c_black);
+			draw_circle(_x, _y, 6, false);
+			draw_set_colour((_ef == "bomba_elec") ? EFX_COL_ZAP : make_color_rgb(255, 250, 200));
+			draw_circle(_x, _y, 5, false);
+			draw_set_colour(c_white);
+			draw_circle(_x + 2, _y - 2, 1.5, false);
+			if (_ef == "bomba_elec") { gpu_set_blendmode(bm_add); __efx_rayos(_x - 6, _y - 6, _x + 6, _y + 6, 1, EFX_COL_ZAP); gpu_set_blendmode(bm_normal); }
+		break;
 		case "iman":
 			gpu_set_blendmode(bm_add);
 			draw_set_colour(EFX_COL_IMAN);
@@ -611,4 +689,331 @@ function scr_efx_bala_draw(_ef, _x, _y, _dir) {
 	}
 	draw_set_alpha(1);
 	draw_set_colour(c_white);
+}
+
+// ======================================================
+// ARMAS NUEVAS 2: MACHETE, GRANADA ELECTRICA, GRANADA CEGADORA, LANZALLAMAS, AMETRALLADORA
+//   MACHETE: golpe en arco con el doble de alcance que el punetazo (no gasta balas).
+//   GRANADA ELECTRICA: se lanza en arco; al explotar aturde 1 s a los rivales cerca (como el Zap)
+//                      y si llevan la bandera se les cae.
+//   GRANADA CEGADORA: al explotar, a los rivales que la ven se les pone la pantalla blanca 2 s.
+//   LANZALLAMAS: chorro corto; deja quemando 2 s (dano poquito a poquito).
+//   AMETRALLADORA: 100 balas, pesada (caminas mas lento) y el canon gira un ratito antes de disparar.
+// Las de efecto solo salen en linea (como las de antes). La ametralladora sale en todos lados.
+// ======================================================
+#macro EFX_MACHETE_ALC 64     // alcance del machete (el punetazo es 26)
+#macro EFX_BOMBA_R     90     // radio de la granada electrica
+#macro EFX_BOMBA_DANO  10
+#macro EFX_LUZ_R       170    // radio de la granada cegadora
+#macro EFX_CIEGO_T     120    // 2 s de pantalla blanca
+#macro EFX_FUEGO_T     120    // 2 s quemandose
+#macro EFX_FUEGO_CADA  20     // cada cuantos frames quema
+#macro EFX_FUEGO_DANO  3
+#macro EFX_COL_FUEGO   make_color_rgb(255, 140, 30)
+
+function scr_efx_init2() {
+	if (!variable_instance_exists(id, "efx_fuego_t")) {
+		efx_fuego_t = 0;
+		efx_fuego_de = -1;
+		efx_fuego_quien = "";
+		efx_fuego_bot = false;
+		efx_ciego_t = 0;
+	}
+}
+
+function scr_efx_ciego() { scr_efx_init2(); return efx_ciego_t > 0; }
+
+/// Quemadura: un golpe chiquito que pasa por el mismo camino que una bala
+function scr_efx_quemar() {
+	var _m = { damage: EFX_FUEGO_DANO, killer: efx_fuego_quien, reason: "fuego", bot: efx_fuego_bot };
+	if (object_index == oPlayer) callback_ReceivedEvent("hit", _m, efx_fuego_de);
+	else if (variable_instance_exists(id, "bot_local") && bot_local) scr_botnet_dano(id, _m, efx_fuego_de);
+}
+
+/// Pantalla blanca de la granada cegadora (Draw GUI de oPlayer)
+function scr_efx_draw_ciego() {
+	scr_efx_init2();
+	if (efx_ciego_t <= 0) return;
+	draw_set_alpha(min(1, efx_ciego_t / 60) * 0.95);
+	draw_set_colour(c_white);
+	draw_rectangle(0, 0, display_get_gui_width(), display_get_gui_height(), false);
+	draw_set_alpha(1);
+}
+
+// ------------------------------------------------------
+// MACHETE
+// ------------------------------------------------------
+function scr_machete_golpe(_w) {
+	var _dir = (lengthdir_x(1, weapon.angle) >= 0) ? 1 : -1;
+	var _fxx = x + _dir * 34, _fxy = y - 14;
+	var _fx = instance_create_layer(_fxx, _fxy, "Instances", oMeleeFX);
+	_fx.image_xscale = _dir * 2.2;
+	_fx.image_yscale = 2.2;
+	_fx.depth = depth - 10;
+	if (global.sfx) audio_play_sound(snd_melee, 1, false, 1, 0, 0.8);
+	with (oOtherPlayer) if (!es_bot) SendEventToClient(clientId, "fx_machete", { x: round(_fxx), y: round(_fxy), dir: _dir });
+
+	var _px = x, _py = y, _mi = global.myTeam;
+	var _dmg = _w.damage * damage_boost;
+	var _hits = [];
+	with (oOtherPlayer) {
+		if (team == _mi || isDead || state == PLAYERSTATE.DEAD || invulnerable || !visible) continue;
+		var _dx = (x - _px) * _dir;
+		if (_dx < -10 || _dx > EFX_MACHETE_ALC) continue;
+		if (abs(y - _py) > 44) continue;
+		array_push(_hits, id);
+	}
+	for (var i = 0; i < array_length(_hits); i++) {
+		var _t = _hits[i];
+		if (_t.has_shield) {
+			instance_create_layer(_t.x, _t.y - 16, "Instances", oShieldSparkFX);
+			if (global.sfx) audio_play_sound(snd_shield_impact, 20, false, 2.0);
+			continue;
+		}
+		fx_damage_number(_t.x, _t.bbox_top - 8, _dmg, 0);
+		fx_impact_net(_t.x, _t.y - 20, (_dir > 0) ? 180 : 0, 6, false);
+		scr_predict_hit(_t, _dmg, 10);
+		scr_hit_confirm(_t, false, true);
+		SendEventToClient(_t.clientId, "hit", { damage: _dmg, killer: global.myName, reason: "pvp", angle: (_dir > 0) ? 0 : 180 });
+	}
+	scrCamShake(_w.shake);
+}
+
+/// Efecto del machete de otro jugador (callback "fx_machete")
+function scr_machete_fx(_x, _y, _dir) {
+	var _fx = instance_create_layer(_x, _y, "Instances", oMeleeFX);
+	_fx.image_xscale = _dir * 2.2;
+	_fx.image_yscale = 2.2;
+}
+
+// ------------------------------------------------------
+// GRANADAS (electrica y cegadora): van en arco y explotan al chocar o al pasar el tiempo
+// ------------------------------------------------------
+function scr_efx_es_bomba(_ef) { return _ef == "bomba_elec" || _ef == "bomba_luz"; }
+
+/// Va al principio del Step de oMyEntity si la bala es una granada
+function scr_efx_bomba_step() {
+	var _eq = variable_instance_exists(id, "bot_team") ? bot_team : global.myTeam;
+	var _boom = false;
+	if (life > 0) { life--; if (life <= 0) _boom = true; }
+	if (place_meeting(x, y, obj_wall)) _boom = true;
+	if (vspeed > 0 && place_meeting(x, y, oPlataformaPasable)) _boom = true;
+	var _t = instance_place(x, y, oOtherPlayer);
+	if (_t != noone && _t.team != _eq && !_t.isDead) _boom = true;
+	if (variable_instance_exists(id, "bot_team") && instance_exists(oPlayer)) {
+		var _pl = instance_place(x, y, oPlayer);
+		if (_pl != noone && _pl.team != _eq && !_pl.isDead) _boom = true;
+	}
+	if (y > room_height + 60) { instance_destroy(); return; }
+	if (_boom) {
+		scr_efx_bomba_explota(x, y, efecto, _eq);
+		instance_destroy();
+	}
+}
+
+/// Lo que se ve al explotar (en todas las pantallas)
+function scr_efx_bomba_fx(_x, _y, _ef) {
+	if (_ef == "bomba_elec") {
+		fx_light(_x, _y, 130, EFX_COL_ZAP, 24);
+		fx_sparks(_x, _y, 0, 14, false);
+		if (global.sfx) audio_play_sound(snd_shield_impact, 20, false, 1, 0, 1.4);
+		scrCamShake(4);
+	} else {
+		fx_light(_x, _y, 240, c_white, 30);
+		fx_sparks(_x, _y, 0, 10, true);
+		if (global.sfx) audio_play_sound(snd_pearl_explodes, 10, false, 0.6, 0, 1.6);
+	}
+}
+
+function scr_efx_bomba_explota(_x, _y, _ef, _eq) {
+	var _bot = variable_instance_exists(id, "bot_team");
+	var _quien = _bot ? owner_name : global.myName;
+	var _de = global.clientId;
+	if (_bot) _de = (variable_instance_exists(id, "owner_id") && instance_exists(owner_id)) ? owner_id.clientId : BOTNET_ID_BASE;
+	scr_efx_bomba_fx(_x, _y, _ef);
+	with (oOtherPlayer) if (!es_bot) SendEventToClient(clientId, "fx_bomba", { x: round(_x), y: round(_y), t: _ef });
+
+	// Rivales cerca
+	var _l = [];
+	with (oOtherPlayer) if (team != _eq && !isDead && visible) array_push(_l, id);
+	if (instance_exists(oPlayer)) with (oPlayer) if (team != _eq && !isDead) array_push(_l, id);
+	for (var i = 0; i < array_length(_l); i++) {
+		var _v = _l[i];
+		var _d = point_distance(_x, _y, _v.x, _v.y - 16);
+		if (_ef == "bomba_elec") {
+			if (_d > EFX_BOMBA_R || _v.invulnerable) continue;
+			var _m = { damage: EFX_BOMBA_DANO, killer: _quien, reason: "pvp", angle: point_direction(_x, _y, _v.x, _v.y),
+			           bot: _bot, ef: "zap", ax: round(_x), ay: round(_y), de: _de };
+			if (_v.object_index == oPlayer) {
+				callback_ReceivedEvent("hit", _m, _de);
+			} else {
+				if (!_bot) {
+					fx_damage_number(_v.x, _v.bbox_top - 8, EFX_BOMBA_DANO, 2);
+					scr_predict_hit(_v, EFX_BOMBA_DANO, 10);
+					scr_hit_confirm(_v, false, false);
+				}
+				SendEventToClient(_v.clientId, "hit", _m);
+			}
+		} else {
+			if (_d > EFX_LUZ_R) continue;
+			if (collision_line(_x, _y, _v.x, _v.y - 16, obj_wall, false, true) != noone) continue;   // detras de una pared no lo ve
+			if (_v.object_index == oPlayer) {
+				with (oPlayer) { scr_efx_init2(); efx_ciego_t = max(efx_ciego_t, EFX_CIEGO_T); }
+			} else {
+				SendEventToClient(_v.clientId, "cegar", { t: EFX_CIEGO_T });
+			}
+		}
+	}
+}
+
+// ======================================================
+// GRANADAS ELECTRICA Y CEGADORA COMO LA NORMAL
+// Salen en los packs de granadas del piso (solo en linea). Llevas un solo tipo a la vez:
+// si agarras un pack de otro tipo, te quedas con 3 de ese. Se lanzan con clic derecho / GRANADA.
+//   granada_tipo (oPlayer): ""  = normal,  "bomba_elec" = electrica,  "bomba_luz" = cegadora
+// ======================================================
+#macro GRANADA_COL_ELEC make_color_rgb(120, 225, 255)
+#macro GRANADA_COL_LUZ  make_color_rgb(255, 250, 200)
+
+/// Color con que se pinta la granada / el pack de ese tipo
+function scr_granada_col(_t) {
+	if (_t == "bomba_elec") return GRANADA_COL_ELEC;
+	if (_t == "bomba_luz") return GRANADA_COL_LUZ;
+	return c_white;
+}
+
+/// Nombre para el aviso al agarrar el pack
+function scr_granada_nombre(_t) {
+	if (_t == "bomba_elec") return "GRANADAS ELECTRICAS";
+	if (_t == "bomba_luz") return "GRANADAS CEGADORAS";
+	return "GRANADAS";
+}
+
+/// El lider elige de que tipo es un pack de granadas (la mitad normales)
+function scr_granada_tipo_azar() {
+	if (!global.ONLINE) return "";
+	var _r = random(100);
+	if (_r < 50) return "";
+	if (_r < 75) return "bomba_elec";
+	return "bomba_luz";
+}
+
+/// Tu jugador lanza una granada electrica o cegadora (oPlayer Step, clic derecho). Mismo arco que la normal.
+function scr_granada_lanzar_efecto(_tipo, _dir) {
+	var _gx = x + lengthdir_x(15, _dir);
+	var _gy = y - 16 + lengthdir_y(15, _dir);
+	var _b = instance_create_layer(_gx, _gy, "Instances", oMyEntity);
+	_b.owner_name = global.myName;
+	_b.owner_team = global.myTeam;
+	_b.owner_id = id;
+	// Mismo arco que la granada normal: fuerza 8, un poquito hacia arriba y gravedad 0.22
+	var _hx = lengthdir_x(8, _dir);
+	var _vy = lengthdir_y(8, _dir) - 2;
+	_b.direction = point_direction(0, 0, _hx, _vy);
+	_b.image_angle = _b.direction;
+	_b.speed = point_distance(0, 0, _hx, _vy);
+	_b.gravity = 0.22;
+	_b.gravity_direction = 270;
+	_b.life = 150;
+	_b.damage = (_tipo == "bomba_elec") ? EFX_BOMBA_DANO : 0;
+	_b.sprite_index = spr_granada;
+	_b.efecto = _tipo;
+	_b.image_blend = scr_granada_col(_tipo);
+}
+
+// ======================================================
+// SEGUNDA ARMA (solo en linea, tu jugador): llevas 2 armas.
+//   guns[0] y guns[1]; weapon.index = la que traes en la mano.
+//   Agarrar: si hay lugar vacio entra ahi y te la pones; si no, reemplaza la de la mano.
+//   Cambiar: E o la rueda del mouse (Q es la habilidad); en el celular tocas el cuadro chico.
+//   El cambio tarda un cuarto de segundo y cancela la recarga.
+// ======================================================
+#macro ARMA_CAMBIO_T 15   // frames sin poder disparar al cambiar (0.25 s)
+
+function scr_slots_dos() {
+	return global.ONLINE && object_index == oPlayer;
+}
+
+function scr_slot_init() {
+	if (array_length(guns) < 2) guns[1] = noone;
+}
+
+/// Cambia a la otra arma (si tienes otra). Devuelve true si cambio.
+function scr_arma_cambiar() {
+	if (!scr_slots_dos()) return false;
+	scr_slot_init();
+	var _o = 1 - weapon.index;
+	if (guns[_o] == noone) return false;
+	weapon.index = _o;
+	reloading = false;
+	reload_timer = 0;
+	weapon.frequency = max(weapon.frequency, ARMA_CAMBIO_T);
+	if (variable_instance_exists(id, "rafaga_quedan")) rafaga_quedan = 0;
+	if (variable_instance_exists(id, "giro_t")) giro_t = 0;
+	if (variable_instance_exists(id, "rail_carga")) rail_carga = 0;
+	if (global.sfx) audio_play_sound(snd_ammo_pickup, 5, false, 0.5, 0, 1.4);
+	return true;
+}
+
+/// Va en el Step de oPlayer: E, rueda del mouse o tocar el cuadro chico
+function scr_arma_cambio_step() {
+	if (!scr_slots_dos() || isDead) return;
+	var _c = vkey_pressed(ord("E")) || mouse_wheel_up() || mouse_wheel_down();
+	if (!_c && touch_mode() && variable_instance_exists(id, "slot2_x1")) {
+		for (var d = 0; d < 5; d++) {
+			if (!device_mouse_check_button_pressed(d, mb_left)) continue;
+			if (point_in_rectangle(device_mouse_x_to_gui(d), device_mouse_y_to_gui(d), slot2_x1, slot2_y1, slot2_x2, slot2_y2)) _c = true;
+		}
+	}
+	if (_c) scr_arma_cambiar();
+}
+
+/// En que lugar entra un arma nueva
+function scr_slot_para_nueva() {
+	if (!scr_slots_dos()) return weapon.index;
+	scr_slot_init();
+	if (guns[weapon.index] == noone) return weapon.index;
+	var _o = 1 - weapon.index;
+	if (guns[_o] == noone) return _o;
+	return weapon.index;
+}
+
+/// En que lugar ya tienes esa misma arma (-1 = en ninguno). Primero la de la mano.
+function scr_slot_misma(_nueva) {
+	if (!is_struct(_nueva)) return -1;
+	var _l = [weapon.index];
+	if (scr_slots_dos()) { scr_slot_init(); array_push(_l, 1 - weapon.index); }
+	for (var i = 0; i < array_length(_l); i++) {
+		var _g = guns[_l[i]];
+		if (_g != noone && is_struct(_g) && string(_g.type2) == string(_nueva.type2)) return _l[i];
+	}
+	return -1;
+}
+
+/// Tope de balas guardadas por tipo (el mismo de Collision_oAmmoPack)
+function scr_municion_tope(_t) {
+	switch (_t) {
+		case "gun":    return 120;
+		case "smg":    return 240;
+		case "escop":  return 180;
+		case "shell":  return 40;
+		case "sniper": return 15;
+	}
+	return 999;
+}
+
+/// A cual de tus 2 armas le sirve un pack de balas (primero la de la mano). noone = a ninguna.
+function scr_arma_para_municion() {
+	var _l = [weapon.index];
+	if (scr_slots_dos()) { scr_slot_init(); array_push(_l, 1 - weapon.index); }
+	for (var i = 0; i < array_length(_l); i++) {
+		var _g = guns[_l[i]];
+		if (_g == noone || !is_struct(_g)) continue;
+		var _t = _g.ammoType;
+		if (_t == "" || is_undefined(_t)) continue;
+		var _cur = variable_struct_exists(reserve, _t) ? reserve[$ _t] : 0;
+		if (_cur >= scr_municion_tope(_t)) continue;
+		return _g;
+	}
+	return noone;
 }

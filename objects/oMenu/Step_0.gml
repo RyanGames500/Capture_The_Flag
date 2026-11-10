@@ -637,6 +637,23 @@ if (menu_state == "lobby_espera") {
     }
 }
 
+// Cambiar de equipo: tocar un lugar con BOT del otro equipo (scr_objetivo)
+if (menu_state == "lobby_espera" && _lobby_input_ok && device_mouse_check_button_pressed(0, mb_left)) {
+    if (scr_sala_toque_cambio(device_mouse_x_to_gui(0), device_mouse_y_to_gui(0))) _lobby_input_ok = false;
+}
+
+// --- BOTON LISTO (scr_objetivo): Enter/OK o tocar el letrero de abajo ---
+var _toque_pie = false;
+if (menu_state == "lobby_espera") {
+    scr_sala_listo_step();
+    if (_lobby_input_ok && device_mouse_check_button_pressed(0, mb_left) && variable_instance_exists(id, "sala_pie_x1")) {
+        _toque_pie = point_in_rectangle(device_mouse_x_to_gui(0), device_mouse_y_to_gui(0), sala_pie_x1, sala_pie_y1, sala_pie_x2, sala_pie_y2);
+    }
+    if (_lobby_input_ok && !oBrain.AmIPseudoHost && (vkey_pressed(vk_enter) || _toque_pie)) {
+        scr_sala_listo_poner(!global.sala_listo);
+    }
+}
+
 if (menu_state == "lobby_espera" && _lobby_input_ok) {
 if (oBrain.AmIPseudoHost) {
     var mx = device_mouse_x_to_gui(0);
@@ -702,7 +719,12 @@ if (oBrain.AmIPseudoHost) {
 
         // Empezar: S en el teclado. En el celular, OK (ahí la flecha de abajo también cuenta como S
         // y ahora sirve para elegir los ajustes, así que no debe arrancar la partida).
-        var _empezar = vkey_pressed(vk_enter);
+        var _empezar = vkey_pressed(vk_enter) || _toque_pie;
+        // Solo se puede empezar cuando todas las personas dieron LISTO (scr_objetivo)
+        if (_empezar && scr_sala_faltan_listos() > 0) {
+            _empezar = false;
+            listo_aviso_t = room_speed * 2;
+        }
         if (_empezar) {
             // Ya no hay que esperar a que se llene: los espacios vacios los juegan bots (scr_objetivo)
             var _dest = scr_mapa_resolver();  // si es ALEATORIO, el líder elige aquí (una sola vez)

@@ -10,6 +10,8 @@ function host_spawn_ammo(_x, _y, _amount)
     // 25% de probabilidad (random(100) < 25)
     var esGranada = (random(100) < 25); 
     a.is_grenade_pack = esGranada;
+    a.gtipo = esGranada ? scr_granada_tipo_azar() : "";   // normal, electrica o cegadora (scr_armas)
+    a.image_blend = scr_granada_col(a.gtipo);
 
     if (esGranada) {
         a.sprite_index = spr_pack_granadas; // Asegúrate que este sprite exista
@@ -25,7 +27,8 @@ function host_spawn_ammo(_x, _y, _amount)
             x: _x,
             y: _y,
             amount: _amount,
-            is_grenade: esGranada // <--- TRANSMITIMOS LA DECISIÓN
+            is_grenade: esGranada, // <--- TRANSMITIMOS LA DECISIÓN
+            gtipo: a.gtipo
         });
     }
 

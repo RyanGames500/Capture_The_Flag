@@ -20,7 +20,7 @@ state = PLAYERSTATE.INTRO;
 can_sfx=false;
 push_h=0;
 //ARMAS - 1 a la ves
-guns = [noone];
+guns = [noone, noone]; // 2 armas en linea (scr_armas, SEGUNDA ARMA)
 t2=0
 weapon = {
     index: 0,
@@ -36,6 +36,7 @@ reserve = {
 };
 
 granadas = 0; // Cantidad inicial
+granada_tipo = ""; // "" normal, "bomba_elec" electrica, "bomba_luz" cegadora (scr_armas, GRANADAS)
 
 reloading = false;
 reload_timer = 0;

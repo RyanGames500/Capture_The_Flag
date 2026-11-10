@@ -138,6 +138,42 @@ case "SALA_LLENA":
             }
         break;
 
+case "estado_partida":
+    // El lider dice cada segundo si ya empezo la partida (scr_objetivo)
+    scr_sala_estado_recibir(theMessageStruct);
+break;
+
+case "sala_listo":
+    // Alguien de la sala dio LISTO o lo quito (scr_objetivo)
+    scr_sala_listo_recibir(senderClientId, theMessageStruct);
+break;
+
+case "pedir_equipo":
+    // Alguien de la sala quiere pasarse al otro equipo: el lider decide (scr_objetivo)
+    if (oBrain.AmIPseudoHost && room == rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "t")) {
+        scr_sala_cambiar_equipo(senderClientId, string(theMessageStruct.t));
+    }
+break;
+
+case "cegar":
+    // Me cego una granada cegadora (scr_armas)
+    with (oPlayer) { scr_efx_init2(); efx_ciego_t = max(efx_ciego_t, real(theMessageStruct.t)); }
+break;
+
+case "bot_cegar":
+    // Cegaron a un bot: lo maneja el lider (scr_objetivo)
+    if (oBrain.AmIPseudoHost) scr_botnet_evento(theMessageStruct.b, "cegar", theMessageStruct.m);
+break;
+
+case "fx_bomba":
+    // Explosion de granada electrica o cegadora de otro jugador (scr_armas)
+    scr_efx_bomba_fx(real(theMessageStruct.x), real(theMessageStruct.y), string(theMessageStruct.t));
+break;
+
+case "fx_machete":
+    scr_machete_fx(real(theMessageStruct.x), real(theMessageStruct.y), real(theMessageStruct.dir));
+break;
+
 case "voz":
     // Voz de alguien de la sala privada (scr_objetivo, CHAT DE VOZ)
     scr_voz_recibir(theMessageStruct, senderClientId);
@@ -233,6 +269,8 @@ case "sync_reloj":
     if (!oBrain.AmIPseudoHost && room != rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "s") && is_numeric(theMessageStruct.s)) {
         oBrain.reloj_seg = max(0, theMessageStruct.s);
         oBrain.reloj_fin = (oBrain.reloj_seg <= 0);
+        // Segundos de muerte subita (-1 = no hay) (scr_reloj)
+        if (variable_struct_exists(theMessageStruct, "ms") && is_numeric(theMessageStruct.ms)) oBrain.ms_seg = theMessageStruct.ms;
     }
 break;
 
@@ -629,7 +667,8 @@ case "request_resync":
     with (oAmmoPack) {
         if (!taken) SendEventToClient(targetID, "spawn_ammo_pack", {
             uid: net_uid, x: x, y: y, amount: amount,
-            is_grenade: (variable_instance_exists(id, "is_grenade_pack") ? is_grenade_pack : false)
+            is_grenade: (variable_instance_exists(id, "is_grenade_pack") ? is_grenade_pack : false),
+            gtipo: (variable_instance_exists(id, "gtipo") ? gtipo : "")
         });
     }
     with (oGun) {
@@ -773,6 +812,8 @@ break;
 		        a.taken   = false;
 		        a.amount  = _amt;
 		        a.is_grenade_pack = _isG; // Guardamos el estado
+		        a.gtipo = (_isG && variable_struct_exists(theMessageStruct, "gtipo")) ? string(theMessageStruct.gtipo) : "";
+		        a.image_blend = scr_granada_col(a.gtipo);   // electrica / cegadora pintadas (scr_armas)
 
 		        // Cambiar sprite visualmente en el cliente
 		        if (_isG) {
@@ -1148,7 +1189,8 @@ case "finalizar_partida":
         var mi_equipo_num = (global.myTeam == "ROJO") ? 1 : 2;
         
         // Con bots en la sala cuenta como partida contra bots (scr_objetivo)
-        scr_botnet_premio(global.winner_team == mi_equipo_num);
+        if (global.winner_team == 3) scr_empate_premio();   // EMPATE (scr_objetivo)
+        else scr_botnet_premio(global.winner_team == mi_equipo_num);
         
         show_debug_message(">>> CLIENTE: Progreso personal actualizado.");
     }

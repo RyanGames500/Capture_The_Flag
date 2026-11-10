@@ -164,11 +164,20 @@ function __touch_buttons_base(_mode, _W, _H) {
 	// Chat de voz en sala privada (scr_objetivo): mantener o prender/apagar segun AJUSTES
 	if (_p != noone && scr_voz_activa()) {
 		opt_init(); scr_voz_init();
-		var _vt = (global.opt.mic_modo == 0) ? "HABLAR" : (global.voz.abierto_on ? "MIC ON" : "MIC OFF");
-		if (scr_voz_motivo() != "") _vt = "SIN VOZ";
-		_hb = _K(_W - 240, 60, 34, _vt, [string(ord("V"))]);
-		_hb.ico = "mic";
-		if (global.voz.on) _hb.col = make_color_rgb(78, 200, 120);
+		// Micro y bocina chiquitos arriba a la izquierda, junto a tu vida (como Free Fire).
+		// Tocar = prender / apagar. En 1 vs 1 (sin companeros) el micro sale gris.
+		var _vp = scr_voz_hud_pos();
+		var _verde = make_color_rgb(78, 200, 120), _gris = make_color_rgb(136, 135, 128);
+		var _mok = global.voz.abierto_on && scr_voz_hay_quien() && scr_voz_motivo() == "";
+		_hb = _K(_vp.mx, _vp.y, _vp.r, "", [string(ord("V"))]);
+		_hb.ico = _mok ? "mic" : "mic_off";
+		_hb.col = _mok ? _verde : _gris;
+		_hb.p = 1;
+		array_push(_b, _hb);
+		_hb = _K(_vp.bx, _vp.y, _vp.r, "", [string(ord("B"))]);
+		_hb.ico = scr_voz_oir() ? "bocina" : "bocina_off";
+		_hb.col = scr_voz_oir() ? _verde : _gris;
+		_hb.p = 1;
 		array_push(_b, _hb);
 	}
 	if (instance_exists(oTouchControls) && oTouchControls.emote_open) {
@@ -224,13 +233,25 @@ function touch_icono(_ico, _x, _y, _s, _col) {
 			draw_rectangle(_x - 16 * _s, _y - 5 * _s, _x + 16 * _s, _y + 5 * _s, false);
 		break;
 		case "granada":
-			__touch_spr_centro(spr_granada, _x, _y, 2.2 * _s);
+			// pintada del color de la granada que llevas (scr_armas, GRANADAS)
+			var _gcol = c_white;
+			if (instance_exists(oPlayer) && variable_instance_exists(oPlayer, "granada_tipo")) _gcol = scr_granada_col(oPlayer.granada_tipo);
+			__touch_spr_centro(spr_granada, _x, _y, 2.2 * _s, _gcol);
 		break;
 		case "golpe":
 			__touch_spr_centro(spr_Hand, _x, _y, 2.6 * _s);
 		break;
 		case "mic":
 			__voz_mic(_x, _y, 1.6 * _s, _col, 1);
+		break;
+		case "mic_off":   // micro tachado (scr_objetivo)
+			__voz_mic(_x, _y, 1.6 * _s, _col, 1);
+			draw_set_colour(make_color_rgb(255, 107, 122));
+			draw_line_width(_x - 11 * _s, _y - 12 * _s, _x + 11 * _s, _y + 12 * _s, 3 * _s);
+		break;
+		case "bocina":
+		case "bocina_off":
+			__voz_bocina(_x - 4 * _s, _y, 1.6 * _s, _col, _ico == "bocina");
 		break;
 		case "pausa":
 			draw_rectangle(_x - 9 * _s, _y - 11 * _s, _x - 3 * _s, _y + 11 * _s, false);
@@ -241,8 +262,8 @@ function touch_icono(_ico, _x, _y, _s, _col) {
 }
 
 /// Dibuja un sprite centrado en (_x, _y) sin importar dónde tenga su origen.
-function __touch_spr_centro(_spr, _x, _y, _e) {
+function __touch_spr_centro(_spr, _x, _y, _e, _col = c_white) {
 	var _ox = (sprite_get_width(_spr) / 2 - sprite_get_xoffset(_spr)) * _e;
 	var _oy = (sprite_get_height(_spr) / 2 - sprite_get_yoffset(_spr)) * _e;
-	draw_sprite_ext(_spr, 0, _x - _ox, _y - _oy, _e, _e, 0, c_white, 1);
+	draw_sprite_ext(_spr, 0, _x - _ox, _y - _oy, _e, _e, 0, _col, 1);
 }

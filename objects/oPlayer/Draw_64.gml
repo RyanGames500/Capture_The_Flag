@@ -17,6 +17,9 @@ if (damage_alpha > 0) {
 
 if (has_flag) scr_bandera_gui_draw();   // efecto A (scr_fx)
 
+// Granada cegadora: pantalla blanca (scr_armas)
+scr_efx_draw_ciego();
+
 // Hitmarker: va después del flash rojo y del brillo de la bandera para que nada lo tape
 scr_hitmarker_draw();
 
@@ -102,6 +105,10 @@ if (infinite_ammo) {
     draw_sprite_part_ext(spr_HUD_Bar_Blank, 0, 0, 0, _w * _porc_a, _h, _xx, _current_y, _escala, _escala, c_aqua, 1);
 }
 
+// Micro y bocina del chat de voz: chiquitos debajo de tus barras (scr_objetivo)
+voz_hud_y = _current_y + (infinite_ammo ? _offset_y : 0);
+scr_voz_hud();   // en la PC se dibujan aqui; en el celular son botones (scr_touch)
+
 draw_set_color(c_white);
 
 
@@ -148,11 +155,41 @@ else {
     draw_text_transformed_color(_centro_x, _by + _alto_cuadro + 10, "MELEE", 1, 1, 0, c_aqua, c_aqua, c_aqua, c_aqua, 1);
 }
 
+// --- SEGUNDA ARMA: cuadro chico a la izquierda (scr_armas, SEGUNDA ARMA) ---
+var _gx_base = _bx - 40;
+if (scr_slots_dos()) {
+    scr_slot_init();
+    var _e2 = 2.4;
+    var _w2 = sprite_get_width(spr_HUD_Box) * _e2;
+    var _h2 = sprite_get_height(spr_HUD_Box) * _e2;
+    var _x2 = _bx - _w2 - 14;
+    var _y2 = _by + (_alto_cuadro - _h2) / 2;
+    slot2_x1 = _x2 - 6; slot2_y1 = _y2 - 6; slot2_x2 = _x2 + _w2 + 6; slot2_y2 = _y2 + _h2 + 30;   // donde se toca
+    var _o2 = guns[1 - weapon.index];
+    var _a2 = (_o2 != noone) ? 0.8 : 0.35;
+    draw_sprite_ext(spr_HUD_Box, 0, _x2, _y2, _e2, _e2, 0, c_white, _a2);
+    if (_o2 != noone && is_struct(_o2)) {
+        draw_sprite_ext(_o2.sprite, 0, _x2 + _w2 / 2, _y2 + _h2 / 2, _e2 - 0.8, _e2 - 0.8, 0, scr_arma_tinte(_o2), 0.85);
+        draw_set_font(fnt_menu);
+        draw_set_halign(fa_center);
+        var _t2 = (_o2.ammoType == "") ? "x" + string(_o2.ammo) : string(_o2.ammo);
+        draw_text_transformed_color(_x2 + _w2 / 2, _y2 + _h2 + 8, _t2, 0.7, 0.7, 0, c_ltgray, c_ltgray, c_ltgray, c_ltgray, 1);
+        if (!touch_mode()) {
+            // Tecla para cambiar
+            draw_set_color(make_color_rgb(44, 49, 69));
+            draw_roundrect(_x2 + _w2 - 18, _y2 - 8, _x2 + _w2 + 4, _y2 + 12, false);
+            draw_set_color(c_white);
+            draw_text_transformed(_x2 + _w2 - 7, _y2 + 2, "E", 0.6, 0.6, 0);
+        }
+    }
+    _gx_base = _x2 - 40;
+}
+
 // --- INDICADOR DE GRANADAS ---
 if (granadas > 0) {
-    var _gx = _bx - 40;
+    var _gx = _gx_base;
     var _gy = _by + (_alto_cuadro / 2);
-    draw_sprite_ext(spr_granada, 0, _gx, _gy, 2, 2, 0, c_white, 1);
+    draw_sprite_ext(spr_granada, 0, _gx, _gy, 2, 2, 0, scr_granada_col(variable_instance_exists(id, "granada_tipo") ? granada_tipo : ""), 1);
     draw_set_halign(fa_right);
     draw_text_transformed(_gx - 10, _gy - 10, "x" + string(granadas), 1, 1, 0);
 }

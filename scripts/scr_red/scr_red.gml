@@ -69,8 +69,9 @@ function scr_red_salir() {
 }
 
 /// Rayitas de señal + ping. Va en el Draw GUI de oBrain.
-/// _abajo = true: chiquito abajo al centro (en la partida). false: arriba a la derecha (en el menú).
+/// _abajo = true: solito y chiquito en la esquina de abajo a la derecha (en la partida). false: arriba a la derecha (en el menú).
 function scr_red_draw_hud(_abajo = false) {
+	if (_abajo) { scr_red_draw_esquina(); return; }
 	var _x2 = display_get_gui_width() - 10;
 	var _y2 = 10;
 	if (_abajo) {
@@ -217,6 +218,57 @@ function scr_red_draw_lag() {
 	draw_set_colour(c_red);
 	draw_roundrect_ext(x - 26, _ty - 12, x + 26, _ty + 12, 4, 4, true);
 	draw_text_transformed(x, _ty, "LAG", 0.7, 0.7, 0);
+	draw_set_colour(c_white);
+	draw_set_halign(fa_left);
+	draw_set_valign(fa_top);
+}
+
+/// Ping en la partida: rayitas y ms chiquitos en la esquina de abajo a la derecha, sin cuadro
+function scr_red_draw_esquina() {
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	var _x2 = _gw - 14, _y2 = _gh - 12;   // abajo a la derecha (es el borde de abajo del texto)
+	var _q = 4;
+	var _col = c_lime;
+	if (net_estado == "lost")      { _q = 0; _col = c_red; }
+	else if (net_estado == "unst") { _q = 1; _col = c_red; }
+	else if (global.ping >= 250)   { _q = 1; _col = c_red; }
+	else if (global.ping >= 180)   { _q = 2; _col = c_yellow; }
+	else if (global.ping >= 120)   { _q = 3; _col = c_yellow; }
+	var _apagado = (net_estado != "ok") && ((current_time div 250) mod 2 == 0);
+
+	var _txt = (net_estado == "ok" && global.ping >= 0) ? string(global.ping) + " ms" : "--- ms";
+	draw_set_font(fnt_killfeed);
+	var _sc = 0.6;
+	var _tw = string_width(_txt) * _sc;
+	draw_set_halign(fa_right);
+	draw_set_valign(fa_bottom);
+	draw_set_colour(c_black);
+	draw_text_transformed(_x2 + 1, _y2 + 1, _txt, _sc, _sc, 0);
+	draw_set_colour(_col);
+	draw_text_transformed(_x2, _y2, _txt, _sc, _sc, 0);
+
+	// Rayitas de senal a la izquierda del texto
+	for (var i = 0; i < 4; i++) {
+		var _bx = _x2 - _tw - 8 - (3 - i) * 6 - 4;
+		var _bh = 4 + i * 3;
+		draw_set_colour((i < _q && !_apagado) ? _col : c_dkgray);
+		draw_rectangle(_bx, _y2 - _bh, _bx + 4, _y2, false);
+	}
+
+	// Aviso amarillo de conexion inestable, arriba del ping en la esquina
+	if (net_estado == "unst") {
+		var _w = 230;
+		var _ay = _y2 - 26 - 38;
+		draw_set_colour(c_black);
+		draw_roundrect_ext(_x2 - _w + 3, _ay + 3, _x2 + 3, _ay + 32 + 3, 6, 6, false);
+		draw_set_colour(c_yellow);
+		draw_roundrect_ext(_x2 - _w, _ay, _x2, _ay + 32, 6, 6, false);
+		draw_set_halign(fa_center);
+		draw_set_valign(fa_middle);
+		draw_set_colour(c_black);
+		draw_text_transformed(_x2 - _w / 2, _ay + 16, "CONEXION INESTABLE", 0.8, 0.8, 0);
+	}
+
 	draw_set_colour(c_white);
 	draw_set_halign(fa_left);
 	draw_set_valign(fa_top);

@@ -4,6 +4,9 @@ scr_musica_step();
 // --- CHAT DE VOZ de las salas privadas (scr_objetivo) ---
 scr_voz_step();
 
+// --- El lider avisa cada segundo si la partida ya empezo (por si a alguien se le perdio el aviso) ---
+scr_sala_estado_step();
+
 // --- AVISO DE RED: revisa cuánto hace que el servidor no responde ---
 scr_red_step();
 
@@ -89,9 +92,8 @@ if (global.ONLINE == false && global.game_over == false) {
     // Usamos el valor del menú (6, o el que elijas)
     var limite_off = variable_global_exists("off_flags") ? global.off_flags : 3;
     
-    var _ganador_local = 0;
-    if (global.puntos_rojo >= limite_off) _ganador_local = 1; 
-    if (global.puntos_azul >= limite_off) _ganador_local = 2; 
+    // Si los dos llegan al limite a la vez y van iguales, nadie gana todavia (antes ganaba azul de regalo)
+    var _ganador_local = scr_ganador_por_banderas(limite_off);
 
     if (_ganador_local != 0) 
     {
@@ -224,6 +226,9 @@ if (oBrain.AmIPseudoHost && !intro_disparada && room != rm_menu && global.ONLINE
     }
 
     // Si todos están listos (o el tiempo se acabó), empezamos
+    // En sala privada tambien hay que esperar a los que todavia estan cargando el mapa (scr_objetivo)
+    if (todos_ready && !scr_sala_roster_presentes()) todos_ready = false;
+
     if (todos_ready && timer_intro > 0) { 
         timer_intro = 0; 
     } 
@@ -311,14 +316,13 @@ if (global.game_over == false)
 
 	if (oBrain.AmIPseudoHost) 
     {
-        var _ganador = 0;
         var _lim = scr_banderas_para_ganar();   // lo elige el líder en la sala (3 en partida rápida)
-        if (global.puntos_rojo >= _lim) _ganador = 1;
-        if (global.puntos_azul >= _lim) _ganador = 2;
-        // Se acabó el tiempo: gana el que va arriba. Si van empatados, sigue (muerte súbita)
-        // y la siguiente bandera rompe el empate.
-        if (_ganador == 0 && reloj_fin && global.puntos_rojo != global.puntos_azul) {
-            _ganador = (global.puntos_rojo > global.puntos_azul) ? 1 : 2;
+        var _ganador = scr_ganador_por_banderas(_lim);   // si llegan los dos a la vez y van iguales: nadie todavia
+        // Se acabó el tiempo: gana el que va arriba. Si van empatados, MUERTE SUBITA de 60 segundos
+        // (scr_reloj): la siguiente bandera gana, y si nadie anota se acaba en EMPATE (3).
+        if (_ganador == 0 && reloj_fin) {
+            if (global.puntos_rojo != global.puntos_azul) _ganador = (global.puntos_rojo > global.puntos_azul) ? 1 : 2;
+            else if (scr_muerte_subita_acabo()) _ganador = 3;
         }
 
         if (_ganador != 0) 
@@ -330,7 +334,8 @@ if (global.game_over == false)
     if (!puntos_procesados) {
         puntos_procesados = true;
         var mi_equipo = (global.myTeam == "ROJO") ? 1 : 2;
-        scr_botnet_premio(_ganador == mi_equipo);   // con bots en la sala, premio de partida contra bots (scr_objetivo)
+        if (_ganador == 3) scr_empate_premio();      // empate: nadie gana ni pierde (scr_objetivo)
+        else scr_botnet_premio(_ganador == mi_equipo);   // con bots en la sala, premio de partida contra bots (scr_objetivo)
     }
 
             // CAMBIO: Avisamos a TODOS los clientes que terminó la partida

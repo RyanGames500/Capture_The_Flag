@@ -624,6 +624,21 @@ else if (menu_state == "lobby_espera") {
                 draw_set_halign(fa_right);
                 draw_set_color(ui_oro);
                 draw_text_transformed(_x + slot_w - 22, _y + (slot_h / 2), "LIDER", 0.6, 0.6, 0);
+            } else if (_bot && ((_t == 1) ? "ROJO" : "AZUL") != scr_my_team()) {
+                // Lugar con bot del OTRO equipo: tocalo para pasarte (scr_objetivo)
+                var _pul = 0.55 + 0.45 * sin(current_time / 180);
+                ctf_ui_para(_x, _y, slot_w, slot_h, 10, ui_oro, 0.9 * _pul, true);
+                draw_set_font(fnt_small);
+                draw_set_halign(fa_right);
+                draw_set_color(ui_oro);
+                draw_text_transformed(_x + slot_w - 22, _y + (slot_h / 2), "TOCA PARA UNIRTE", 0.6, 0.6, 0);
+            } else if (!_bot) {
+                // Persona: LISTO o ESPERANDO (scr_objetivo)
+                var _lst = _soy_yo ? (variable_global_exists("sala_listo") && global.sala_listo) : scr_sala_listo_de(_s.cid);
+                draw_set_font(fnt_small);
+                draw_set_halign(fa_right);
+                draw_set_color(_lst ? ui_verde : ui_gris);
+                draw_text_transformed(_x + slot_w - 22, _y + (slot_h / 2), _lst ? "LISTO" : "ESPERANDO...", 0.6, 0.6, 0);
             } else if (_bot) {
                 var _cx = _x + slot_w - 92;
                 var _cy = _y + (slot_h / 2) - 14;
@@ -644,14 +659,32 @@ else if (menu_state == "lobby_espera") {
         // Ya no hay que esperar a que se llene: lo que falte lo juegan bots
         _fcol = ui_oro;
         var _tecla = touch_mode() ? "OK" : "ENTER";
-        if (_n_bots == 0) _ftxt = "SALA LLENA! PRESIONA " + _tecla + " PARA EMPEZAR";
-        else _ftxt = "PRESIONA " + _tecla + " PARA EMPEZAR (" + string(_n_bots) + ((_n_bots == 1) ? " BOT)" : " BOTS)");
+        var _faltan = scr_sala_faltan_listos();
+        if (_faltan > 0) {
+            // Todavia no estan todos listos (scr_objetivo)
+            var _avi = variable_instance_exists(id, "listo_aviso_t") && listo_aviso_t > 0;
+            _fcol = _avi ? ui_rojo : ui_gris;
+            _ftxt = "FALTAN " + string(_faltan) + ((_faltan == 1) ? " POR DAR LISTO" : " POR DAR LISTO");
+        }
+        else if (_n_bots == 0) _ftxt = "TODOS LISTOS! PRESIONA " + _tecla + " PARA EMPEZAR";
+        else _ftxt = "TODOS LISTOS! " + _tecla + " PARA EMPEZAR (" + string(_n_bots) + ((_n_bots == 1) ? " BOT)" : " BOTS)");
     } else {
-        _fcol = c_white;
-        _ftxt = "ESPERANDO A QUE EL LIDER INICIE...";
+        // Boton LISTO (scr_objetivo)
+        var _yo_listo = variable_global_exists("sala_listo") && global.sala_listo;
+        var _como = touch_mode() ? "TOCA AQUI" : "PRESIONA ENTER";
+        if (_yo_listo) {
+            _fcol = ui_verde;
+            _ftxt = "LISTO! ESPERANDO AL LIDER (" + (touch_mode() ? "TOCA" : "ENTER") + " PARA CANCELAR)";
+        } else {
+            _fcol = ui_oro;
+            _ftxt = _como + " PARA ESTAR LISTO";
+        }
     }
     draw_set_font(fnt_menu);
     var _fw = string_width(_ftxt) * 0.75 + 60;
+    // Donde se puede tocar el letrero (lo usa oMenu Step para el LISTO / EMPEZAR)
+    sala_pie_x1 = gui_w / 2 - _fw / 2; sala_pie_y1 = gui_h - 86;
+    sala_pie_x2 = gui_w / 2 + _fw / 2; sala_pie_y2 = gui_h - 34;
     ctf_ui_para(gui_w / 2 - _fw / 2, gui_h - 80, _fw, 40, 10, ui_tinta, 0.9, false);
     ctf_ui_para(gui_w / 2 - _fw / 2, gui_h - 80, _fw, 40, 10, _fcol, 0.5, true);
     draw_set_halign(fa_center);
