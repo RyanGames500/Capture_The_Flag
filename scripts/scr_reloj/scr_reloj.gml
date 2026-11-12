@@ -394,6 +394,7 @@ function scr_bot_empezar_viejo() {
 
 /// Copas y XP contra el bot (menos que contra una persona)
 function scr_bot_premio(_gane) {
+	scr_eq_premio(_gane ? 30 : 10);   // monedas (scr_armas, EQUIPAMIENTO)
 	if (_gane) {
 		global.wins  += 1;
 		global.xp    += 20;
@@ -512,6 +513,7 @@ function scr_bot_pj_bot() {
 	max_hp      = hp_max;
 	hp          = hp_max;
 	old_hp      = hp;
+	melee_damage = 20 + ((mi_clase == 1) ? TANQUE_GOLPE_EXTRA : 0);   // PASIVA TANQUE (scr_personajes)
 	playerName  = global.bot_nombre;
 	Name        = playerName;
 	scr_bot_sprites(mi_clase);
@@ -594,10 +596,10 @@ function scr_bot_hab_step() {
 					_usar = true;
 				}
 			break;
-			case 3: // SARGENTO: botiquín cuando está herido
+			case 3: // SARGENTO: botiquín cuando está herido (se cura 30 al instante)
 				if (hp < hp_max * 0.5) {
-					var _b = instance_create_layer(x, bbox_bottom - 6, "Instances", oBotiquin);
-					_b.team = team;
+					hp = min(hp_max, hp + SARG_CURA);
+					repeat (4) instance_create_layer(x + random_range(-14, 14), y - random_range(4, 30), "Instances", oHealFX);
 					if (global.sfx) audio_play_sound(snd_ammo_pickup, 5, false, 1, 0, 0.8);
 					_usar = true;
 				}

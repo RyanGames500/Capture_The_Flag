@@ -30,6 +30,9 @@ function scr_save_to_local() {
 	ini_write_real("Inventario", "avatar", global.avatar_id);
 	ini_write_string("Inventario", "skin", string(global.skin_actual));
 	ini_write_string("Inventario", "desbloqueados", json_stringify(global.desbloqueados));
+	// Equipamiento: monedas, armas, mejoras y tus 2 armas (scr_armas, EQUIPAMIENTO)
+	scr_eq_init();
+	ini_write_string("Equipo", "datos", json_stringify(global.equipo));
 
 	// GUARDAR AMIGOS EN ARCHIVO APARTE
     var _file = file_text_open_write("amigos_data.json");

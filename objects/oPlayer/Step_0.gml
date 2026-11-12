@@ -186,7 +186,7 @@ if (global.ONLINE && spawn_lock > 0)
 // Cambiar entre tus 2 armas: E, rueda del mouse o tocar el cuadro chico (scr_armas, SEGUNDA ARMA)
 scr_arma_cambio_step();
 
-var canShoot = (!has_flag) && (state != PLAYERSTATE.DEAD);
+var canShoot = (!has_flag || scr_pj_dispara_con_bandera()) && (state != PLAYERSTATE.DEAD);   // el Sargento si puede (scr_personajes)
 if (scr_efx_aturdido()) canShoot = false;   // aturdido o congelado: no dispara
 
 if (melee_active > 0)

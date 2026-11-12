@@ -771,6 +771,7 @@ function fb_indicadores() {
 
 	with (oOtherPlayer) {
 		if (state == PLAYERSTATE.DEAD || !visible) continue;
+		if (scr_pj_oculto(_mio)) continue;   // Exploradora rival: sin circulito (scr_personajes)
 		if (x >= _vx && x <= _vx + _vw && y >= _vy && y <= _vy + _vh) continue;   // se ve en pantalla
 
 		// Punto en el borde
@@ -879,6 +880,7 @@ function fb_indicadores_bot() {
 
 	with (oPlayer2_local) {
 		if (isDead || !visible) continue;
+		if (scr_pj_oculto(_mio)) continue;   // Exploradora rival: sin circulito (scr_personajes)
 		if (x >= _vx && x <= _vx + _vw && y >= _vy && y <= _vy + _vh) continue;
 
 		var _tx = (x - _vx) * (_gw / _vw);

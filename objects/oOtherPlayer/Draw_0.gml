@@ -44,7 +44,7 @@ if (invulnerable) {
 if (state != PLAYERSTATE.DEAD) {
 
     var dir = sign(image_xscale);
-    var tiene_arma = (WSI != 0 && !has_flag);
+    var tiene_arma = (WSI != 0 && (!has_flag || mySelectedPJ == 3));   // el Sargento lleva arma con la bandera (scr_personajes)
 
     // 1. Punto de giro (Hombro)
     var hombroX = x + (2 * dir); 

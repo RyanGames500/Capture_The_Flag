@@ -239,7 +239,13 @@ var move = vkey_pressed(ord("S")) - vkey_pressed(ord("W"));
 					exit;
                 break;
                 
-                case 1: 
+                case 1: // EQUIPMENT: tus 2 armas, comprar y mejorar (scr_armas, EQUIPAMIENTO)
+					menu_state = "equipo";
+					scr_eq_abrir();
+					menu_delay = 5;
+				break;
+
+                case 2: 
 					global.ONLINE = false;
 					if(global.ONLINE){
 					DisconnectFromServer();}
@@ -262,35 +268,35 @@ var move = vkey_pressed(ord("S")) - vkey_pressed(ord("W"));
                 break;
 
 
-				case 2: // FRIENDS
+				case 3: // FRIENDS
 				    menu_state = "friends_menu";
 				    friends_index = 0;
 				    friends_state = "main";
 					exit;
 				break;
 
-				case 3:
+				case 4:
 				menu_state = "achievements";
 				break;
 
-				case 4: // RANKING (las cuentas con mas copas) (DatabaseFunctions)
+				case 5: // RANKING (las cuentas con mas copas) (DatabaseFunctions)
 				    menu_state = "ranking";
 				    scr_ranking_abrir();
 				    menu_delay = 5;
 				break;
 
-				case 5: 
+				case 6: 
 				    menu_state = "profile";
 					show_debug_message(">>> ENTRANDO AL PERFIL");
 				break;
                 
-                case 6: // OPTIONS -> pantalla de AJUSTES
+                case 7: // OPTIONS -> pantalla de AJUSTES
 					menu_state = "options";
 					opt_sel = 0;
 					menu_delay = 5;
                 break;
 				
-                case 7: 
+                case 8: 
                     game_end();
                 break;
             }
@@ -900,6 +906,7 @@ if (estado_busqueda == "error" && mensaje_alpha <= 0) {
 }
 
 if (menu_state == "ranking") scr_ranking_step();   // (DatabaseFunctions)
+if (menu_state == "equipo") scr_eq_step();        // EQUIPAMIENTO (scr_armas)
 
 if (menu_state == "achievements") {
     if (vkey_pressed(vk_escape)) {

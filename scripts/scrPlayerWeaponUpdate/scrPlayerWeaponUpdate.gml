@@ -79,7 +79,7 @@ function scrPlayerWeaponUpdate()
             bullet.life = 40;
             bullet.owner_team = global.myTeam;
             bullet.owner_id = id;
-            bullet.damage = w.damage * damage_boost; 
+            bullet.damage = w.damage * damage_boost + scr_pj_bono_auto(w);   // pasiva del Asalto (scr_personajes) 
 
             if (damage_boost > 1) {
                 bullet.image_blend = c_red;
@@ -127,7 +127,7 @@ function scrPlayerWeaponUpdate()
             bullet.speed = 16;   // antes 11
             bullet.direction = shot_dir;
             bullet.life = 35;
-            bullet.damage = w.damage * damage_boost; 
+            bullet.damage = w.damage * damage_boost + scr_pj_bono_auto(w);   // pasiva del Asalto (scr_personajes) 
             bullet.owner_team = global.myTeam;
             bullet.owner_id = id;
 
@@ -258,7 +258,7 @@ function scrPlayerWeaponUpdate()
             bullet.direction = shot_dir;
             bullet.image_angle = shot_dir;
             bullet.life = 40;    // con 19 de velocidad llega a 760 px
-            bullet.damage = w.damage * damage_boost; 
+            bullet.damage = w.damage * damage_boost + scr_pj_bono_auto(w);   // pasiva del Asalto (scr_personajes) 
             bullet.owner_team = global.myTeam;
             bullet.owner_id = id;
 

@@ -159,3 +159,6 @@ if (variable_global_exists("bot_partida") && global.bot_partida) {
 	dificultad = 2;      // como una persona normal
 	scr_bot_pj_bot();
 }
+
+// EQUIPAMIENTO: el bot tambien empieza con un arma (en el mapa ya no salen las normales) (scr_armas)
+scr_eq_dar_bot_local();

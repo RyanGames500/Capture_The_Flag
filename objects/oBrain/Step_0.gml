@@ -110,6 +110,13 @@ if (global.ONLINE == false && global.game_over == false) {
             var _mi_eq = (global.myTeam == "ROJO") ? 1 : 2;
             scr_bot_premio(_ganador_local == _mi_eq);
         }
+        // Local con bots (no practica sola): unas pocas monedas (scr_armas, EQUIPAMIENTO)
+        else if (!global.bot_partida && !puntos_procesados && variable_global_exists("off_bots") && global.off_bots >= 1) {
+            puntos_procesados = true;
+            var _mi_eq2 = (global.myTeam == "ROJO") ? 1 : 2;
+            scr_eq_premio((_ganador_local == _mi_eq2) ? 15 : 5);
+            scr_save_to_local();
+        }
         with(oMouseIcon_falso) { window_set_cursor(cr_arrow); }
     }
 }
@@ -449,8 +456,12 @@ if (oBrain.AmIPseudoHost)
 				    _nuevo = host_spawn_ammo(x, y, 25); 
 				}
 				// --- SPAWN DE ARMAS ---
+                else if (tipo_spawn == "weapon" && EQ_MAPA_SOLO_FUERTES && (nivel == 1 || nivel == 2 || (nivel == 0 && random(100) < 70))) {
+                    // EQUIPAMIENTO: donde salian pistolas, subfusiles y rifles ahora sale municion o granadas (scr_armas)
+                    _nuevo = host_spawn_ammo(x, y, 25);
+                }
                 else if (tipo_spawn == "weapon") {
-                    var _struct_a_usar = arma_struct;
+                    var _struct_a_usar = EQ_MAPA_SOLO_FUERTES ? noone : arma_struct;   // con EQUIPAMIENTO solo las fuertes
                     if (_struct_a_usar == noone) {
                         // Según el nivel del punto (scr_armas): 1 pistolas/subfusiles, 2 rifles/escopetas, 3 fuertes, 0 de todo
                         _struct_a_usar = scr_arma_al_azar(nivel);

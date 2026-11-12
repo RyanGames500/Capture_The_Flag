@@ -44,7 +44,7 @@ if (invulnerable) {
 if (state != PLAYERSTATE.DEAD) {
 
     var dir = sign(image_xscale);
-    var tiene_arma = (guns[weapon.index] != noone && !has_flag && !instance_exists(mi_guante));
+    var tiene_arma = (guns[weapon.index] != noone && (!has_flag || scr_pj_dispara_con_bandera()) && !instance_exists(mi_guante));
 
     // 1. Punto de giro (Hombro)
     var hombroX = x + (2 * dir); 

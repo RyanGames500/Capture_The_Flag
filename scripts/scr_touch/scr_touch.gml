@@ -228,6 +228,12 @@ function touch_icono(_ico, _x, _y, _s, _col) {
 			draw_circle(_x + 10 * _s, _y - 10 * _s, 7 * _s, true);
 			draw_circle(_x + 10 * _s, _y - 10 * _s, 6 * _s, true);
 		break;
+		case "red":
+			for (var _ri = -2; _ri <= 2; _ri++) {
+				draw_line_width(_x + _ri * 7 * _s, _y - 16 * _s, _x + _ri * 7 * _s, _y + 16 * _s, 2 * _s);
+				draw_line_width(_x - 16 * _s, _y + _ri * 7 * _s, _x + 16 * _s, _y + _ri * 7 * _s, 2 * _s);
+			}
+		break;
 		case "botiquin":
 			draw_rectangle(_x - 5 * _s, _y - 16 * _s, _x + 5 * _s, _y + 16 * _s, false);
 			draw_rectangle(_x - 16 * _s, _y - 5 * _s, _x + 16 * _s, _y + 5 * _s, false);

@@ -805,6 +805,9 @@ else if (menu_state == "achievements") {
 else if (menu_state == "ranking") {
     scr_ranking_draw();   // (DatabaseFunctions)
 }
+else if (menu_state == "equipo") {
+    scr_eq_draw();        // EQUIPAMIENTO (scr_armas)
+}
 else if (menu_state == "friends_menu") {
     var cx = gui_w / 2;
     var cy = gui_h / 2;

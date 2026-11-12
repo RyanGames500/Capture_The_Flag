@@ -28,6 +28,10 @@ function scr_load_from_local() {
 		global.skin_actual = ini_read_string("Inventario", "skin", "");
 		try { global.desbloqueados = json_parse(ini_read_string("Inventario", "desbloqueados", "[]")); } catch (_e2) { global.desbloqueados = []; }
 		if (!is_array(global.desbloqueados)) global.desbloqueados = [];
+		// Equipamiento (scr_armas, EQUIPAMIENTO)
+		try { global.equipo = json_parse(ini_read_string("Equipo", "datos", "{}")); } catch (_e3) { global.equipo = {}; }
+		if (!is_struct(global.equipo)) global.equipo = {};
+		scr_eq_init();
 
 	// CARGAR AMIGOS DESDE EL ARCHIVO APARTE
     if (file_exists("amigos_data.json")) {

@@ -535,12 +535,14 @@ function minimapa_draw() {
     // Otros jugadores en linea
     with (oOtherPlayer) {
         if (!visible || state == PLAYERSTATE.DEAD) continue;
+        if (scr_pj_oculto(_mi_team)) continue;   // Exploradora rival: no sale (scr_personajes)
         var _t = variable_instance_exists(id, "team") ? string(team) : _rival;
         _dibujar(x, (bbox_top + bbox_bottom) / 2, (_t == "AZUL") ? _azul : _rojo, false, _mx, _my, _kx, _ky, _mw, _mh, _modo, _r, _py);
     }
     // Rival en local (bot / jugador 2)
     with (oPlayer2_local) {
         if (!visible) continue;
+        if (scr_pj_oculto(_mi_team)) continue;   // Exploradora rival: no sale (scr_personajes)
         var _t2 = variable_instance_exists(id, "team") ? string(team) : _rival;
         _dibujar(x, (bbox_top + bbox_bottom) / 2, (_t2 == "AZUL") ? _azul : _rojo, false, _mx, _my, _kx, _ky, _mw, _mh, _modo, _r, _py);
     }

@@ -1,4 +1,5 @@
 function scr_add_victory() {
+    scr_eq_premio(50);   // monedas (scr_armas, EQUIPAMIENTO)
     global.wins += 1;
     global.xp += 50; // Recompensa de XP por ganar
     

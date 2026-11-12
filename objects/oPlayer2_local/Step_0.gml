@@ -1,5 +1,19 @@
 // Contra el bot de partida rápida: quieto mientras eligen personaje y en la intro VS
 if (scr_bot_congelado()) { hsp = 0; vsp = 0; sprite_index = spr_idle; exit; }
+// Atrapado en la red de la Exploradora (scr_personajes): 2 s sin moverse, solo cae
+if (variable_instance_exists(id, "red_t") && red_t > 0) {
+    red_t--;
+    hsp = 0;
+    push_h = 0;
+    vsp = min(vsp + grv, 10);
+    if (place_meeting(x, y + vsp, obj_wall) || (vsp > 0 && place_meeting(x, y + vsp, oPlataformaPasable) && !place_meeting(x, y, oPlataformaPasable))) {
+        while (!place_meeting(x, y + sign(vsp), obj_wall) && !(vsp > 0 && place_meeting(x, y + 1, oPlataformaPasable))) y += sign(vsp);
+        vsp = 0;
+    }
+    y += vsp;
+    sprite_index = spr_idle;
+    exit;
+}
 if (global.bot_partida) scr_bot_hab_step();   // habilidad y pasivas de su personaje (scr_reloj)
 
 // Esto debería estar en el Step de tu objeto enemigo/jugador

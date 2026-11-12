@@ -152,8 +152,15 @@ function scr_cuenta_perfil() {
 		// INVENTARIO (icono, skin puesta y desbloqueables)
 		avatar: variable_global_exists("avatar_id") ? global.avatar_id : 0,
 		skin: scr_inv_skin(),
-		desbloqueados: scr_inv_lista()
+		desbloqueados: scr_inv_lista(),
+		// EQUIPAMIENTO: monedas, armas compradas, mejoras y tus 2 armas (scr_armas)
+		equipo: __cuenta_equipo()
 	};
+}
+
+function __cuenta_equipo() {
+	scr_eq_init();
+	return global.equipo;
 }
 
 function __cuenta_dato(_p, _k, _def) {
@@ -186,6 +193,9 @@ function scr_cuenta_aplicar(_json) {
 	if (variable_struct_exists(_p, "skin")) global.skin_actual = string(_p.skin);
 	var _db = __cuenta_dato(_p, "desbloqueados", undefined);
 	if (is_array(_db)) for (var k = 0; k < array_length(_db); k++) scr_inv_agregar(string(_db[k]));
+	// EQUIPAMIENTO: monedas de la cuenta; armas y mejoras se juntan con las del aparato (scr_armas)
+	var _eqc = __cuenta_dato(_p, "equipo", undefined);
+	if (is_struct(_eqc)) scr_eq_aplicar_cuenta(_eqc);
 	// Logros: se juntan los de la cuenta con los del aparato (no se pierde ninguno)
 	var _lg = __cuenta_dato(_p, "logros", undefined);
 	if (is_array(_lg)) {

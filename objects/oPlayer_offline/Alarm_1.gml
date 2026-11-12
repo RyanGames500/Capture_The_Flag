@@ -15,6 +15,7 @@ visible = true;
 for (var i = 0; i < array_length(guns); i++) {
     guns[i] = noone;
 }
+scr_eq_dar();   // EQUIPAMIENTO: vuelves con tus 2 armas (scr_armas)
 
 // 4. INVULNERABILIDAD POST-RESPAWN
 // 180 frames = 3 segundos de protección para que no te maten apenas apareces

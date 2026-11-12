@@ -1,6 +1,7 @@
 function scr_drop_on_death(_weapon_struct, _x, _y) {
     if (!oBrain.AmIPseudoHost) exit;
     if (!is_struct(_weapon_struct)) exit;
+    if (variable_struct_exists(_weapon_struct, "equipada")) exit;   // las del EQUIPAMIENTO no se tiran (scr_armas)
  
 
     var drop = instance_create_layer(_x, _y, "Weapons", oGun);

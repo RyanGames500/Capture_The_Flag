@@ -1,6 +1,6 @@
 
 // Menú principal más limpio
-menu_options = ["PLAY","OFFLINE","FRIENDS","ACHIEVEMENTS", "RANKING", "PROFILE", "OPTIONS", "EXIT"];   // RANKING nuevo (DatabaseFunctions)
+menu_options = ["PLAY","EQUIPMENT","OFFLINE","FRIENDS","ACHIEVEMENTS", "RANKING", "PROFILE", "OPTIONS", "EXIT"];   // EQUIPMENT nuevo (scr_armas)   // RANKING nuevo (DatabaseFunctions)
 index = 0;
 
 // Nueva lista para cuando elijas PLAY

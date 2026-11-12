@@ -425,6 +425,7 @@ function scr_botnet_init(_team, _name, _pj) {
 	bot_rafaga = 0;
 	bot_rafaga_t = 0;
 	scr_botnet_pistola();
+	scr_botnet_equipo_azar();   // EQUIPAMIENTO: empieza con un arma al azar (scr_armas)
 
 	// Habilidad de su personaje (scr_botnet_hab_usar)
 	bot_hab_cd = irandom_range(60, 180);
@@ -891,7 +892,7 @@ function scr_botnet_disparar(_de_rafaga = false) {
 		_b.image_angle = _dir;
 		_b.speed = _d.vel * ((_d.balas > 1) ? random_range(0.9, 1.1) : 1);
 		_b.life = _d.vida;
-		_b.damage = _d.dano;
+		_b.damage = _d.dano + ((bot_pj == 0 && _d.cada <= 10 && _d.balas == 1 && !_d.cohete && _d.efecto == "") ? irandom_range(2, 3) : 0);   // pasiva del Asalto
 		_b.sprite_index = _d.bala;
 		if (_d.atraviesa > 1) _b.atraviesa = _d.atraviesa;
 		if (_d.cohete) {
@@ -948,12 +949,34 @@ function scr_botnet_hab_usar(_dist) {
 				_usar = true;
 			}
 		break;
-		case 3:
+		case 2:   // EXPLORADORA: la red cuando tiene al rival cerca (scr_personajes)
+			if (_dist < 260 && random(1) < 0.08) {
+				var _rd = weapon.angle;
+				var _rb = instance_create_layer(x + lengthdir_x(14, _rd), y - 20 + lengthdir_y(14, _rd), "Instances", oMyEntity);
+				_rb.owner_name = Name;
+				_rb.owner_team = team;
+				_rb.owner_id = id;
+				_rb.bot_team = team;
+				_rb.bot_src = id;
+				_rb.direction = _rd;
+				_rb.image_angle = _rd;
+				_rb.speed = EXPLO_RED_VEL;
+				_rb.life = 90;
+				_rb.damage = EXPLO_RED_DANO;
+				_rb.sprite_index = sprBullet_smg;
+				_rb.efecto = "red_hab";
+				_rb.gravity = 0.32;
+				_rb.gravity_direction = 270;
+				_rb.image_xscale = 1.5;
+				_rb.image_yscale = 1.5;
+				if (global.sfx && scr_botnet_se_ve(x, y)) audio_play_sound(snd_escop, 5, false, 0.6, 0, 1.4);
+				_usar = true;
+			}
+		break;
+		case 3:   // SARGENTO: se cura 30 al instante cuando esta herido (scr_personajes)
 			if (hp < max_health * 0.5) {
-				var _bq = instance_create_layer(x, bbox_bottom - 6, "Instances", oBotiquin);
-				_bq.team = team;
-				var _m = { x: _bq.x, y: _bq.y, team: team };
-				with (oOtherPlayer) if (!es_bot) SendEventToClient(clientId, "hab_botiquin", _m);
+				hp = min(max_health, hp + SARG_CURA);
+				repeat (4) instance_create_layer(x + random_range(-14, 14), y - random_range(4, 30), "Instances", oHealFX);
 				if (global.sfx && scr_botnet_se_ve(x, y)) audio_play_sound(snd_ammo_pickup, 5, false, 1, 0, 0.8);
 				_usar = true;
 			}
@@ -1020,7 +1043,7 @@ function scr_botnet_golpe(_t) {
 	var _m = { x: x, y: y, dir: _dir };
 	with (oOtherPlayer) if (!es_bot) SendEventToClient(clientId, "fx_melee", _m);
 	if (global.sfx && scr_botnet_se_ve(x, y)) audio_play_sound(snd_melee, 1, false);
-	scr_botnet_pegar(_t, BOTNET_GOLPE, point_direction(x, y, _t.x, _t.y));
+	scr_botnet_pegar(_t, BOTNET_GOLPE + ((bot_pj == 1) ? TANQUE_GOLPE_EXTRA : 0), point_direction(x, y, _t.x, _t.y));   // pasiva del Tanque
 }
 
 /// El bot le pega a alguien: a tu jugador, a otra persona o a otro bot.
@@ -1222,6 +1245,7 @@ function scr_botnet_revivir() {
 	sprite_index = bot_anim.idle;
 	bot_invul = 120;
 	scr_botnet_pistola();
+	scr_botnet_equipo_azar();   // EQUIPAMIENTO (scr_armas)
 	bot_hab_cd = irandom_range(30, 90);
 	nav_path = [];
 	nav_escape = 0;
@@ -2603,6 +2627,7 @@ function scr_sala_listo_step() {
 /// EMPATE: no se ganan ni se pierden trofeos, solo +10 XP por jugar (en sala privada nada)
 function scr_empate_premio() {
 	if (scr_fin_es_privada()) return;
+	scr_eq_premio(25);   // monedas por jugar (scr_armas, EQUIPAMIENTO)
 	global.xp += 10;
 	while (global.xp >= 100) { global.lvl += 1; global.xp -= 100; }
 	scr_save_to_local();
@@ -2734,3 +2759,4 @@ function scr_voz_hud() {
 	draw_text_transformed(_p.bx, _p.y + _p.r + 2, "B", 0.5, 0.5, 0);
 	draw_set_halign(fa_left);
 }
+

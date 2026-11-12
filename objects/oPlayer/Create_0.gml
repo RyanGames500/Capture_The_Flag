@@ -148,3 +148,6 @@ escudo_visual = shield_timer;
 TAG=string(global.miFriendTag);
 mi_guante = noone;
 hit_bloqueo_timer=0;
+
+// EQUIPAMIENTO: apareces con tus 2 armas (scr_armas)
+scr_eq_dar();
