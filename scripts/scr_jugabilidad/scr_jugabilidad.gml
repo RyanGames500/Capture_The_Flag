@@ -70,6 +70,7 @@ function scr_fondo_variante() {
 // Devuelve true si te lanzó.
 // ------------------------------------------------------
 function scr_salto_usar() {
+	if (scr_grav_dir() < 0) return false;   // GRAVEDAD LOCA: de cabeza no se usan
 	var _p = instance_place(x, y + 2, oSalto);
 	if (_p == noone) return false;
 	vsp = SALTO_VSP;
@@ -86,7 +87,7 @@ function scr_arma_punta(_largo = 34) {
 	var _d = sign(image_xscale);
 	var _a = weapon.angle;
 	var _hx = x + 2 * _d + lengthdir_x(14, _a);
-	var _hy = y - 18 + lengthdir_y(14, _a);
+	var _hy = y - 18 * scr_grav_signo() + lengthdir_y(14, _a);   // GRAVEDAD LOCA: de cabeza el hombro va abajo
 	var _adj = (_a > 90 && _a < 270) ? 4 : -4;
 	return [_hx + lengthdir_x(_largo, _a) + lengthdir_x(_adj, _a - 90),
 	        _hy + lengthdir_y(_largo, _a) + lengthdir_y(_adj, _a - 90)];

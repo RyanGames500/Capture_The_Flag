@@ -1244,6 +1244,17 @@ function scr_eq_reserva(_w) {
 function scr_eq_dar() {
 	scr_eq_init();
 	if (array_length(guns) < 2) guns[1] = noone;
+	// UN TIRO (scr_reloj): todos con el francotirador y nada mas
+	if (scr_modo_tiro()) {
+		var _fr = scr_eq_arma("g_franco", false);
+		guns[0] = _fr;
+		guns[1] = noone;
+		weapon.index = 0;
+		reloading = false;
+		reload_timer = 0;
+		reserve[$ _fr.ammoType] = scr_municion_tope(_fr.ammoType);
+		return;
+	}
 	var _p = scr_eq_arma(global.equipo.p);
 	var _s = scr_eq_arma(global.equipo.s);
 	guns[0] = _p;
@@ -1268,6 +1279,18 @@ function scr_eq_dar_bot_local() {
 
 /// Bot de sala (en linea): un arma del equipamiento al azar hasta nivel 12 (sin mejoras)
 function scr_botnet_equipo_azar() {
+	// UN TIRO (scr_reloj): los bots tambien con francotirador (balas sin fin)
+	if (scr_modo_tiro()) {
+		var _fw = scr_eq_arma("g_franco", false);
+		bot_w_src = _fw;
+		bot_w = scr_botnet_arma_datos(_fw);
+		ammo = bot_w.max;
+		bot_cargas = -1;
+		reloading = false;
+		bot_rafaga = 0;
+		WSI = bot_w.spr;
+		return;
+	}
 	var _c = scr_eq_catalogo();
 	var _ops = [];
 	for (var i = 0; i < array_length(_c); i++) if (_c[i].lv <= 12) array_push(_ops, _c[i].id);
@@ -1522,6 +1545,20 @@ function __eq_rect(_x1, _y1, _x2, _y2, _r, _col, _a, _borde = false) {
 	draw_set_alpha(1);
 }
 
+/// Panel con sombra y borde oscuro (estetica del menu nuevo)
+function __eq_caja(_x1, _y1, _x2, _y2, _r, _col) {
+	__eq_rect(_x1, _y1 + 5, _x2, _y2 + 5, _r, c_black, 0.45);
+	__eq_rect(_x1, _y1, _x2, _y2, _r, _col, 1);
+	__eq_rect(_x1, _y1, _x2, _y2, _r, make_color_rgb(11, 15, 26), 1, true);
+}
+/// Boton con relieve (sombra, brillo arriba y borde oscuro)
+function __eq_boton(_x1, _y1, _x2, _y2, _r, _col) {
+	__eq_rect(_x1, _y1 + 5, _x2, _y2 + 5, _r, merge_colour(_col, c_black, 0.55), 1);
+	__eq_rect(_x1, _y1, _x2, _y2, _r, _col, 1);
+	__eq_rect(_x1 + 5, _y1 + 4, _x2 - 5, _y1 + (_y2 - _y1) * 0.42, _r * 0.6, merge_colour(_col, c_white, 0.25), 1);
+	__eq_rect(_x1, _y1, _x2, _y2, _r, make_color_rgb(11, 15, 26), 1, true);
+}
+
 function __eq_txt(_x, _y, _s, _px, _col, _ha, _a = 1, _font = fnt_menu) {
 	draw_set_font(_font);
 	draw_set_halign(_ha);
@@ -1583,16 +1620,18 @@ function scr_eq_draw() {
 	var _cat = scr_eq_catalogo();
 	var _n = array_length(_cat);
 	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
-	var _tinta = make_color_rgb(11, 15, 26), _panel = make_color_rgb(22, 28, 44), _caja = make_color_rgb(150, 160, 185);
+	var _tinta = make_color_rgb(11, 15, 26), _panel = make_color_rgb(20, 24, 50), _caja = make_color_rgb(150, 160, 185);
 	var _oro = make_color_rgb(255, 212, 71), _azul = make_color_rgb(31, 155, 255), _gris = make_color_rgb(169, 180, 208);
 	var _verde = make_color_rgb(78, 220, 140), _rojo = make_color_rgb(229, 72, 77), _apag = make_color_rgb(60, 66, 86);
 	var _fx = _q.fx, _t = _q.fx_t;
 
-	// Fondo (toda la pantalla) y barra de arriba
-	draw_set_color(make_color_rgb(16, 20, 34));
-	draw_rectangle(0, 0, _gw, _gh, false);
+	// Fondo (toda la pantalla) y barra de arriba (estetica del menu nuevo)
+	if (MN_NUEVO) __mn_fondo_wh(_gw, _gh);
+	else { draw_set_color(make_color_rgb(16, 20, 34)); draw_rectangle(0, 0, _gw, _gh, false); }
 	draw_set_color(_tinta);
+	draw_set_alpha(0.75);
 	draw_rectangle(0, 0, _gw, __eq_y(44), false);
+	draw_set_alpha(1);
 	__eq_txt(18, 22, "EQUIPAMIENTO", 20, c_white, fa_left);
 	__eq_txt(452, 22, "NV " + string(global.lvl), 15, _azul, fa_left);
 	__eq_moneda(512, 22, 8);
@@ -1601,11 +1640,11 @@ function scr_eq_draw() {
 		var _ft = (_t - 6) / 54;
 		__eq_txt(526, 40 - 10 * __eq_ease(_ft), "-" + string(_q.fx_costo), 11, _rojo, fa_left, 1 - _ft);
 	}
-	__eq_rect(610, 8, 712, 36, 6, make_color_rgb(40, 46, 66), 1);
+	__eq_boton(610, 8, 712, 36, 6, make_color_rgb(44, 54, 110));
 	__eq_txt(661, 22, "VOLVER", 12, c_white, fa_center);
 
 	// --- LISTA ---
-	__eq_rect(12, 54, 262, EQ_LISTA_FIN + 4, 10, _panel, 1);
+	__eq_caja(12, 54, 262, EQ_LISTA_FIN + 4, 10, _panel);
 	for (var i = 0; i < _n; i++) {
 		var _it = _cat[i];
 		var _y = EQ_LISTA_Y + i * EQ_FILA - _q.scroll;
@@ -1643,7 +1682,7 @@ function scr_eq_draw() {
 	var _mia2 = scr_eq_tiene(_sel.id);
 	var _nmej = scr_eq_mejora(_sel.id);
 	var _es_fx = (_q.fx_id == _sel.id && _t >= 0);
-	__eq_rect(274, 54, 708, 301, 10, _panel, 1);
+	__eq_caja(274, 54, 708, 301, 10, _panel);
 	__eq_txt(292, 74, _sel.nombre, 22, c_white, fa_left);
 	// Estrellas (la nueva salta con un aro)
 	for (var k = 0; k < EQ_MEJORA_MAX; k++) {
@@ -1695,7 +1734,7 @@ function scr_eq_draw() {
 	var _bs = __eq_botones();
 	for (var j = 0; j < array_length(_bs); j++) {
 		var _bt = _bs[j];
-		__eq_rect(_bt.x1, _bt.y1, _bt.x2, _bt.y2, 8, _bt.col, 1);
+		__eq_boton(_bt.x1, _bt.y1, _bt.x2, _bt.y2, 10, _bt.col);
 		__eq_txt((_bt.x1 + _bt.x2) / 2, (_bt.y1 + _bt.y2) / 2, _bt.txt, (array_length(_bs) == 1) ? 15 : 13, _bt.tc, fa_center);
 	}
 	// Cartel de la mejora / compra
@@ -1724,7 +1763,7 @@ function scr_eq_draw() {
 	for (var m = 0; m < 2; m++) {
 		var _sx1 = 274 + m * (_sw + 6), _sx2 = _sx1 + _sw - 6;
 		var _act = (_q.slot == m);
-		__eq_rect(_sx1, 311, _sx2, EQ_LISTA_FIN + 4, 10, _panel, 1);
+		__eq_caja(_sx1, 311, _sx2, EQ_LISTA_FIN + 4, 10, _panel);
 		__eq_rect(_sx1, 311, _sx2, EQ_LISTA_FIN + 4, 10, _act ? _azul : make_color_rgb(60, 70, 100), 1, true);
 		if (_fx == "equipa" && _t < 24 && _act) __eq_rect(_sx1, 311, _sx2, EQ_LISTA_FIN + 4, 10, c_white, 0.35 * (1 - _t / 24));
 		__eq_txt(_sx1 + 14, 327, _labs[m], 11, _act ? _azul : _gris, fa_left);

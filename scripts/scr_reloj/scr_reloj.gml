@@ -42,8 +42,31 @@ function scr_ajustes_cambiar(_fila, _dir) {
 	}
 }
 
+// ------------------------------------------------------
+// MODOS DE JUEGO (tarjetas del menu nuevo). global.match_modo:
+//   0 CLASICO, 1 BANDERA BOMBA, 2 GRAVEDAD LOCA, 3 UN TIRO, 4 REY DE LA BANDERA, 5 PISO DE LAVA
+// Lo elige quien busca partida o el lider de la sala, y viaja con los ajustes ("mo").
+// ------------------------------------------------------
+#macro MODO_TIRO 3
+
+function scr_modo() {
+	return (variable_global_exists("match_modo") && is_numeric(global.match_modo)) ? global.match_modo : 0;
+}
+function scr_modo_nombre() {
+	switch (scr_modo()) {
+		case 1: return "BANDERA BOMBA";
+		case 2: return "GRAVEDAD LOCA";
+		case 3: return "UN TIRO";
+		case 4: return "REY DE LA BANDERA";
+		case 5: return "PISO DE LAVA";
+	}
+	return "CLASICO";
+}
+/// UN TIRO: todos con francotirador y 1 de vida (solo en linea)
+function scr_modo_tiro() { return global.ONLINE && scr_modo() == MODO_TIRO; }
+
 function scr_ajustes_struct() {
-	var _s = { t: global.match_tiempo, m: global.match_mapa, b: global.match_banderas };
+	var _s = { t: global.match_tiempo, m: global.match_mapa, b: global.match_banderas, mo: scr_modo() };
 	// En la sala de espera el lider tambien manda los equipos (parejos, scr_objetivo)
 	if (room == rm_menu && instance_exists(oBrain) && oBrain.AmIPseudoHost) _s.eq = scr_sala_equipos_calc();
 	return _s;
@@ -55,6 +78,7 @@ function scr_ajustes_aplicar(_s) {
 	if (variable_struct_exists(_s, "t") && is_numeric(_s.t)) global.match_tiempo   = max(0, round(_s.t));
 	if (variable_struct_exists(_s, "m") && is_numeric(_s.m)) global.match_mapa     = clamp(round(_s.m), 0, MAPA_ALEATORIO);
 	if (variable_struct_exists(_s, "b") && is_numeric(_s.b)) global.match_banderas = clamp(round(_s.b), 1, 5);
+	if (variable_struct_exists(_s, "mo") && is_numeric(_s.mo)) global.match_modo = clamp(round(_s.mo), 0, 5);   // modo de juego
 	if (variable_struct_exists(_s, "eq")) scr_sala_equipos_aplicar(_s.eq);   // equipos que repartio el lider
 }
 
@@ -236,7 +260,7 @@ function scr_ajustes_draw(_soy_lider, _sel) {
 	draw_rectangle(_x1 + 16, _y0 + 12, _x1 + 18, _y0 + 24, false);
 	draw_set_colour(_gris);
 	draw_set_alpha(0.7);
-	draw_text_transformed(_x1 + 28, _y0 + 18, _soy_lider ? "AJUSTES DE LA PARTIDA" : "AJUSTES DE LA PARTIDA (LOS ELIGE EL LIDER)", 0.6, 0.6, 0);
+	draw_text_transformed(_x1 + 28, _y0 + 18, "MODO: " + scr_modo_nombre() + (_soy_lider ? "   -   AJUSTES DE LA PARTIDA" : "   -   AJUSTES (LOS ELIGE EL LIDER)"), 0.6, 0.6, 0);
 	draw_set_alpha(1);
 
 	var _nom = ["TIEMPO", "MAPA", "BANDERAS PARA GANAR"];
@@ -353,8 +377,25 @@ function scr_botq_arrancar() {
 	global.game_over   = false;
 	global.pausa       = false;
 	global.mi_listo    = false;
-	// El rival: un bot de sala privada, con nombre de persona (sin "BOT")
-	global.botnet_defs = [{ i: BOTNET_ID_BASE - 4, n: global.bot_nombre, t: "ROJO", r: "ataque", h: true, pj: global.bot_pj }];
+	// Los rivales (y tus aliados en 2 VS 2 o mas): bots de sala privada, con nombre de persona (sin "BOT")
+	var _tam = variable_global_exists("qp_tam") ? clamp(global.qp_tam, 1, 4) : 1;
+	global.max_players_allowed = _tam * 2;
+	global.botnet_defs = [{ i: BOTNET_ID_BASE - 4, n: global.bot_nombre, t: "ROJO", r: (_tam >= 3) ? "defensa" : "ataque", h: true, pj: global.bot_pj }];
+	var _usados = [global.bot_nombre, global.myName];
+	var _k = 1;
+	for (var _e = 0; _e < 2; _e++) {
+		var _cuantos = (_e == 0) ? (_tam - 1) : (_tam - 1);   // aliados que faltan / rivales que faltan (el primer rival ya esta)
+		var _eq = (_e == 0) ? "AZUL" : "ROJO";
+		for (var _j = 0; _j < _cuantos; _j++) {
+			scr_bot_rival_nuevo();
+			var _nom = global.bot_nombre;
+			for (var _u = 0; _u < array_length(_usados); _u++) if (_usados[_u] == _nom) _nom += string(_k);
+			array_push(_usados, _nom);
+			var _rol = (_eq == "AZUL" && _j == 0 && _tam >= 3) ? "defensa" : "ataque";
+			array_push(global.botnet_defs, { i: BOTNET_ID_BASE - 4 - _k, n: _nom, t: _eq, r: _rol, h: true, pj: irandom(3) });
+			_k++;
+		}
+	}
 	room_goto(scr_mapa_room(global.match_mapa));
 }
 
@@ -760,4 +801,919 @@ function scr_ms_aviso_draw() {
 	draw_set_color(c_white);
 	draw_set_halign(fa_left);
 	draw_set_valign(fa_top);
+}
+
+// ======================================================
+// MODO BANDERA BOMBA (solo en linea)
+//   Cuando una bandera sale de su base empieza una cuenta de BOMBA_SEG segundos.
+//   Si llega a 0 y alguien la lleva: explota y ese jugador cae. Si esta en el suelo: explota y vuelve a su base.
+//   Vuelve a la cuenta completa cuando la bandera regresa a su base (anotan o la devuelven).
+//   Pasarla: tocas a un aliado mientras la llevas y se la pasas (la cuenta sigue).
+// Cada juego lleva su propia cuenta (todos ven la bandera igual), cada uno revisa a su jugador
+// y el lider a sus bots.
+// ======================================================
+#macro MODO_BOMBA 1
+#macro BOMBA_SEG 15        // segundos que aguanta la bomba fuera de su base
+#macro BOMBA_PASE_CD 45    // frames despues de agarrarla en que no se puede pasar (para no devolverla al instante)
+#macro BOMBA_NO_COGER 90   // frames que el que la paso no la puede volver a agarrar
+
+function scr_modo_bomba() { return global.ONLINE && scr_modo() == MODO_BOMBA; }
+
+function __bomba_full() { return BOMBA_SEG * game_get_speed(gamespeed_fps); }
+
+/// oBrain Step: cuenta de las dos banderas y la explosion
+function scr_bomba_step() {
+	if (!scr_modo_bomba() || room == rm_menu || global.game_over) return;
+	if (!variable_global_exists("bomba_t") || !is_array(global.bomba_t)) global.bomba_t = [__bomba_full(), __bomba_full()];
+	var _fps = game_get_speed(gamespeed_fps);
+	var _objs = [oFlag, oFlag2];
+	for (var i = 0; i < 2; i++) {
+		if (!instance_exists(_objs[i])) continue;
+		var _f = instance_find(_objs[i], 0);
+		if (!_f.has_flag && abs(_f.x - _f.spawnX) < 1) { global.bomba_t[i] = __bomba_full(); continue; }   // en su base
+		global.bomba_t[i] = max(0, global.bomba_t[i] - 1);
+		var _t = global.bomba_t[i];
+		// Pitido en los ultimos 3 segundos
+		if (_t > 0 && _t <= 3 * _fps && (_t mod _fps) == 0 && global.sfx) audio_play_sound(snd_hitmarker, 5, false, 0.6, 0, 1.6);
+		if (_t > 0) continue;
+		if (_f.has_flag) {
+			// La lleva alguien: explota (cada juego revisa a su jugador; el lider a sus bots)
+			var _p = _f.portador_instancia;
+			if (!instance_exists(_p)) continue;
+			if (_p.object_index == oPlayer) {
+				with (_p) {
+					if (!isDead && health > 0) {
+						instance_create_layer(x, y - 16, "Instances", oExplosionFX);
+						scrCamShake(12);
+						if (global.sfx) audio_play_sound(sndMissileExplode, 10, false);
+						health = 0;
+					}
+				}
+			} else if (variable_instance_exists(_p, "es_bot") && _p.es_bot && variable_instance_exists(_p, "bot_local") && _p.bot_local) {
+				with (_p) {
+					if (!isDead && hp > 0) {
+						instance_create_layer(x, y - 16, "Instances", oExplosionFX);
+						if (global.sfx && scr_botnet_se_ve(x, y)) audio_play_sound(sndMissileExplode, 10, false);
+						last_reason = "bomba"; last_killer = ""; last_killer_id = -1;
+						hp = 0;
+					}
+				}
+			}
+		} else {
+			// En el suelo: explota y vuelve a su base
+			instance_create_layer(_f.x, _f.y - 10, "Instances", oExplosionFX);
+			scrCamShake(6);
+			if (global.sfx) audio_play_sound(sndMissileExplode, 10, false, 0.7);
+			with (_f) { x = spawnX; y = spawnY; velocidad_caida = 0; has_flag = false; portador_instancia = noone; sprite_index = spr_suela; }
+			if (i == 0) global.bandera_roja_robada = false; else global.bandera_azul_robada = false;
+			global.bomba_t[i] = __bomba_full();
+		}
+	}
+}
+
+/// oPlayer Step (cada frame): tiempos y pasar la bomba a un aliado tocandolo
+function scr_bomba_jugador_step() {
+	if (!variable_instance_exists(id, "bomba_pase_cd")) { bomba_pase_cd = 0; bomba_no_coger = 0; bomba_tenia = false; }
+	if (bomba_pase_cd > 0) bomba_pase_cd--;
+	if (bomba_no_coger > 0) bomba_no_coger--;
+	if (has_flag && !bomba_tenia) bomba_pase_cd = BOMBA_PASE_CD;   // la acabo de agarrar
+	bomba_tenia = has_flag;
+	if (!scr_modo_bomba() || !has_flag || isDead || bomba_pase_cd > 0) return;
+	var _aliado = noone;
+	var _yo = id;
+	with (oOtherPlayer) {
+		if (team != global.myTeam || state == PLAYERSTATE.DEAD || !visible) continue;
+		if (variable_instance_exists(id, "has_flag") && has_flag) continue;
+		if (point_distance(x, y, _yo.x, _yo.y) < 26) { _aliado = id; break; }
+	}
+	if (_aliado == noone) return;
+	// Se la paso: la suelto donde estoy y el aliado la agarra al tocarla
+	has_flag = false;
+	bomba_tenia = false;
+	bomba_no_coger = BOMBA_NO_COGER;
+	var _ban = (global.myTeam == "AZUL") ? oFlag : oFlag2;
+	var _dx = _aliado.x, _dy = _aliado.y;
+	with (_ban) { has_flag = false; portador_instancia = noone; x = _dx; y = _dy; velocidad_caida = 0; sprite_index = spr_suela; }
+	if (instance_exists(oOtherPlayer)) {
+		with (oOtherPlayer) { if (!es_bot) SendEventToClient(clientId, "flag_dropped", { team: global.myTeam, dropX: _dx, dropY: _dy }); }
+	}
+	fb_toast("PASASTE LA BOMBA", "Corre a tu base!", FB_ORO);
+}
+
+/// ¿Todavia no la puedo volver a agarrar? (el que la acaba de pasar)
+function scr_bomba_no_coger() {
+	return scr_modo_bomba() && variable_instance_exists(id, "bomba_no_coger") && bomba_no_coger > 0;
+}
+
+/// oBrain Draw GUI: la cuenta encima de cada bandera que salio de su base
+function scr_bomba_draw() {
+	if (!scr_modo_bomba() || room == rm_menu || global.game_over) return;
+	if (!variable_global_exists("bomba_t") || !is_array(global.bomba_t)) return;
+	var _cam = view_camera[0];
+	var _cvx = camera_get_view_x(_cam), _cvy = camera_get_view_y(_cam);
+	var _kx = display_get_gui_width() / max(1, camera_get_view_width(_cam));
+	var _ky = display_get_gui_height() / max(1, camera_get_view_height(_cam));
+	var _u = clamp(min(display_get_gui_width() / 1280, display_get_gui_height() / 720), 0.6, 1.6);
+	var _fps = game_get_speed(gamespeed_fps);
+	var _objs = [oFlag, oFlag2];
+	for (var i = 0; i < 2; i++) {
+		if (!instance_exists(_objs[i])) continue;
+		var _f = instance_find(_objs[i], 0);
+		if (!_f.has_flag && abs(_f.x - _f.spawnX) < 1) continue;
+		var _wx = _f.x, _wy = _f.y - 40;
+		if (_f.has_flag && instance_exists(_f.portador_instancia)) { _wx = _f.portador_instancia.x; _wy = _f.portador_instancia.y - 70; }
+		var _gx = (_wx - _cvx) * _kx, _gy = (_wy - _cvy) * _ky;
+		var _seg = ceil(global.bomba_t[i] / _fps);
+		var _urge = (_seg <= 3);
+		var _late = _urge && ((current_time div 150) mod 2 == 0);
+		var _r = (18 + (_urge ? 3 : 0)) * _u;
+		draw_set_alpha(0.5); draw_set_color(c_black);
+		draw_circle(_gx, _gy + 3 * _u, _r, false);
+		draw_set_alpha(1);
+		draw_set_color(_late ? make_color_rgb(229, 72, 77) : make_color_rgb(20, 24, 50));
+		draw_circle(_gx, _gy, _r, false);
+		draw_set_color(make_color_rgb(11, 15, 26));
+		draw_circle(_gx, _gy, _r, true);
+		// arco que se vacia
+		var _p = clamp(global.bomba_t[i] / __bomba_full(), 0, 1);
+		draw_set_color(_urge ? make_color_rgb(255, 120, 60) : make_color_rgb(255, 212, 71));
+		var _n = max(2, ceil(32 * _p));
+		var _ax = _gx, _ay = _gy - _r + 3 * _u;
+		for (var k = 1; k <= _n; k++) {
+			var _ang = 90 - 360 * _p * (k / _n);
+			var _nx = _gx + lengthdir_x(_r - 3 * _u, _ang), _ny = _gy + lengthdir_y(_r - 3 * _u, _ang);
+			draw_line_width(_ax, _ay, _nx, _ny, 3 * _u);
+			_ax = _nx; _ay = _ny;
+		}
+		draw_set_font(fnt_menu); draw_set_halign(fa_center); draw_set_valign(fa_middle);
+		draw_set_color(c_white);
+		draw_text_transformed(_gx, _gy + 1, string(_seg), 0.7 * _u, 0.7 * _u, 0);
+	}
+	draw_set_halign(fa_left); draw_set_valign(fa_top); draw_set_color(c_white);
+}
+
+// ======================================================
+// MODO GRAVEDAD LOCA (solo en linea)
+//   Cada GRAV_SEG segundos la gravedad se voltea: todos caen al techo (y luego vuelven al piso).
+//   El giro lo decide el lider y se lo manda a todos ("sync_grav"); los demas solo cuentan para
+//   mostrar el tiempo y esperan su aviso para voltear (asi nadie se voltea antes que los demas).
+//   Si el lider se va, el nuevo lider sigue desde donde iba su cuenta.
+//   Las banderas que estan en su base no se mueven; las que estan sueltas si caen al techo.
+// ======================================================
+#macro MODO_GRAVEDAD 2
+#macro GRAV_SEG 30      // segundos entre cada giro
+#macro GRAV_AVISO 3     // segundos antes del giro en que sale el aviso grande
+
+function scr_modo_grav() { return global.ONLINE && scr_modo() == MODO_GRAVEDAD; }
+
+/// 1 = normal (hacia abajo), -1 = al reves (hacia el techo)
+function scr_grav_dir() {
+	if (!scr_modo_grav() || room == rm_menu || !variable_global_exists("grav_dir")) return 1;
+	return global.grav_dir;
+}
+
+function scr_grav_reset() {
+	global.grav_dir = 1;
+	global.grav_seg = GRAV_SEG;
+	global.grav_frames = 0;
+	global.grav_banner_t = 0;
+	global.grav_flash = 0;
+	global.grav_obj = false;   // los objetos del mapa empiezan a caer desde el primer giro
+}
+
+/// oBrain Step: la cuenta del giro
+function scr_grav_step() {
+	if (!variable_global_exists("grav_dir")) scr_grav_reset();
+	if (!scr_modo_grav() || room == rm_menu) {
+		if (global.grav_dir != 1 || global.grav_seg != GRAV_SEG) scr_grav_reset();
+		return;
+	}
+	if (global.grav_banner_t > 0) global.grav_banner_t--;
+	if (global.grav_flash > 0) global.grav_flash = max(0, global.grav_flash - 1 / (room_speed * 0.45));
+	if (global.grav_obj) scr_grav_objetos();   // barriles, armas, municion y poderes caen hacia donde va la gravedad
+	if (global.game_over) return;
+	if (!intro_disparada || instance_exists(oIntroVersus)) {   // empieza cuando termina la intro (y cada partida empieza normal)
+		if (global.grav_dir != 1 || global.grav_seg != GRAV_SEG) scr_grav_reset();
+		return;
+	}
+	global.grav_frames++;
+	if (global.grav_frames < room_speed) return;
+	global.grav_frames = 0;
+	if (global.grav_seg > 0) global.grav_seg--;
+	// Pitido en los ultimos segundos
+	if (global.grav_seg > 0 && global.grav_seg <= GRAV_AVISO && global.sfx) audio_play_sound(snd_hitmarker, 5, false, 0.6, 0, 1.3);
+	if (!AmIPseudoHost) return;   // los demas esperan el aviso del lider
+	if (global.grav_seg <= 0) scr_grav_poner(-global.grav_dir, GRAV_SEG);
+	scr_grav_enviar();
+}
+
+function scr_grav_enviar() {
+	var _s = { d: global.grav_dir, s: global.grav_seg };
+	with (oOtherPlayer) { if (!es_bot) SendEventToClient(clientId, "sync_grav", _s); }
+}
+
+/// Cambia la gravedad (el lider al girar, o los demas cuando llega "sync_grav")
+function scr_grav_poner(_dir, _seg) {
+	_dir = (_dir < 0) ? -1 : 1;
+	if (!variable_global_exists("grav_dir")) scr_grav_reset();
+	global.grav_seg = max(0, _seg);
+	if (_dir == global.grav_dir) return;
+	global.grav_dir = _dir;
+	global.grav_banner_t = room_speed * 2;
+	global.grav_flash = 1;      // destello blanco en toda la pantalla
+	global.grav_obj = true;
+	scrCamShake(8);
+	if (global.sfx) audio_play_sound(snd_powerdown, 8, false, 1, 0, (_dir < 0) ? 0.8 : 1.25);
+}
+
+/// Llamar en el Step de cada jugador (tu jugador y los bots que mueves) antes de moverse:
+/// voltea el muñeco (y su figura de choque) cuando cambia la gravedad.
+function scr_grav_voltear() {
+	var _g = scr_grav_dir();
+	if (image_yscale == 0 || sign(image_yscale) == _g) return;
+	image_yscale = -image_yscale;
+	// Que no quede metido en una pared al voltearse (la figura no es exactamente pareja)
+	var _k = 0;
+	while (place_meeting(x, y, obj_wall) && _k < 8) { y += _g; _k++; }
+}
+
+/// ¿Estoy parado en el techo? (gravedad al reves: pared o la parte de abajo de una plataforma)
+function scr_grav_en_techo() {
+	if (place_meeting(x, y - 1, obj_wall)) return true;
+	var _pl = instance_place(x, y - 1, oPlataformaPasable);
+	return (_pl != noone && bbox_top > _pl.bbox_bottom - 2);
+}
+
+/// Al reves: las plataformas que se atraviesan te detienen por abajo. Devuelve true si aterrizaste.
+function scr_grav_plataforma_techo() {
+	if (vsp >= 0) return false;
+	var _pl = instance_place(x, y + vsp, oPlataformaPasable);
+	if (_pl == noone || bbox_top < _pl.bbox_bottom + vsp) return false;
+	y = _pl.bbox_bottom + 1 + (y - bbox_top);
+	vsp = 0;
+	return true;
+}
+
+/// Donde estan los pies (para el polvo al saltar o caer)
+function scr_grav_pies() { return (image_yscale < 0) ? bbox_top : bbox_bottom; }
+
+/// 1 si el muñeco esta normal, -1 si esta de cabeza (para dibujar barra, nombre y brazo)
+function scr_grav_signo() { return (image_yscale < 0) ? -1 : 1; }
+
+/// Bots con la gravedad al reves: su mapa de caminos esta hecho para caer hacia abajo, asi que
+/// aqui solo caminan hacia donde iban y saltan cuando chocan con una pared (o de vez en cuando).
+function scr_grav_bot_teclas() {
+	var _m = key_right - key_left;
+	if (_m == 0) _m = (image_xscale >= 0) ? 1 : -1;
+	key_jump = place_meeting(x + _m * 8, y, obj_wall) || (irandom(60) == 0);
+	key_left = (_m < 0);
+	key_right = (_m > 0);
+	nav_quiere_pad = false;
+}
+
+/// oBrain Draw GUI: cuanto falta para el giro y el aviso grande
+function scr_grav_draw() {
+	if (!scr_modo_grav() || room == rm_menu || global.game_over) return;
+	if (!variable_global_exists("grav_dir")) return;
+	if (!intro_disparada || instance_exists(oIntroVersus)) return;
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	var _u = clamp(min(_gw / 1280, _gh / 720), 0.6, 1.6);
+	// Destello blanco al girar (se desvanece en medio segundo)
+	if (variable_global_exists("grav_flash") && global.grav_flash > 0) {
+		draw_set_alpha(0.9 * global.grav_flash);
+		draw_set_color(c_white);
+		draw_rectangle(0, 0, _gw, _gh, false);
+		draw_set_alpha(1);
+	}
+	var _seg = global.grav_seg;
+	var _urge = (_seg <= GRAV_AVISO);
+	draw_set_font(fnt_menu);
+	draw_set_halign(fa_center);
+	draw_set_valign(fa_middle);
+
+	// Chip debajo del marcador: GIRO EN 12
+	var _cx = _gw / 2, _cy = 104 * _u;
+	var _txt = "GIRO EN " + string(_seg);
+	var _w = string_width(_txt) * 0.5 * _u + 44 * _u;
+	var _col = _urge ? (((current_time div 200) mod 2 == 0) ? make_color_rgb(229, 72, 77) : make_color_rgb(255, 212, 71)) : make_color_rgb(160, 90, 255);
+	draw_set_alpha(0.55); draw_set_color(c_black);
+	draw_roundrect_ext(_cx - _w / 2, _cy - 13 * _u + 3 * _u, _cx + _w / 2, _cy + 13 * _u + 3 * _u, 12 * _u, 12 * _u, false);
+	draw_set_alpha(1); draw_set_color(make_color_rgb(20, 24, 50));
+	draw_roundrect_ext(_cx - _w / 2, _cy - 13 * _u, _cx + _w / 2, _cy + 13 * _u, 12 * _u, 12 * _u, false);
+	draw_set_color(_col);
+	draw_roundrect_ext(_cx - _w / 2, _cy - 13 * _u, _cx + _w / 2, _cy + 13 * _u, 12 * _u, 12 * _u, true);
+	// flechita: hacia donde vas a caer despues del giro
+	var _ax = _cx - _w / 2 + 16 * _u, _ad = -global.grav_dir;   // -1 = vas a caer hacia arriba
+	draw_triangle(_ax - 6 * _u, _cy - 3 * _u * _ad, _ax + 6 * _u, _cy - 3 * _u * _ad, _ax, _cy + 7 * _u * _ad, false);
+	draw_set_color(c_white);
+	draw_text_transformed(_cx + 8 * _u, _cy + 1, _txt, 0.5 * _u, 0.5 * _u, 0);
+
+	// Aviso grande: los ultimos segundos y justo despues del giro
+	var _big = "", _bc = c_white;
+	if (global.grav_banner_t > 0) {
+		_big = (global.grav_dir < 0) ? "GRAVEDAD AL REVES!" : "GRAVEDAD NORMAL!";
+		_bc = ((current_time div 150) mod 2 == 0) ? make_color_rgb(255, 212, 71) : c_white;
+	} else if (_urge && _seg > 0) {
+		_big = "LA GRAVEDAD SE VOLTEA EN " + string(_seg);
+		_bc = make_color_rgb(255, 212, 71);
+	}
+	if (_big != "") {
+		var _by = _gh * 0.3;
+		var _bs = 0.9 * _u;
+		draw_text_transformed_color(_cx + 3 * _u, _by + 3 * _u, _big, _bs, _bs, 0, c_black, c_black, c_black, c_black, 0.8);
+		draw_text_transformed_color(_cx, _by, _big, _bs, _bs, 0, _bc, _bc, _bc, _bc, 1);
+	}
+	draw_set_halign(fa_left); draw_set_valign(fa_top); draw_set_color(c_white); draw_set_alpha(1);
+}
+
+/// Los objetos sueltos del mapa caen hacia donde va la gravedad (oBrain Step, solo GRAVEDAD LOCA).
+/// Cada pantalla los mueve igual: todos se voltean al mismo tiempo y caen derechito.
+function scr_grav_objetos() {
+	with (oExplosiveBarrel) scr_grav_objeto();   // tambien los barriles chiquitos (son hijos)
+	with (oGun) { if (!taken) scr_grav_objeto(); }
+	with (oAmmoPack) { if (!variable_instance_exists(id, "taken") || !taken) scr_grav_objeto(); }
+	with (oPowerupPickup) { if (!variable_instance_exists(id, "taken") || !taken) scr_grav_objeto(); }
+}
+
+/// Un objeto cae (con la instancia): se para en paredes y plataformas, en el piso o en el techo.
+function scr_grav_objeto() {
+	if (!variable_instance_exists(id, "grav_vy")) grav_vy = 0;
+	var _g = global.grav_dir;
+	if (place_meeting(x, y, obj_wall)) { grav_vy = 0; return; }   // metido en una pared: no se mueve
+	// ¿Ya esta apoyado?
+	var _apoyo = place_meeting(x, y + _g, obj_wall);
+	if (!_apoyo && !place_meeting(x, y, oPlataformaPasable)) {
+		var _pl = instance_place(x, y + _g, oPlataformaPasable);
+		if (_pl != noone) _apoyo = (_g > 0) ? (bbox_bottom <= _pl.bbox_top + 1) : (bbox_top >= _pl.bbox_bottom - 1);
+	}
+	if (_apoyo) { grav_vy = 0; return; }
+	grav_vy = clamp(grav_vy + 0.4 * _g, -12, 12);
+	var _s = sign(grav_vy);
+	if (_s == 0) return;
+	if (place_meeting(x, y + grav_vy, obj_wall)) {
+		var _k = 0;
+		while (!place_meeting(x, y + _s, obj_wall) && _k < 16) { y += _s; _k++; }
+		grav_vy = 0;
+		return;
+	}
+	if (!place_meeting(x, y, oPlataformaPasable)) {
+		var _p2 = instance_place(x, y + grav_vy, oPlataformaPasable);
+		if (_p2 != noone) {
+			if (_s > 0 && bbox_bottom <= _p2.bbox_top) { y = _p2.bbox_top - 1 - (bbox_bottom - y); grav_vy = 0; return; }
+			if (_s < 0 && bbox_top >= _p2.bbox_bottom) { y = _p2.bbox_bottom + 1 + (y - bbox_top); grav_vy = 0; return; }
+		}
+	}
+	y += grav_vy;
+	// Por si un mapa no tuviera techo o piso: que no se vaya para siempre
+	if (y < -100 || y > room_height + 100) { y = clamp(y, -100, room_height + 100); grav_vy = 0; }
+}
+
+// ======================================================
+// MODO REY DE LA BANDERA (solo en linea)
+//   No hay banderas que robar: hay una ZONA en el centro del mapa con una bandera blanca.
+//   El equipo que esta solo en la zona (sin rivales adentro) va llenando su barra.
+//   Si hay de los dos equipos adentro, la zona esta EN DISPUTA y nadie suma.
+//   Gana el primero que llega a 100%. Si se acaba el tiempo, gana el que lleve mas (igual = EMPATE).
+//   Lo cuenta el lider y se lo manda a todos ("sync_rey").
+// ======================================================
+#macro MODO_REY 4
+#macro REY_SEG 60          // segundos dentro de la zona (sin rivales) para llegar a 100%
+#macro REY_ANCHO 90        // mitad del ancho de la zona
+#macro REY_ALTO 100        // alto de la zona (desde el piso hacia arriba)
+
+function scr_modo_rey() { return global.ONLINE && scr_modo() == MODO_REY; }
+
+function scr_rey_reset() {
+	global.rey_a = 0;      // azul (0 a 100)
+	global.rey_r = 0;      // rojo (0 a 100)
+	global.rey_c = 0;      // quien tiene la zona: 0 nadie, 1 AZUL, 2 ROJO, 3 en disputa
+	global.rey_envio = 0;
+}
+
+/// Donde va la zona: en el centro del mapa, sobre el primer piso o plataforma de la mitad para abajo.
+/// Todos la calculan igual (mismo mapa = misma zona).
+function scr_rey_zona() {
+	if (variable_global_exists("rey_room") && global.rey_room == room) return;
+	global.rey_room = room;
+	var _cx = room_width / 2;
+	var _sy = room_height - 160;
+	for (var _y = room_height * 0.5; _y < room_height; _y += 2) {
+		if (collision_point(_cx, _y, obj_wall, false, true) != noone || collision_point(_cx, _y, oPlataformaPasable, false, true) != noone) { _sy = _y; break; }
+	}
+	global.rey_x = _cx;
+	global.rey_y = _sy;
+}
+
+function scr_rey_dentro(_x, _y) {
+	return point_in_rectangle(_x, _y, global.rey_x - REY_ANCHO, global.rey_y - REY_ALTO, global.rey_x + REY_ANCHO, global.rey_y + 6);
+}
+
+/// oBrain Step
+function scr_rey_step() {
+	if (!scr_modo_rey() || room == rm_menu) return;
+	scr_rey_zona();
+	if (!variable_global_exists("rey_a")) scr_rey_reset();
+	if (global.game_over) return;
+	if (!intro_disparada || instance_exists(oIntroVersus)) {   // cada partida empieza en 0
+		if (global.rey_a != 0 || global.rey_r != 0 || global.rey_c != 0) scr_rey_reset();
+		return;
+	}
+	if (!AmIPseudoHost) return;   // los demas solo muestran lo que manda el lider
+	// Quien esta en la zona (vivos)
+	var _na = 0, _nr = 0;
+	with (oPlayer) {
+		if (!isDead && state != PLAYERSTATE.DEAD && visible && scr_rey_dentro(x, y)) { if (global.myTeam == "AZUL") _na++; else _nr++; }
+	}
+	with (oOtherPlayer) {
+		if (team == "" || state == PLAYERSTATE.DEAD || !visible) continue;
+		if (variable_instance_exists(id, "isDead") && isDead) continue;
+		if (!scr_rey_dentro(x, y)) continue;
+		if (team == "AZUL") _na++; else if (team == "ROJO") _nr++;
+	}
+	var _c = 0;
+	if (_na > 0 && _nr == 0) _c = 1;
+	else if (_nr > 0 && _na == 0) _c = 2;
+	else if (_na > 0 && _nr > 0) _c = 3;
+	var _paso = 100 / (REY_SEG * room_speed);
+	if (_c == 1) global.rey_a = min(100, global.rey_a + _paso);
+	if (_c == 2) global.rey_r = min(100, global.rey_r + _paso);
+	if (_c != global.rey_c) { scr_rey_cambio(_c); global.rey_envio = 0; }
+	global.rey_envio--;
+	if (global.rey_envio <= 0) {
+		global.rey_envio = 10;   // 6 veces por segundo
+		var _m = { a: global.rey_a, r: global.rey_r, c: global.rey_c };
+		with (oOtherPlayer) { if (!es_bot) SendEventToClient(clientId, "sync_rey", _m); }
+	}
+}
+
+/// Cambio de quien tiene la zona (sonidito si la toma alguien)
+function scr_rey_cambio(_c) {
+	global.rey_c = _c;
+	if (!global.sfx) return;
+	var _mio = (global.myTeam == "AZUL") ? 1 : 2;
+	if (_c == _mio) audio_play_sound(snd_grab, 6, false, 0.9, 0, 1.3);
+	else if (_c == 1 || _c == 2) audio_play_sound(snd_grab, 6, false, 0.9, 0, 0.7);
+}
+
+/// El lider: ¿ya gano alguien? (1 ROJO, 2 AZUL, 3 EMPATE, 0 todavia)
+function scr_rey_ganador() {
+	if (!variable_global_exists("rey_a")) return 0;
+	if (global.rey_a >= 100 && global.rey_a > global.rey_r) return 2;
+	if (global.rey_r >= 100 && global.rey_r > global.rey_a) return 1;
+	if (oBrain.reloj_fin) {
+		if (floor(global.rey_a) != floor(global.rey_r)) return (global.rey_r > global.rey_a) ? 1 : 2;
+		return 3;
+	}
+	return 0;
+}
+
+function __rey_col(_c) {
+	switch (_c) {
+		case 1: return make_color_rgb(31, 155, 255);
+		case 2: return make_color_rgb(229, 72, 77);
+		case 3: return make_color_rgb(255, 212, 71);
+	}
+	return c_white;
+}
+
+/// La zona en el mapa (Draw de oFlag; las banderas normales no se dibujan en este modo)
+function scr_rey_draw_zona() {
+	if (!variable_global_exists("rey_x")) return;
+	var _c = variable_global_exists("rey_c") ? global.rey_c : 0;
+	var _col = __rey_col(_c);
+	var _x1 = global.rey_x - REY_ANCHO, _x2 = global.rey_x + REY_ANCHO;
+	var _y1 = global.rey_y - REY_ALTO, _y2 = global.rey_y;
+	var _pul = 0.5 + 0.5 * sin(current_time / 250);
+	// Relleno que sube desde el piso
+	draw_set_alpha(0.12 + 0.06 * _pul);
+	draw_rectangle_colour(_x1, _y1, _x2, _y2, _col, _col, _col, _col, false);
+	draw_set_alpha(0.35);
+	draw_rectangle_colour(_x1, _y2 - 18, _x2, _y2, _col, _col, _col, _col, false);
+	// Borde
+	draw_set_alpha(0.6 + 0.4 * _pul);
+	draw_set_color(_col);
+	draw_line_width(_x1, _y1, _x1, _y2, 3);
+	draw_line_width(_x2, _y1, _x2, _y2, 3);
+	draw_line_width(_x1, _y2, _x2, _y2, 4);
+	// Esquinitas arriba
+	draw_line_width(_x1, _y1, _x1 + 16, _y1, 3);
+	draw_line_width(_x2 - 16, _y1, _x2, _y1, 3);
+	draw_set_alpha(1);
+	// Bandera blanca en el centro (ondea)
+	var _px = global.rey_x, _pb = _y2, _pt = _y2 - 64;
+	draw_set_color(make_color_rgb(220, 220, 230));
+	draw_line_width(_px, _pb, _px, _pt, 3);
+	var _o = sin(current_time / 180) * 4;
+	var _fc = (_c == 0) ? c_white : _col;
+	draw_set_color(_fc);
+	draw_triangle(_px + 1, _pt, _px + 30, _pt + 9 + _o, _px + 1, _pt + 20, false);
+	draw_set_color(c_white);
+}
+
+/// Marcador de arriba en este modo (reemplaza al de las banderas). _mx centro, _y arriba.
+function scr_rey_draw_marcador(_mx, _y) {
+	if (!variable_global_exists("rey_a")) return;
+	var _h = 64, _wb = 210, _gap = 70;
+	var _cy = _y + _h / 2;
+	var _total = _wb * 2 + _gap * 2 + 20;
+	var _x0 = _mx - _total / 2;
+	draw_set_alpha(0.55); draw_set_color(c_black);
+	draw_roundrect_ext(_x0, _y + 6, _x0 + _total, _y + _h + 6, 20, 20, false);
+	draw_set_alpha(1); draw_set_color(make_color_rgb(20, 24, 50));
+	draw_roundrect_ext(_x0, _y, _x0 + _total, _y + _h, 20, 20, false);
+	draw_set_color(make_color_rgb(11, 15, 26));
+	draw_roundrect_ext(_x0, _y, _x0 + _total, _y + _h, 20, 20, true);
+	var _azul = make_color_rgb(31, 155, 255), _rojo = make_color_rgb(229, 72, 77);
+	// Barras: azul se llena hacia el centro desde la izquierda, roja desde la derecha
+	var _by1 = _cy - 4, _by2 = _cy + 14;
+	var _ax1 = _x0 + 14, _ax2 = _ax1 + _wb;
+	var _rx2 = _x0 + _total - 14, _rx1 = _rx2 - _wb;
+	draw_set_color(make_color_rgb(40, 46, 66));
+	draw_roundrect_ext(_ax1, _by1, _ax2, _by2, 8, 8, false);
+	draw_roundrect_ext(_rx1, _by1, _rx2, _by2, 8, 8, false);
+	var _pa = clamp(global.rey_a / 100, 0, 1), _pr = clamp(global.rey_r / 100, 0, 1);
+	draw_set_color(_azul);
+	if (_pa > 0.02) draw_roundrect_ext(_ax1, _by1, _ax1 + _wb * _pa, _by2, 8, 8, false);
+	draw_set_color(_rojo);
+	if (_pr > 0.02) draw_roundrect_ext(_rx2 - _wb * _pr, _by1, _rx2, _by2, 8, 8, false);
+	// Brillo en la barra del que tiene la zona
+	var _brillo = 0.25 + 0.25 * sin(current_time / 120);
+	if (global.rey_c == 1 && _pa > 0.02) { draw_set_alpha(_brillo); draw_set_color(c_white); draw_roundrect_ext(_ax1, _by1, _ax1 + _wb * _pa, _by2, 8, 8, false); draw_set_alpha(1); }
+	if (global.rey_c == 2 && _pr > 0.02) { draw_set_alpha(_brillo); draw_set_color(c_white); draw_roundrect_ext(_rx2 - _wb * _pr, _by1, _rx2, _by2, 8, 8, false); draw_set_alpha(1); }
+	// Textos
+	draw_set_font(fnt_menu); draw_set_valign(fa_middle);
+	draw_set_halign(fa_left);  draw_set_color(_azul);
+	draw_text_transformed(_ax1 + 4, _y + 14, "AZUL " + string(floor(global.rey_a)) + "%", 0.45, 0.45, 0);
+	draw_set_halign(fa_right); draw_set_color(_rojo);
+	draw_text_transformed(_rx2 - 4, _y + 14, string(floor(global.rey_r)) + "% ROJO", 0.45, 0.45, 0);
+	// Centro: reloj (o corona)
+	draw_set_halign(fa_center); draw_set_color(c_white);
+	var _txt = "REY";
+	if (scr_reloj_visible()) {
+		var _m = oBrain.reloj_seg div 60, _s = oBrain.reloj_seg mod 60;
+		_txt = string(_m) + ":" + ((_s < 10) ? "0" : "") + string(_s);
+	}
+	draw_text_transformed(_mx, _cy + 2, _txt, 0.6, 0.6, 0);
+	// Debajo: quien tiene la zona
+	var _est = "ZONA LIBRE", _ec = c_white;
+	switch (global.rey_c) {
+		case 1: _est = "AZUL TIENE LA ZONA"; _ec = _azul; break;
+		case 2: _est = "ROJO TIENE LA ZONA"; _ec = _rojo; break;
+		case 3: _est = "ZONA EN DISPUTA"; _ec = ((current_time div 250) mod 2 == 0) ? make_color_rgb(255, 212, 71) : c_white; break;
+	}
+	draw_set_color(c_black);
+	draw_text_transformed(_mx + 2, _y + _h + 20, _est, 0.5, 0.5, 0);
+	draw_set_color(_ec);
+	draw_text_transformed(_mx, _y + _h + 18, _est, 0.5, 0.5, 0);
+	draw_set_halign(fa_left); draw_set_valign(fa_top); draw_set_color(c_white); draw_set_alpha(1);
+}
+
+// ======================================================
+// MODO PISO DE LAVA (solo en linea)
+//   Captura la bandera normal, pero la lava sube en oleadas:
+//   CALMA (abajo, en el piso)  ->  SUBE (sube LAVA_ALTO pixeles)  ->  SE QUEDA arriba  ->  BAJA.
+//   Tocar la lava = eliminado. Las bases quedan bajo la lava un rato: hay que esperar o apurarse.
+//   Si reapareces y tu base esta bajo la lava, sales en el lugar seguro mas cercano.
+//   Una bandera que cae en la lava regresa sola a su base.
+//   El lider lleva la cuenta y la manda a todos ("sync_lava"); todos calculan la altura igual.
+// ======================================================
+#macro MODO_LAVA 5
+#macro LAVA_CALMA 20    // segundos con la lava abajo
+#macro LAVA_SUBE 10     // segundos subiendo
+#macro LAVA_ARRIBA 8    // segundos arriba
+#macro LAVA_BAJA 6      // segundos bajando
+#macro LAVA_ALTO 280    // cuanto sube (pixeles sobre el piso)
+#macro LAVA_AVISO 3     // segundos antes de subir en que sale el aviso
+
+function scr_modo_lava() { return global.ONLINE && scr_modo() == MODO_LAVA; }
+
+function scr_lava_reset() {
+	global.lava_c = 0;          // frames del ciclo
+	global.lava_envio = 0;
+	global.lava_y = 99999;
+	global.lava_fx = [];        // salpicaduras
+	global.lava_flash = 0;      // destello naranja (solo si caes tu)
+	global.lava_msg_t = 0;      // letrero TE QUEMASTE EN LA LAVA
+}
+
+/// Donde esta el piso del mapa (lo mas bajo donde se puede parar); todos lo calculan igual
+function scr_lava_piso() {
+	if (variable_global_exists("lava_room") && global.lava_room == room) return global.lava_piso;
+	global.lava_room = room;
+	var _p = room_height;
+	var _cx = room_width / 2;
+	// Piso: el primer muro que hay bajando desde la mitad, revisando varias columnas (el mas bajo)
+	var _mejor = -1;
+	for (var _i = 1; _i <= 7; _i++) {
+		var _x = room_width * _i / 8;
+		for (var _y = room_height * 0.5; _y < room_height; _y += 2) {
+			if (collision_point(_x, _y, obj_wall, false, true) != noone) { _mejor = max(_mejor, _y); break; }
+		}
+	}
+	if (_mejor > 0) _p = _mejor;
+	global.lava_piso = _p;
+	return _p;
+}
+
+function __lava_total() { return (LAVA_CALMA + LAVA_SUBE + LAVA_ARRIBA + LAVA_BAJA) * room_speed; }
+
+/// Altura de la lava (0 = abajo, 1 = arriba) segun el ciclo
+function scr_lava_nivel() {
+	var _f = room_speed;
+	var _c = global.lava_c mod __lava_total();
+	var _a = LAVA_CALMA * _f, _b = _a + LAVA_SUBE * _f, _d = _b + LAVA_ARRIBA * _f;
+	if (_c < _a) return 0;
+	if (_c < _b) { var _p = (_c - _a) / (LAVA_SUBE * _f); return _p * _p * (3 - 2 * _p); }
+	if (_c < _d) return 1;
+	var _q = (_c - _d) / (LAVA_BAJA * _f);
+	return 1 - _q * _q * (3 - 2 * _q);
+}
+
+/// 0 calma, 1 subiendo, 2 arriba, 3 bajando; y segundos que faltan para el siguiente cambio
+function scr_lava_fase() {
+	var _f = room_speed;
+	var _c = global.lava_c mod __lava_total();
+	var _a = LAVA_CALMA * _f, _b = _a + LAVA_SUBE * _f, _d = _b + LAVA_ARRIBA * _f, _e = __lava_total();
+	if (_c < _a) return { f: 0, s: ceil((_a - _c) / _f) };
+	if (_c < _b) return { f: 1, s: ceil((_b - _c) / _f) };
+	if (_c < _d) return { f: 2, s: ceil((_d - _c) / _f) };
+	return { f: 3, s: ceil((_e - _c) / _f) };
+}
+
+/// oBrain Step
+function scr_lava_step() {
+	if (!scr_modo_lava() || room == rm_menu) return;
+	if (!variable_global_exists("lava_c")) scr_lava_reset();
+	var _piso = scr_lava_piso();
+	if (!intro_disparada || instance_exists(oIntroVersus)) {   // cada partida empieza con la lava abajo
+		if (global.lava_c != 0) scr_lava_reset();
+		global.lava_y = _piso + 6;
+		return;
+	}
+	if (!global.game_over) {
+		var _antes = scr_lava_fase().f;
+		global.lava_c++;
+		var _f = scr_lava_fase();
+		// Pitido antes de subir y aviso al empezar a subir
+		if (_f.f == 0 && _f.s <= LAVA_AVISO && (global.lava_c mod room_speed) == 0 && global.sfx) audio_play_sound(snd_hitmarker, 5, false, 0.6, 0, 0.8);
+		if (_antes == 0 && _f.f == 1) { scrCamShake(6); if (global.sfx) audio_play_sound(sndMissileExplode, 6, false, 0.5, 0, 0.6); }
+		if (AmIPseudoHost) {
+			global.lava_envio--;
+			if (global.lava_envio <= 0) {
+				global.lava_envio = room_speed;   // una vez por segundo
+				var _m = { c: global.lava_c };
+				with (oOtherPlayer) { if (!es_bot) SendEventToClient(clientId, "sync_lava", _m); }
+			}
+		}
+	}
+	// Ondita encima, igual en todas las pantallas
+	global.lava_y = _piso + 6 - LAVA_ALTO * scr_lava_nivel();
+	// Salpicaduras (las ve cada pantalla sola)
+	if (!variable_global_exists("lava_fx")) { global.lava_fx = []; global.lava_flash = 0; global.lava_msg_t = 0; }
+	for (var _i = array_length(global.lava_fx) - 1; _i >= 0; _i--) {
+		global.lava_fx[_i].t += 1;
+		if (global.lava_fx[_i].t > room_speed * 1.6) array_delete(global.lava_fx, _i, 1);
+	}
+	if (global.lava_flash > 0) global.lava_flash = max(0, global.lava_flash - 1 / (room_speed * 0.35));
+	if (global.lava_msg_t > 0) global.lava_msg_t--;
+	if (global.game_over) return;
+	var _ly = global.lava_y;
+	// ¿Alguien acaba de caer en la lava? (tu, las personas y los bots): salpica
+	with (oPlayer) scr_lava_chapuzon(_ly, true);
+	with (oOtherPlayer) scr_lava_chapuzon(_ly, false);
+
+	// Tu jugador
+	with (oPlayer) {
+		if (!isDead && state != PLAYERSTATE.DEAD && health > 0 && bbox_bottom > _ly + 8) {
+			death_reason = "lava";
+			last_killer = "";
+			health = 0;
+			if (global.sfx) audio_play_sound(sndMissileExplode, 8, false, 0.6, 0, 1.4);
+			fx_dust(x, _ly, 14, 0);
+		}
+	}
+	// Los bots que muevo yo
+	with (oOtherPlayer) {
+		if (!bot_local || isDead || hp <= 0) continue;
+		if (bbox_bottom > _ly + 8) {
+			last_reason = "lava";
+			last_killer = "";
+			last_killer_id = -1;
+			hp = 0;
+		}
+	}
+	// Bandera en la lava: regresa a su base
+	with (oFlag) {
+		if (!has_flag && y > _ly && x != spawnX) { x = spawnX; y = spawnY; velocidad_caida = 0; portador_instancia = noone; global.bandera_roja_robada = false; }
+	}
+	with (oFlag2) {
+		if (!has_flag && y > _ly && x != spawnX) { x = spawnX; y = spawnY; velocidad_caida = 0; portador_instancia = noone; global.bandera_azul_robada = false; }
+	}
+}
+
+/// Con la instancia de un jugador: salpica cuando entra a la lava y lo pinta de quemado
+function scr_lava_chapuzon(_ly, _yo) {
+	if (!variable_instance_exists(id, "lava_in")) { lava_in = false; lava_tinte = false; }
+	var _dentro = visible && bbox_bottom > _ly + 8;
+	if (_dentro && !lava_in) {
+		lava_in = true;
+		scr_lava_salpicar(x, _ly);
+		image_blend = make_color_rgb(90, 25, 10);   // quemado
+		lava_tinte = true;
+		if (_yo) { global.lava_flash = 1; global.lava_msg_t = room_speed * 2; }
+		else if (global.sfx) audio_play_sound(sndMissileExplode, 4, false, 0.35, 0, 1.6);
+	} else if (!_dentro && lava_in) {
+		lava_in = false;
+	}
+	// Ya reaparecio: vuelve a su color
+	if (lava_tinte && !_dentro && visible && state != PLAYERSTATE.DEAD) { image_blend = c_white; lava_tinte = false; }
+}
+
+/// Una salpicadura en la superficie de la lava (x del mundo)
+function scr_lava_salpicar(_x, _ly) {
+	var _g = [], _c = [];
+	repeat (16) array_push(_g, [random_range(-4, 4), random_range(-9, -4), random_range(3, 6)]);
+	repeat (18) array_push(_c, [random_range(-2, 2), random_range(-5, -2), random(0.6)]);
+	array_push(global.lava_fx, { x: _x, y: _ly, t: 0, g: _g, c: _c });
+	if (array_length(global.lava_fx) > 12) array_delete(global.lava_fx, 0, 1);
+}
+
+/// Llega "sync_lava" del lider
+function scr_lava_sync(_c) {
+	if (!variable_global_exists("lava_c")) scr_lava_reset();
+	global.lava_c = max(0, _c);
+}
+
+/// Al reaparecer (con la instancia): si mi base esta bajo la lava, al lugar seguro mas cercano
+function scr_lava_reubicar() {
+	if (!scr_modo_lava() || !variable_global_exists("lava_y")) return;
+	// Peor caso: la lava puede llegar arriba mientras reapareces; buscamos algo por encima de lo mas alto
+	var _limite = min(global.lava_y, scr_lava_piso() + 6 - LAVA_ALTO) - 50;
+	if (bbox_bottom < _limite) return;
+	var _mejor = noone, _bd = 999999, _yo = id;
+	with (oSpawnPoint) {
+		if (y > _limite) continue;
+		var _d = abs(x - _yo.x) + abs(y - _yo.y) * 0.5;
+		if (_d < _bd) { _bd = _d; _mejor = id; }
+	}
+	if (_mejor == noone) return;
+	x = _mejor.x;
+	y = _mejor.y;
+	var _n = 0;
+	while (place_meeting(x, y, obj_wall) && _n < 300) { y -= 1; _n++; }
+	if (variable_instance_exists(id, "latest_x")) latest_x = x;
+	if (variable_instance_exists(id, "latest_y")) latest_y = y;
+	if (variable_instance_exists(id, "net_x")) { net_x = x; net_y = y; }
+}
+
+/// oBrain Draw GUI (antes del marcador): la lava encima del mapa, y el aviso
+function scr_lava_draw() {
+	if (!scr_modo_lava() || room == rm_menu || !variable_global_exists("lava_y")) return;
+	var _cam = view_camera[0];
+	var _cvx = camera_get_view_x(_cam), _cvy = camera_get_view_y(_cam);
+	var _cvw = max(1, camera_get_view_width(_cam)), _cvh = max(1, camera_get_view_height(_cam));
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	var _kx = _gw / _cvw, _ky = _gh / _cvh;
+	var _ly = (global.lava_y - _cvy) * _ky;   // arriba de la lava en la pantalla
+	if (_ly < _gh + 20) {
+		var _t = current_time / 1000;
+		var _naranja = make_color_rgb(255, 130, 40), _rojo = make_color_rgb(200, 40, 20), _amar = make_color_rgb(255, 212, 71);
+		// Cuerpo de la lava
+		draw_set_alpha(0.92);
+		draw_rectangle_colour(0, _ly + 6, _gw, _gh, _naranja, _naranja, _rojo, _rojo, false);
+		// Olas encima
+		var _paso = 16;
+		for (var _x = 0; _x < _gw + _paso; _x += _paso) {
+			var _wx = (_x / _kx) + _cvx;   // x del mundo: las olas no se mueven con la camara
+			var _a = sin(_wx * 0.04 + _t * 3) * 4 + sin(_wx * 0.013 - _t * 2) * 3;
+			var _b = sin((_wx + _paso / _kx) * 0.04 + _t * 3) * 4 + sin((_wx + _paso / _kx) * 0.013 - _t * 2) * 3;
+			draw_set_color(_naranja);
+			draw_triangle(_x, _ly + _a, _x + _paso, _ly + _b, _x, _ly + 8, false);
+			draw_triangle(_x + _paso, _ly + _b, _x + _paso, _ly + 8, _x, _ly + 8, false);
+		}
+		// Brillo en la orilla
+		draw_set_alpha(0.8);
+		draw_set_color(_amar);
+		draw_line_width(0, _ly + 2, _gw, _ly + 2, 2);
+		// Burbujas
+		draw_set_alpha(0.7);
+		for (var _i = 0; _i < 14; _i++) {
+			var _bx = ((_i * 173 + _t * 20 * (1 + (_i mod 3))) mod (_gw + 40)) - 20;
+			var _ciclo = frac(_t * 0.6 + _i * 0.37);
+			var _by = _ly + 10 + (1 - _ciclo) * 50;
+			draw_circle(_bx, _by, (2 + (_i mod 3)) * (1 - _ciclo * 0.5), false);
+		}
+		draw_set_alpha(1);
+		// Calor: brillo arriba de la lava
+		draw_set_alpha(0.18);
+		draw_rectangle_colour(0, _ly - 40, _gw, _ly, c_black, c_black, _naranja, _naranja, false);
+		draw_set_alpha(1);
+	}
+
+	// Salpicaduras: anillos, gotas, chispas y humo
+	if (variable_global_exists("lava_fx")) {
+		var _naranja2 = make_color_rgb(255, 130, 40), _amar2 = make_color_rgb(255, 212, 71);
+		for (var _i = 0; _i < array_length(global.lava_fx); _i++) {
+			var _s = global.lava_fx[_i];
+			var _dt = _s.t / room_speed;             // segundos desde que cayo
+			var _sx = (_s.x - _cvx) * _kx;
+			var _sy = (_s.y - _cvy) * _ky;
+			if (_sx < -150 || _sx > _gw + 150 || _sy < -150 || _sy > _gh + 150) continue;
+			// Anillos en la superficie
+			for (var _k = 0; _k < 2; _k++) {
+				var _r = (_dt * 90 - _k * 25) * _kx;
+				if (_r <= 0 || _r >= 120 * _kx) continue;
+				var _a = 1 - _r / (120 * _kx);
+				draw_set_alpha(0.9);
+				draw_set_color(merge_colour(_naranja2, _amar2, _a));
+				draw_ellipse(_sx - _r, _sy - _r * 0.18, _sx + _r, _sy + _r * 0.18, true);
+				draw_ellipse(_sx - _r + 1, _sy - _r * 0.18 + 1, _sx + _r - 1, _sy + _r * 0.18 - 1, true);
+			}
+			// Humo
+			for (var _k = 0; _k < 5; _k++) {
+				var _tt = _dt - _k * 0.12;
+				if (_tt <= 0 || _tt >= 1.6) continue;
+				var _hx = _sx + sin(_k * 2.1) * 14 * _kx, _hy = _sy - (12 + _tt * 55) * _ky;
+				draw_set_alpha(0.55 * (1 - _tt / 1.6));
+				draw_set_color(make_color_rgb(90, 90, 95));
+				draw_circle(_hx, _hy, (8 + _tt * 14) * _kx, false);
+			}
+			// Gotas de lava que saltan y caen
+			if (_dt < 1.4) {
+				for (var _k = 0; _k < array_length(_s.g); _k++) {
+					var _gg = _s.g[_k];
+					var _f = _dt * 30;
+					var _gx = _sx + _gg[0] * _f * _kx;
+					var _gy = _sy + (_gg[1] * _f + 0.5 * 20 * _f * _f / 30) * _ky;
+					if (_gy > _sy + 4 * _ky) continue;
+					draw_set_alpha(1);
+					draw_set_color(_amar2);
+					draw_circle(_gx, _gy, (_gg[2] + 1) * _kx, false);
+					draw_set_color(_naranja2);
+					draw_circle(_gx, _gy, _gg[2] * _kx, false);
+				}
+			}
+			// Chispas
+			for (var _k = 0; _k < array_length(_s.c); _k++) {
+				var _cc = _s.c[_k];
+				var _tt = _dt - _cc[2];
+				if (_tt <= 0 || _tt >= 1.2) continue;
+				var _a2 = 1 - _tt / 1.2;
+				draw_set_alpha(_a2);
+				draw_set_color(make_color_rgb(255, 150 + floor(100 * _a2), floor(60 * _a2)));
+				var _px = _sx + _cc[0] * _tt * 40 * _kx, _py = _sy + (-10 + _cc[1] * _tt * 40) * _ky;
+				draw_rectangle(_px - 1.5 * _kx, _py - 1.5 * _kx, _px + 1.5 * _kx, _py + 1.5 * _kx, false);
+			}
+		}
+		draw_set_alpha(1);
+		// Destello naranja y letrero (solo si caiste tu)
+		if (global.lava_flash > 0) {
+			draw_set_alpha(0.45 * global.lava_flash);
+			draw_set_color(make_color_rgb(255, 120, 30));
+			draw_rectangle(0, 0, _gw, _gh, false);
+			draw_set_alpha(1);
+		}
+		if (global.lava_msg_t > 0) {
+			var _u2 = clamp(min(_gw / 1280, _gh / 720), 0.6, 1.6);
+			draw_set_font(fnt_menu); draw_set_halign(fa_center); draw_set_valign(fa_middle);
+			draw_text_transformed_color(_gw / 2 + 3 * _u2, _gh * 0.22 + 3 * _u2, "TE QUEMASTE EN LA LAVA", 0.8 * _u2, 0.8 * _u2, 0, c_black, c_black, c_black, c_black, 0.8);
+			draw_text_transformed_color(_gw / 2, _gh * 0.22, "TE QUEMASTE EN LA LAVA", 0.8 * _u2, 0.8 * _u2, 0, _amar2, _amar2, _amar2, _amar2, 1);
+			draw_set_halign(fa_left); draw_set_valign(fa_top);
+		}
+		draw_set_color(c_white);
+	}
+
+	// Chip y aviso (debajo del marcador)
+	if (global.game_over || !intro_disparada || instance_exists(oIntroVersus)) { draw_set_color(c_white); return; }
+	var _u = clamp(min(_gw / 1280, _gh / 720), 0.6, 1.6);
+	var _fa = scr_lava_fase();
+	var _txt = "", _col = make_color_rgb(255, 130, 40);
+	switch (_fa.f) {
+		case 0: _txt = "LAVA SUBE EN " + string(_fa.s); break;
+		case 1: _txt = "LA LAVA SUBE!"; _col = make_color_rgb(229, 72, 77); break;
+		case 2: _txt = "LAVA BAJA EN " + string(_fa.s); break;
+		case 3: _txt = "LA LAVA BAJA"; _col = make_color_rgb(78, 220, 140); break;
+	}
+	draw_set_font(fnt_menu); draw_set_halign(fa_center); draw_set_valign(fa_middle);
+	var _cx = _gw / 2, _cy = 104 * _u;
+	var _w = string_width(_txt) * 0.5 * _u + 30 * _u;
+	draw_set_alpha(0.55); draw_set_color(c_black);
+	draw_roundrect_ext(_cx - _w / 2, _cy - 10 * _u, _cx + _w / 2, _cy + 16 * _u, 12 * _u, 12 * _u, false);
+	draw_set_alpha(1); draw_set_color(make_color_rgb(20, 24, 50));
+	draw_roundrect_ext(_cx - _w / 2, _cy - 13 * _u, _cx + _w / 2, _cy + 13 * _u, 12 * _u, 12 * _u, false);
+	draw_set_color(_col);
+	draw_roundrect_ext(_cx - _w / 2, _cy - 13 * _u, _cx + _w / 2, _cy + 13 * _u, 12 * _u, 12 * _u, true);
+	draw_set_color(c_white);
+	draw_text_transformed(_cx, _cy + 1, _txt, 0.5 * _u, 0.5 * _u, 0);
+	// Aviso grande antes de subir y al empezar a subir
+	var _big = "";
+	if (_fa.f == 0 && _fa.s <= LAVA_AVISO) _big = "LA LAVA SUBE EN " + string(_fa.s);
+	else if (_fa.f == 1 && _fa.s > LAVA_SUBE - 2) _big = "LA LAVA SUBE! A LO ALTO!";
+	if (_big != "") {
+		var _bc = ((current_time div 150) mod 2 == 0) ? make_color_rgb(255, 130, 40) : make_color_rgb(255, 212, 71);
+		var _by = _gh * 0.3, _bs = 0.9 * _u;
+		draw_text_transformed_color(_cx + 3 * _u, _by + 3 * _u, _big, _bs, _bs, 0, c_black, c_black, c_black, c_black, 0.8);
+		draw_text_transformed_color(_cx, _by, _big, _bs, _bs, 0, _bc, _bc, _bc, _bc, 1);
+	}
+	draw_set_halign(fa_left); draw_set_valign(fa_top); draw_set_color(c_white); draw_set_alpha(1);
 }

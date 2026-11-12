@@ -49,6 +49,7 @@ function scr_pj_aplicar() {
 	walksp_base = pj.vel;
 	jumpsp = pj.salto;
 	max_health = pj.vida;
+	if (scr_modo_tiro()) max_health = 1;   // UN TIRO: 1 golpe = 1 baja (scr_reloj)
 	health = max_health;
 	melee_damage = 20 + ((mi_clase == 1) ? TANQUE_GOLPE_EXTRA : 0);   // PASIVA TANQUE
 	hab_cd = 0;

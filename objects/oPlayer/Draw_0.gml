@@ -1,8 +1,10 @@
 scr_bandera_aura_draw();   // brillo bajo los pies si llevas la bandera (scr_fx)
+// GRAVEDAD LOCA: si el muñeco esta de cabeza, barra, nombre y brazo van del otro lado (scr_reloj)
+var _gs = scr_grav_signo();
 var _x1 = x - 30;
-var _y1 = y - 45;
+var _y1 = y - 45 * _gs;
 var _x2 = x + 30;
-var _y2 = y - 40;
+var _y2 = y - 40 * _gs;
 
 // 1. Sombra/Borde exterior
 draw_set_color(c_black);
@@ -27,7 +29,7 @@ if (health > 0) {
 draw_set_halign(fa_center);
 draw_set_font(fnt_small);
 draw_set_color(c_white);
-draw_text(x, y - 60, string(playerName));
+draw_text(x, y - 60 * _gs, string(playerName));
 
 if (invulnerable) {
     var _oscilacion = (sin(current_time / 100) + 1) / 2;
@@ -48,7 +50,7 @@ if (state != PLAYERSTATE.DEAD) {
 
     // 1. Punto de giro (Hombro)
     var hombroX = x + (2 * dir); 
-    var hombroY = y - 18;
+    var hombroY = y - 18 * _gs;
 
     // 2. Calcular dónde debe estar la mano
     var handX, handY, handAngle;
@@ -62,7 +64,7 @@ if (state != PLAYERSTATE.DEAD) {
         handAngle = weapon.angle + recoil_angle; 
     } else {
         handX = x + (11 * dir); 
-        handY = y - 5;          
+        handY = y - 5 * _gs;          
         handAngle = 80 * dir; 
     }
 
@@ -71,7 +73,7 @@ if (state != PLAYERSTATE.DEAD) {
         var p = 1 - (melee_active / 6); 
         var estocada_dist = sin(p * pi) * 25; 
         var punch_x = x + lengthdir_x(estocada_dist + 10, (tiene_arma ? weapon.angle : (dir == 1 ? 0 : 180)));
-        var punch_y = (y - 12) + lengthdir_y(estocada_dist + 10, (tiene_arma ? weapon.angle : (dir == 1 ? 0 : 180)));
+        var punch_y = (y - 12 * _gs) + lengthdir_y(estocada_dist + 10, (tiene_arma ? weapon.angle : (dir == 1 ? 0 : 180)));
         draw_sprite_ext(spr_Hand, 0, punch_x, punch_y, sx_melee, 2, 0, c_white, 1);
     } 
     else {
@@ -102,7 +104,7 @@ if (reloading)
     var progress = 1 - (reload_timer / reload_max);
     var frame = floor(progress * (frames - 1));
     frame = clamp(frame, 0, frames - 1);
-    var yy = bbox_top - 25;
+    var yy = (_gs > 0) ? bbox_top - 25 : bbox_bottom + 25;
     draw_sprite_ext(spr, frame, x, yy, 0.5, 0.5, 0, c_white, 1);
 }
 
@@ -110,7 +112,7 @@ if (has_shield) {
     gpu_set_blendmode(bm_add);
     var _sc = 1.4 + sin(current_time/150) * 0.08; 
     var _alp = 0.4 + random(0.1);
-    var _y_ajustada = y - 5; 
+    var _y_ajustada = y - 5 * _gs; 
     draw_set_alpha(_alp);
     draw_circle_colour(x, _y_ajustada, 28 * _sc, c_aqua, c_blue, false);
     gpu_set_blendmode(bm_normal);
@@ -124,4 +126,4 @@ scr_hab_draw();
 scr_efx_draw_cuerpo(scr_efx_codigo());
 
 // Chat de voz: mi microfonito cuando hablo (scr_objetivo)
-if (visible && scr_voz_activa() && scr_voz_yo_hablo()) scr_voz_draw_cabeza(x, y - 74);
+if (visible && scr_voz_activa() && scr_voz_yo_hablo()) scr_voz_draw_cabeza(x, y - 74 * _gs);

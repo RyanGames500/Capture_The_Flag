@@ -4,6 +4,12 @@ if (!instance_exists(oBrain)) scr_musica_step();
 // CUENTAS: pantalla de entrar / crear cuenta, chip del menu y franja de PERFIL (DatabaseFunctions)
 if (scr_cuenta_menu_step()) exit;
 
+// MENU NUEVO (draw_player_profile): las pantallas viejas pasan a las nuevas, y aqui se manejan
+// el menu principal, la pantalla de modos y la de cuantos jugadores
+scr_mn_redirigir();
+scr_mn_step();
+scr_mn_buscando_step();
+
 // ======================================================
 // TOQUES / CLICS DIRECTOS EN LOS BOTONES DEL MENU
 // El Draw GUI guarda donde esta cada boton (global.ui_taps) y aqui vemos si lo tocaron.
@@ -228,7 +234,7 @@ if (menu_delay > 0) {
 var move = vkey_pressed(ord("S")) - vkey_pressed(ord("W"));
 
 // --- ESTADO PRINCIPAL ---
-    if (menu_state == "main") {
+    if (menu_state == "main" && !MN_NUEVO) {   // (con el menu nuevo lo maneja scr_mn_step)
         index = clamp(index + move, 0, array_length(menu_options) - 1);
 
         if (vkey_pressed(vk_enter)) {
@@ -395,7 +401,7 @@ else if (menu_state == "setup_room") {
     if (vkey_pressed(vk_enter) && s_index == 4) { // CREAR SALA
 
         // si el input estaba activo o el texto cambio, actualizamos YA
-        if (texto_input != "Escribe tu nombre..." && texto_input != "") {
+        if (texto_input != "Escribe tu nombre..." && texto_input != "" && texto_input != "Name") {   // "Name" = el cuadro sin tocar (no es tu nombre)
             global.myName = texto_input;
         }
 

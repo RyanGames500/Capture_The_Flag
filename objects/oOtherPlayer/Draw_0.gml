@@ -1,11 +1,13 @@
 // --- BARRA DE VIDA ÉPICA (OTROS) ---
+// GRAVEDAD LOCA: si el muñeco esta de cabeza, barra, nombre y brazo van del otro lado (scr_reloj)
+var _gs = scr_grav_signo();
 var barColor = (team == global.myTeam) ? c_blue : c_red;
 var barColorLight = (team == global.myTeam) ? c_aqua : c_orange; 
 
 var _x1 = x - 30;
-var _y1 = y - 45;
+var _y1 = y - 45 * _gs;
 var _x2 = x + 30;
-var _y2 = y - 40;
+var _y2 = y - 40 * _gs;
 
 draw_set_color(c_black);
 draw_rectangle(_x1 - 1, _y1 - 1, _x2 + 1, _y2 + 1, false);
@@ -26,7 +28,7 @@ if (enemyHealth > 0) {
 draw_set_halign(fa_center);
 draw_set_font(fnt_small); 
 draw_set_color(c_white);
-draw_text(x, y - 60, string(Name));
+draw_text(x, y - 60 * _gs, string(Name));
 
 // --- DIBUJO DEL CUERPO ---
 if (invulnerable) {
@@ -48,7 +50,7 @@ if (state != PLAYERSTATE.DEAD) {
 
     // 1. Punto de giro (Hombro)
     var hombroX = x + (2 * dir); 
-    var hombroY = y - 18;
+    var hombroY = y - 18 * _gs;
 
     var handX, handY, handAngle;
 
@@ -62,7 +64,7 @@ if (state != PLAYERSTATE.DEAD) {
         handAngle = _ang + recoil_angle; 
     } else {
         handX = x + (11 * dir); 
-        handY = y - 5;          
+        handY = y - 5 * _gs;          
         handAngle = 80 * dir; 
     }
 
@@ -73,7 +75,7 @@ if (state != PLAYERSTATE.DEAD) {
         var estocada_dist = sin(p * pi) * 25; 
         var punch_dir = (tiene_arma ? weapon.angle : (dir == 1 ? 0 : 180));
         var punch_x = x + lengthdir_x(estocada_dist + 10, punch_dir);
-        var punch_y = (y - 12) + lengthdir_y(estocada_dist + 10, punch_dir);
+        var punch_y = (y - 12 * _gs) + lengthdir_y(estocada_dist + 10, punch_dir);
         draw_sprite_ext(spr_Hand, 0, punch_x, punch_y, sx_melee, 2, 0, c_white, 1);
     } 
     else {
@@ -102,7 +104,7 @@ if (has_shield) {
     gpu_set_blendmode(bm_add);
     var _sc = 1.4 + sin(current_time/150) * 0.08; 
     var _alp = 0.4 + random(0.1);
-    var _y_ajustada = y - 5; 
+    var _y_ajustada = y - 5 * _gs; 
     draw_set_alpha(_alp);
     draw_circle_colour(x, _y_ajustada, 28 * _sc, c_aqua, c_blue, false);
     gpu_set_blendmode(bm_normal);
@@ -119,4 +121,4 @@ scr_red_draw_lag();
 scr_efx_draw_cuerpo(scr_efx_vis());
 
 // Chat de voz: microfonito sobre la cabeza del que habla (scr_objetivo)
-if (!es_bot && visible && scr_voz_activa() && scr_voz_hablando(clientId)) scr_voz_draw_cabeza(x, y - 74);
+if (!es_bot && visible && scr_voz_activa() && scr_voz_hablando(clientId)) scr_voz_draw_cabeza(x, y - 74 * _gs);

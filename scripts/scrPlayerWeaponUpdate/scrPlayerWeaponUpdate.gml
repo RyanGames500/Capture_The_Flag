@@ -42,7 +42,7 @@ function scrPlayerWeaponUpdate()
 
         // 1. Posición del hombro y mano (Igual que en el Draw)
         var hombroX = x + (2 * dir_char); 
-        var hombroY = y - 18;
+        var hombroY = y - 18 * scr_grav_signo();   // GRAVEDAD LOCA: de cabeza el hombro va abajo
         
         // La mano ya tiene el largo del brazo (14)
         var handX = hombroX + lengthdir_x(14, handAngle);

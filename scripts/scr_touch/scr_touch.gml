@@ -117,6 +117,17 @@ function __touch_buttons_base(_mode, _W, _H) {
 	var _esc = string(vk_escape);
 
 	if (_mode == "menu") {
+		// Menu nuevo: esas pantallas se tocan directo, sin las flechas encima (draw_player_profile)
+		if (MN_NUEVO) {
+			if (room == rm_menu && instance_exists(oMenu)) {
+				var _st = oMenu.menu_state;
+				if (_st == "main" || _st == "modos" || _st == "tamano" || _st == "connecting" || _st == "equipo") return _b;
+			}
+			var _pau = variable_global_exists("pausa") && global.pausa;
+			var _fin = variable_global_exists("game_over") && global.game_over;
+			if (room != rm_menu && !_pau && !_fin && scr_mn_sel_activa()) return _b;
+			if (room != rm_menu && _pau && !_fin) return _b;   // la pausa nueva se toca directo
+		}
 		// En el menú principal también se navega con W y S; en el juego no, para no saltar
 		var _up = (room == rm_menu) ? [string(vk_up), string(ord("W"))] : [string(vk_up)];
 		var _dn = (room == rm_menu) ? [string(vk_down), string(ord("S"))] : [string(vk_down)];

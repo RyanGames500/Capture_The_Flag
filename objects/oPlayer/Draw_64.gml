@@ -29,6 +29,8 @@ if (state == PLAYERSTATE2.DEAD) exit;
 
 // oPlayer - Draw GUI Event (HUD PRINCIPAL)
 
+// HUD NUEVO (draw_player_profile): tu carta arriba a la izquierda y tu arma arriba a la derecha
+if (MN_NUEVO) { scr_hud_nuevo(); } else {
 // --- CONFIGURACIÓN BASE ---
 var _escala = 4; 
 var _xx = 40; 
@@ -195,3 +197,4 @@ if (granadas > 0) {
 }
 
 draw_set_halign(fa_left);
+}

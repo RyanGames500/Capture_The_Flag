@@ -460,6 +460,17 @@ function minimapa_draw() {
     // ---------- Fondo ----------
     var _pad = (_modo == 2) ? 18 * _u : 6 * _u;
     var _padv = (_modo == 2) ? 16 * _u : 6 * _u;
+    if (MN_NUEVO) {
+        // Marco redondo con sombra y borde oscuro (estetica nueva)
+        var _rr = 10 * _u;
+        draw_set_alpha(0.45); draw_set_colour(c_black);
+        draw_roundrect_ext(_mx - _pad, _my - _padv + 4, _mx + _mw + _pad, _my + _mh + _padv + 4, _rr, _rr, false);
+        draw_set_alpha(0.88); draw_set_colour(make_color_rgb(20, 24, 50));
+        draw_roundrect_ext(_mx - _pad, _my - _padv, _mx + _mw + _pad, _my + _mh + _padv, _rr, _rr, false);
+        draw_set_alpha(1); draw_set_colour(_tinta);
+        draw_roundrect_ext(_mx - _pad, _my - _padv, _mx + _mw + _pad, _my + _mh + _padv, _rr, _rr, true);
+        draw_roundrect_ext(_mx - _pad + 1, _my - _padv + 1, _mx + _mw + _pad - 1, _my + _mh + _padv - 1, _rr, _rr, true);
+    } else {
     draw_set_alpha(0.72);
     draw_set_colour(_tinta);
     draw_rectangle(_mx - _pad, _my - _padv, _mx + _mw + _pad, _my + _mh + _padv, false);
@@ -469,6 +480,7 @@ function minimapa_draw() {
     draw_set_alpha(1);
     draw_set_colour(_azul);
     draw_rectangle(_mx - _pad, _my - _padv, _mx - _pad + 40 * _u, _my - _padv + 1, false);
+    }
 
     // ---------- El nivel (se guarda en una superficie para no redibujarlo cada frame) ----------
     if (_modo != 2) {
@@ -520,8 +532,15 @@ function minimapa_draw() {
 
     // ---------- Banderas (parpadean si alguien la lleva) ----------
     var _fsc = (12 * _u) / 17;
+    if (!scr_modo_rey()) {   // REY DE LA BANDERA: no hay banderas (scr_reloj)
     with (oFlag)  { if (!has_flag || _blink) draw_sprite_ext(spr_flag_red,  0, _mx + clamp(x * _kx, 0, _mw), (_modo == 2) ? _my - 9 * _u : _py(y, _my, _ky, _mh, _modo) - 6 * _u, _fsc, _fsc, 0, c_white, 1); }
     with (oFlag2) { if (!has_flag || _blink) draw_sprite_ext(spr_flag_blue, 0, _mx + clamp(x * _kx, 0, _mw), (_modo == 2) ? _my - 9 * _u : _py(y, _my, _ky, _mh, _modo) - 6 * _u, _fsc, _fsc, 0, c_white, 1); }
+    } else if (variable_global_exists("rey_x")) {
+        // La zona en el mini mapa
+        draw_set_colour(make_color_rgb(255, 212, 71));
+        var _zx = _mx + clamp(global.rey_x * _kx, 0, _mw), _zy = _py(global.rey_y, _my, _ky, _mh, _modo);
+        draw_rectangle(_zx - 5 * _u, _zy - 6 * _u, _zx + 5 * _u, _zy, false);
+    }
 
     // ---------- Jugadores (todos: aliados y enemigos) ----------
     var _r = 3 * _u;
@@ -726,6 +745,12 @@ function scr_fin_festejo_step() {
             _f.col  = make_color_rgb(242, 182, 50);
             _f.gana = "EMPATE";
             _f.txt  = "TIEMPO!";
+        }
+        // REY DE LA BANDERA: la camara va a la zona (ahi se gano), no a la base (scr_reloj)
+        if (scr_modo_rey() && variable_global_exists("rey_x")) {
+            _f.x = global.rey_x;
+            _f.y = global.rey_y;
+            if (!_empate && !(instance_exists(oBrain) && oBrain.reloj_fin)) _f.txt = "REY!";
         }
         _f.conf = [];
         var _oro = make_color_rgb(242, 182, 50);

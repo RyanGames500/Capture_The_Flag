@@ -264,6 +264,30 @@ case "sync_ajustes":
     if (!oBrain.AmIPseudoHost) scr_ajustes_aplicar(theMessageStruct);
 break;
 
+case "sync_lava":
+    // PISO DE LAVA: el lider manda en que parte del ciclo va la lava (scr_reloj)
+    if (!oBrain.AmIPseudoHost && room != rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "c") && is_numeric(theMessageStruct.c)) {
+        scr_lava_sync(theMessageStruct.c);
+    }
+break;
+
+case "sync_rey":
+    // REY DE LA BANDERA: el lider manda las barras y quien tiene la zona (scr_reloj)
+    if (!oBrain.AmIPseudoHost && room != rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "a") && variable_struct_exists(theMessageStruct, "r") && variable_struct_exists(theMessageStruct, "c")) {
+        if (!variable_global_exists("rey_a")) scr_rey_reset();
+        global.rey_a = real(theMessageStruct.a);
+        global.rey_r = real(theMessageStruct.r);
+        if (real(theMessageStruct.c) != global.rey_c) scr_rey_cambio(real(theMessageStruct.c));
+    }
+break;
+
+case "sync_grav":
+    // GRAVEDAD LOCA: el lider dice hacia donde va la gravedad y cuanto falta (scr_reloj)
+    if (!oBrain.AmIPseudoHost && room != rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "d") && variable_struct_exists(theMessageStruct, "s") && is_numeric(theMessageStruct.d) && is_numeric(theMessageStruct.s)) {
+        scr_grav_poner(theMessageStruct.d, theMessageStruct.s);
+    }
+break;
+
 case "sync_reloj":
     // Reloj de la partida: lo lleva el líder
     if (!oBrain.AmIPseudoHost && room != rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "s") && is_numeric(theMessageStruct.s)) {
@@ -515,7 +539,7 @@ case "barrel_dead":
     var _inst = instance_nearest(_bx, _by, oExplosiveBarrel); 
     
     if (_inst != noone) {
-        if (point_distance(_inst.x, _inst.y, _bx, _by) < 15) {
+        if (point_distance(_inst.x, _inst.y, _bx, _by) < (scr_modo_grav() ? 80 : 15)) {   // GRAVEDAD LOCA: pueden ir cayendo
             
             instance_create_layer(_inst.x, _inst.y, "Weapons", oExplosionFX);
             scrCamShake(10);

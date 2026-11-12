@@ -112,9 +112,9 @@ your sharedProperties
         var _st_net = real(SP._ST);
 		var _sx_net = sign(real(SP._IMXS));
 		if (!variable_instance_exists(id, "fx_prev_st")) { fx_prev_st = _st_net; fx_prev_sx = _sx_net; }
-		if (_st_net == PLAYERSTATE.JUMP && fx_prev_st != PLAYERSTATE.JUMP) fx_dust(x, bbox_bottom, 6, 0);
-		if (fx_prev_st == PLAYERSTATE.JUMP && (_st_net == PLAYERSTATE.IDLE || _st_net == PLAYERSTATE.WALK)) fx_dust(x, bbox_bottom, 10, 0);
-		if (_st_net == PLAYERSTATE.WALK && fx_prev_sx != 0 && _sx_net != fx_prev_sx) fx_dust(x, bbox_bottom, 6, -_sx_net);
+		if (_st_net == PLAYERSTATE.JUMP && fx_prev_st != PLAYERSTATE.JUMP) fx_dust(x, scr_grav_pies(), 6, 0);
+		if (fx_prev_st == PLAYERSTATE.JUMP && (_st_net == PLAYERSTATE.IDLE || _st_net == PLAYERSTATE.WALK)) fx_dust(x, scr_grav_pies(), 10, 0);
+		if (_st_net == PLAYERSTATE.WALK && fx_prev_sx != 0 && _sx_net != fx_prev_sx) fx_dust(x, scr_grav_pies(), 6, -_sx_net);
 		fx_prev_st = _st_net;
 		fx_prev_sx = _sx_net;
     

@@ -317,6 +317,11 @@ function fb_flechas() {
 	if (_online  && _me.state == PLAYERSTATE.DEAD)  return;
 	if (!_online && _me.state == PLAYERSTATE2.DEAD) return;
 	var _mio = scr_my_team();
+	// REY DE LA BANDERA: solo la flechita hacia la zona (scr_reloj)
+	if (scr_modo_rey()) {
+		if (variable_global_exists("rey_x")) fb_burbuja_bandera(global.rey_x, global.rey_y - 40, (global.rey_c == 2) ? spr_flag_red : spr_flag_blue, FB_ORO, "ZONA", false);
+		return;
+	}
 	var _rival = fb_rival(_mio);
 	var _fEnemy = (_mio == "AZUL") ? oFlag : oFlag2;   // la que tengo que robar
 	var _fMine  = (_mio == "AZUL") ? oFlag2 : oFlag;   // la mía
@@ -400,6 +405,18 @@ function fb_draw_marcador(_mx, _y) {
 	draw_roundrect_ext(_bx1, _y + 6, _bx2, _y + _h - 6, 14, 14, false);
 	draw_set_color(FB_ROJO);
 	draw_roundrect_ext(_rx1, _y + 6, _rx2, _y + _h - 6, 14, 14, false);
+	if (MN_NUEVO) {
+		// Bordes oscuros y brillo arriba (estetica nueva)
+		draw_set_color(merge_colour(FB_AZUL, c_white, 0.25));
+		draw_roundrect_ext(_bx1 + 5, _y + 9, _bx2 - 5, _y + _h * 0.42, 10, 10, false);
+		draw_set_color(merge_colour(FB_ROJO, c_white, 0.25));
+		draw_roundrect_ext(_rx1 + 5, _y + 9, _rx2 - 5, _y + _h * 0.42, 10, 10, false);
+		draw_set_color(c_black);
+		draw_roundrect_ext(_bx1, _y + 6, _bx2, _y + _h - 6, 14, 14, true);
+		draw_roundrect_ext(_rx1, _y + 6, _rx2, _y + _h - 6, 14, 14, true);
+		draw_roundrect_ext(_x0, _y, _x0 + _total, _y + _h, 20, 20, true);
+		draw_roundrect_ext(_x0 + 1, _y + 1, _x0 + _total - 1, _y + _h - 1, 19, 19, true);
+	}
 
 	// Pop del número al anotar (usa el rebote que ya tenía oBrain)
 	var _popA = 1, _popR = 1;

@@ -105,6 +105,16 @@ for (var i = 0; i < array_length(kill_feed); i++)
     var dx = _kf_x - it.xoff;
     var dy = _kf_y + i * line_step + it.yoff;
 
+    // Chip redondo detras (estetica nueva)
+    if (MN_NUEVO) {
+        var _kw = string_width(it.text) * scale;
+        var _kh = string_height(it.text) * scale;
+        draw_set_alpha(it.a * 0.9);
+        draw_set_color(make_color_rgb(20, 24, 50));
+        draw_roundrect_ext(dx - _kw - 10, dy - 3, dx + 10, dy + _kh + 1, 8, 8, false);
+        draw_set_color(make_color_rgb(11, 15, 26));
+        draw_roundrect_ext(dx - _kw - 10, dy - 3, dx + 10, dy + _kh + 1, 8, 8, true);
+    }
     // sombra
     draw_set_alpha(it.a);
     draw_set_color(c_black);
@@ -157,8 +167,12 @@ if (!global.game_over) {
     if (room != rm_menu) {
         // Marcador vivo, flechas, banners, anotacion y avisos (scr_feedback).
         // Ahora funciona tanto en linea como en local.
-        fb_draw_marcador(_mx_base, 14);
+        scr_lava_draw();   // PISO DE LAVA: la lava y el aviso (scr_reloj)
+        if (scr_modo_rey()) scr_rey_draw_marcador(_mx_base, 14);   // REY DE LA BANDERA: barras (scr_reloj)
+        else fb_draw_marcador(_mx_base, 14);
         fb_draw_gui();
+        scr_bomba_draw();   // BANDERA BOMBA: la cuenta encima de cada bandera (scr_reloj)
+        scr_grav_draw();    // GRAVEDAD LOCA: cuanto falta para el giro (scr_reloj)
         minimapa_draw(); // mini mapa (se apaga o cambia en AJUSTES)
     } else {
 
@@ -206,6 +220,7 @@ if (!global.game_over) {
 
 // --- MENÚ DE PAUSA FLOTANTE ---
 if (global.pausa && !global.game_over) {
+    if (MN_NUEVO) { scr_mn_draw_pausa(pause_index); } else {   // pausa nueva (draw_player_profile)
     var mid_x = display_get_gui_width() / 2;
     var mid_y = display_get_gui_height() / 2;
     
@@ -234,6 +249,7 @@ if (global.pausa && !global.game_over) {
         var texto = (pause_index == i) ? "> " + opciones_actuales[i] + " <" : opciones_actuales[i];
         draw_set_color(color);
         draw_text_transformed(mid_x, mid_y + (i * 50), texto, escala, escala, 0);
+    }
     }
     // Voz de tu equipo: silenciar a alguien (sala privada, scr_objetivo)
     scr_voz_draw_panel();
@@ -445,6 +461,7 @@ draw_set_valign(fa_top);
 
 
 if ((!intro_disparada || scr_sel_tarde()) && room != rm_menu && (global.ONLINE == true || global.bot_partida)) {   // tambien si te quedaste sin personaje
+if (MN_NUEVO) { scr_mn_draw_seleccion(); } else {   // seleccion nueva (draw_player_profile)
     var sw = display_get_gui_width();
     var sh = display_get_gui_height();
     var _yo = scr_my_team();   // mi equipo desde que entro a la sala (antes salía vacío y todo se veía rojo)
@@ -532,6 +549,7 @@ if ((!intro_disparada || scr_sel_tarde()) && room != rm_menu && (global.ONLINE =
     draw_set_halign(fa_left);
     draw_set_valign(fa_top);
     draw_set_colour(c_white);
+}
 }
 	
 // ======================================================

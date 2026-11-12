@@ -89,7 +89,8 @@ var ui_gris  = make_color_rgb(169, 180, 208);
 var ui_verde = make_color_rgb(78, 255, 145);
 
 // --- DIBUJO DEL MENÚ PRINCIPAL (CYBERPUNK, PANTALLA COMPLETA) ---
-if (menu_state == "main") {
+// (con MN_NUEVO se usa el menu nuevo de abajo: scr_mn_draw_main)
+if (menu_state == "main" && !MN_NUEVO) {
     var C_TINTA = make_color_rgb(11, 15, 26);
     var C_AZUL  = make_color_rgb(31, 155, 255);
     var C_ROJO  = make_color_rgb(255, 42, 58);
@@ -252,6 +253,11 @@ if (menu_state == "main") {
     scr_cuenta_chip_draw(u, hud_h);
 }
 
+// --- MENU NUEVO (draw_player_profile): principal, modos y cuantos jugadores ---
+else if (menu_state == "main")   { scr_mn_draw_main(); }
+else if (menu_state == "modos")  { scr_mn_draw_modos(); }
+else if (menu_state == "tamano") { scr_mn_draw_tamano(); }
+
 // --- DIBUJO DEL ESTADO BUZÓN (Capa superior) ---
 else if (menu_state == "mailbox") {
     // Buzon: hasta 5 solicitudes en lista, cada una con ACEPTAR / RECHAZAR (DatabaseFunctions, BUZON)
@@ -403,6 +409,7 @@ else if (menu_state == "options") {
 // ==========================================
 else if (menu_state == "connecting")
 {
+    if (MN_NUEVO) { scr_mn_draw_buscando(); } else {   // pantalla nueva (draw_player_profile)
     var cx = gui_w * 0.5;
     var cy = gui_h * 0.5;
 
@@ -485,6 +492,7 @@ else if (menu_state == "connecting")
 
     // --- Footer ---
     ctf_ui_hint(cx, py1 + panel_h + 30, "[ESC] CANCELAR", 1);
+    }
 }
 else if (menu_state == "verifying") {
     ctf_ui_fondo(gui_w, gui_h);
@@ -1138,7 +1146,7 @@ if (mostrando_reto) {
 }
 
 // --- CUADRO DE CONTROLES (solo en PC, en el menu principal) ---
-if (menu_state == "main" && !touch_mode())
+if (menu_state == "main" && !touch_mode() && !MN_NUEVO)   // (el menu nuevo ya no lo muestra)
 {
     var _cu = clamp(min(gui_w / 1280, gui_h / 720), 0.6, 1.6);
     var cuadro_ancho = 300 * _cu;
