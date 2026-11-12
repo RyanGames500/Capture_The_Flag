@@ -5,8 +5,8 @@ function scr_aceptar_solicitud() {
         var id_amigo = datos_solicitud_recibida.desde_id; 
         var tag_amigo = datos_solicitud_recibida.desde_tag; 
         
-        // 2. BORRAMOS LA SOLICITUD DE LA NUBE (Ya no es necesaria)
-        DeleteSimpleData("solicitudes", string(global.miFriendTag));
+        // 2. LA QUITAMOS DEL BUZON (solo esa; las demas se quedan) (DatabaseFunctions, BUZON)
+        scr_buzon_quitar_sel();
         
         // 3. LO AÑADIMOS A NUESTRA LISTA LOCAL
         var ya_es_amigo = false;
@@ -36,7 +36,7 @@ function scr_aceptar_solicitud() {
 			var _confirmacion = {
 			    quien_acepto_nombre: global.myName,
 			    quien_acepto_tag: global.miFriendTag,
-			    quien_acepto_id: string(gmda_getPlayerid()),
+			    quien_acepto_id: string(global.miFriendTag),   // antes era el ID de Gamdato
 			    es_confirmacion: true // <-- Agrégale esto para mayor seguridad
 			};
 
@@ -47,9 +47,7 @@ function scr_aceptar_solicitud() {
             scr_save_to_cloud(); // Tu guardado general de stats
         }
 
-        // 4. LIMPIAMOS
-        hay_solicitud_pendiente = false;
-        datos_solicitud_recibida = -1;
+        // 4. (el buzon ya se acomodo solo en scr_buzon_quitar_sel: si quedan mas, se siguen viendo)
         
         mensaje_texto = "Ahora eres amigo de " + nombre_amigo + "!";
         mensaje_alpha = 3;

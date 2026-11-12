@@ -2,6 +2,9 @@
 // Botones que se pueden tocar/clickear este frame (los lee el Step)
 global.ui_taps = [];
 
+// CUENTAS: si esta abierta la pantalla de entrar / crear cuenta, solo se dibuja esa (DatabaseFunctions)
+if (scr_cuenta_ui_draw()) exit;
+
 // 1. OBTENER EL CENTRO REAL DE LA PANTALLA (Indispensable para centrar)
 var gui_w = display_get_gui_width();
 var gui_h = display_get_gui_height();
@@ -244,50 +247,15 @@ if (menu_state == "main") {
     draw_text_transformed(mail_x, mail_y + 34 * u, "[M] CORREO", 0.6 * u, 0.6 * u, 0);
     draw_set_alpha(1);
     draw_set_color(c_white);
+
+    // Tu cuenta, arriba en la barra (INVITADO - ENTRAR o CUENTA: USUARIO) (DatabaseFunctions)
+    scr_cuenta_chip_draw(u, hud_h);
 }
 
 // --- DIBUJO DEL ESTADO BUZÓN (Capa superior) ---
 else if (menu_state == "mailbox") {
-    var cx = gui_w / 2;
-    var cy = gui_h / 2;
-
-    ctf_ui_fondo(gui_w, gui_h);
-    ctf_ui_header(gui_w, "BUZON", "MENSAJES Y SOLICITUDES", ui_u);
-
-    var _pw = 560 * ui_u;
-    var _ph = 210 * ui_u;
-    ctf_ui_panel(cx - _pw / 2, cy - _ph / 2, cx + _pw / 2, cy + _ph / 2, ui_azul);
-
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
-    if (hay_solicitud_pendiente && is_struct(datos_solicitud_recibida)) {
-        draw_set_font(fnt_small);
-        draw_set_color(ui_gris); draw_set_alpha(0.55);
-        draw_text_transformed(cx, cy - 55 * ui_u, "SOLICITUD DE AMISTAD DE", 0.6 * ui_u, 0.6 * ui_u, 0);
-        draw_set_alpha(1);
-        draw_set_font(fnt_menu);
-        draw_set_color(c_white);
-        draw_text_transformed(cx, cy - 15 * ui_u, string_upper(string(datos_solicitud_recibida.desde_nombre)), 1.0 * ui_u, 1.0 * ui_u, 0);
-        draw_set_font(fnt_small);
-        var _yw = 160 * ui_u; var _yh = 40 * ui_u; var _yy = cy + 50 * ui_u - _yh / 2;
-        ctf_ui_para(cx - 95 * ui_u - _yw / 2, _yy, _yw, _yh, 8 * ui_u, ui_verde, 0.1, false);
-        ctf_ui_para(cx - 95 * ui_u - _yw / 2, _yy, _yw, _yh, 8 * ui_u, ui_verde, 0.6, true);
-        ctf_ui_para(cx + 95 * ui_u - _yw / 2, _yy, _yw, _yh, 8 * ui_u, ui_rojo, 0.1, false);
-        ctf_ui_para(cx + 95 * ui_u - _yw / 2, _yy, _yw, _yh, 8 * ui_u, ui_rojo, 0.6, true);
-        draw_set_color(ui_verde);
-        draw_text_transformed(cx - 95 * ui_u, cy + 50 * ui_u, touch_mode() ? "ACEPTAR" : "[Y] ACEPTAR", 0.7 * ui_u, 0.7 * ui_u, 0);
-        draw_set_color(ui_rojo);
-        draw_text_transformed(cx + 95 * ui_u, cy + 50 * ui_u, touch_mode() ? "RECHAZAR" : "[N] RECHAZAR", 0.7 * ui_u, 0.7 * ui_u, 0);
-        ui_tap_add(cx - 95 * ui_u - _yw / 2, _yy, cx - 95 * ui_u + _yw / 2, _yy + _yh, -1, ord("Y"));
-        ui_tap_add(cx + 95 * ui_u - _yw / 2, _yy, cx + 95 * ui_u + _yw / 2, _yy + _yh, -1, ord("N"));
-    } else {
-        draw_set_font(fnt_menu);
-        draw_set_color(ui_gris); draw_set_alpha(0.5);
-        draw_text_transformed(cx, cy, "NO HAY MENSAJES NUEVOS", 0.8 * ui_u, 0.8 * ui_u, 0);
-        draw_set_alpha(1);
-    }
-
-    ctf_ui_hint(cx, cy + _ph / 2 + 40 * ui_u, "[ESC] VOLVER", ui_u);
+    // Buzon: hasta 5 solicitudes en lista, cada una con ACEPTAR / RECHAZAR (DatabaseFunctions, BUZON)
+    scr_buzon_draw(ui_u, gui_w, gui_h);
 }
 else if (menu_state == "private") {
     ctf_ui_fondo(gui_w, gui_h);
@@ -786,6 +754,7 @@ if (menu_state == "play_selection") {
 }
 if (menu_state == "profile") {
     draw_player_profile(room_width/2, room_height/2);
+    scr_cuenta_franja_draw();   // CUENTA: usuario / CERRAR SESION, o crear cuenta (DatabaseFunctions)
 
     // --- RESULTADO DE BUSQUEDA ---
     if (estado_busqueda == "encontrado" && datos_busqueda_resultado != -1) {
@@ -832,6 +801,9 @@ else if (menu_state == "achievements") {
     gmda_draw_achievements(cx - (tabla_ancho / 2), _hy + 10);
 
     ctf_ui_hint(cx, gui_h - 34 * ui_u, "[ESC] O [ENTER] PARA VOLVER", ui_u);
+}
+else if (menu_state == "ranking") {
+    scr_ranking_draw();   // (DatabaseFunctions)
 }
 else if (menu_state == "friends_menu") {
     var cx = gui_w / 2;
@@ -886,7 +858,7 @@ else if (friends_state == "lista") {
 
                 // Estado online/offline
                 var _tag_amigo = amigo.tag;
-                var _esta_online = gmda_status(_tag_amigo);
+                var _esta_online = variable_struct_exists(amigo, "online") && amigo.online == true;   // lo dice el servidor (DatabaseFunctions)
                 draw_set_color(_esta_online ? ui_verde : ui_gris);
                 draw_set_alpha(_esta_online ? 1 : 0.4);
                 draw_circle(cx - card_w / 2 + 28, yy, 6, false);

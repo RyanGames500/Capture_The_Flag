@@ -1,6 +1,6 @@
 
 // Menú principal más limpio
-menu_options = ["PLAY","OFFLINE","FRIENDS","ACHIEVEMENTS", "PROFILE", "OPTIONS", "EXIT"];
+menu_options = ["PLAY","OFFLINE","FRIENDS","ACHIEVEMENTS", "RANKING", "PROFILE", "OPTIONS", "EXIT"];   // RANKING nuevo (DatabaseFunctions)
 index = 0;
 
 // Nueva lista para cuando elijas PLAY

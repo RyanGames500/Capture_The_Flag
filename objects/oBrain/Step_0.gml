@@ -4,6 +4,9 @@ scr_musica_step();
 // --- CHAT DE VOZ de las salas privadas (scr_objetivo) ---
 scr_voz_step();
 
+// --- PRUEBA: F9 muestra el aviso de logro sin darte el logro (DatabaseFunctions) ---
+scr_logros_prueba_step();
+
 // --- El lider avisa cada segundo si la partida ya empezo (por si a alguien se le perdio el aviso) ---
 scr_sala_estado_step();
 

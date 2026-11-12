@@ -62,6 +62,22 @@ if(type == network_type_data){
 			global.roomId = string(global.clientId)
 			alarm[2] = 1;
 			callback_ConnectToServer();
+			scr_cuenta_al_conectar();   // si hay "Recordarme", se entra solo a la cuenta (DatabaseFunctions)
+		break;
+
+		case "amigos_online":
+			// Cuales de mis amigos estan conectados (DatabaseFunctions)
+			scr_amigos_online_recibir(realData);
+		break;
+
+		case "ranking":
+			// Lista del ranking (DatabaseFunctions)
+			scr_ranking_recibir(realData);
+		break;
+
+		case "cuenta":
+			// Respuesta de las cuentas (crear, entrar, token, guardar, salir) (DatabaseFunctions)
+			scr_cuenta_recibir(realData);
 		break;
 		
 		case "alert":

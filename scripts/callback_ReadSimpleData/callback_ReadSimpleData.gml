@@ -18,11 +18,14 @@ function callback_ReadSimpleData(readId, data) {
 
     // --- 2. SI HAY DATOS (ÉXITO) ---
     
-    // A. ¿ES UNA SOLICITUD DE AMISTAD?
-    if (variable_struct_exists(data, "desde_id")) {
+    // A. ¿ES TU BUZON? (ahora es una lista de hasta 5 solicitudes; DatabaseFunctions, BUZON)
+    if (variable_struct_exists(data, "lista") && is_array(data.lista)) {
+        scr_buzon_recibir(data.lista);
+    }
+    // (formato viejo: una sola solicitud)
+    else if (variable_struct_exists(data, "desde_id")) {
         show_debug_message(">>> CALLBACK: ¡SOLICITUD DE AMISTAD DETECTADA!");
-        oMenu.datos_solicitud_recibida = data;
-        oMenu.hay_solicitud_pendiente = true;
+        scr_buzon_recibir([data]);
     } 
     
     // B. ¿ES UN RESULTADO DE BÚSQUEDA POR NOMBRE?

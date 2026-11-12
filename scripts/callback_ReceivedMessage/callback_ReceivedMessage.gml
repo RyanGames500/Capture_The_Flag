@@ -13,6 +13,7 @@ function callback_ReceivedMessage(theMessage , senderClientId){
 			if oPlayer.isDead = false && !scr_fin_es_privada()
 			{
 				global.kills++;
+				scr_logros_baja();   // racha para los logros (DatabaseFunctions, LOGROS)
 			}
 		
 			}

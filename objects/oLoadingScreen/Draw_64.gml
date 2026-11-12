@@ -58,5 +58,4 @@ if (timer_timeout <= 0) {
 
 }
 
-	var status = gmda_status();
-	draw_text(gw/2, gh/2 + 100, status);
+	// (aqui se dibujaba el estado de Gamdato, que ya no existe)

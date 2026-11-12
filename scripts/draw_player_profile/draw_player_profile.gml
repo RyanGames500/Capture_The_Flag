@@ -255,7 +255,7 @@ function draw_player_profile(px, py) {
     // COLUMNA DERECHA: LOGROS
     // ========================================================
     var ach = [];
-    var table = gmda_get_achievement_list();
+    var table = scr_logros_lista_map();   // la misma lista, ahora del juego (DatabaseFunctions, LOGROS)
     if (!is_undefined(table)) {
         var tsz = ds_map_size(table);
         for (var a = 0; a < tsz; a++) {
@@ -282,7 +282,7 @@ function draw_player_profile(px, py) {
     var show_n = min(total_ach, max_rows);
     var obtained = 0;
     for (var a3 = 0; a3 < total_ach; a3++) {
-        if (gmda_check_achievement(ach[a3].ide)) obtained++;
+        if (scr_logro_tiene(ach[a3].ide)) obtained++;
     }
 
     var lyy = top + 32;
@@ -292,7 +292,7 @@ function draw_player_profile(px, py) {
     var ic_cols = [C_ORO, C_AZUL, C_ROJO];
     for (var a4 = 0; a4 < show_n; a4++) {
         var ry = lyy + 32 + a4 * rh;
-        var got = gmda_check_achievement(ach[a4].ide);
+        var got = scr_logro_tiene(ach[a4].ide);
 
         if (a4 > 0) {
             draw_set_color(C_GRIS); draw_set_alpha(0.08);

@@ -448,6 +448,7 @@ y += vsp;
 
 if (health <= 0 && !isDead)
 {
+	scr_logros_racha_reset();   // te eliminaron: la racha de los logros vuelve a 0 (DatabaseFunctions)
 	reloading = false;
 	reload_timer = 0;
 

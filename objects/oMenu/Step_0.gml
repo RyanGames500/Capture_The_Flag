@@ -1,6 +1,9 @@
 // MUSICA: si todavia no existe oBrain (sin conexion), la lleva el menu (scr_fx)
 if (!instance_exists(oBrain)) scr_musica_step();
 
+// CUENTAS: pantalla de entrar / crear cuenta, chip del menu y franja de PERFIL (DatabaseFunctions)
+if (scr_cuenta_menu_step()) exit;
+
 // ======================================================
 // TOQUES / CLICS DIRECTOS EN LOS BOTONES DEL MENU
 // El Draw GUI guarda donde esta cada boton (global.ui_taps) y aqui vemos si lo tocaron.
@@ -22,6 +25,8 @@ if (device_mouse_check_button_pressed(0, mb_left) && variable_global_exists("ui_
                 else { friend_selected = _tp.extra.i; _vk = -1; }
             }
             // Icono del selector de avatar: primer toque lo elige, segundo lo confirma
+            // Fila del buzon: la elige (y si tocaste ACEPTAR / RECHAZAR, se aplica a esa) (DatabaseFunctions)
+            if (_tp.extra.tipo == "buzon") buzon_sel = _tp.extra.i;
             if (_tp.extra.tipo == "avatar") {
                 if (avatar_seleccionado == _tp.extra.i) _vk = vk_enter;
                 else { avatar_seleccionado = _tp.extra.i; _vk = -1; }
@@ -63,7 +68,7 @@ if (mouse_check_button_pressed(mb_left)) {
         if (input_activo) {
             // Aplicamos la misma lógica que el ENTER
             global.myName = (texto_input == "") ? "Jugador" : texto_input;
-            gmda_setNewname((texto_input == "") ? "Jugador" : texto_input);
+            // (antes: gmda_setNewname, Gamdato se quito del juego)
 			global.registrado=1;
 			menu_delay = 5;
 	
@@ -202,7 +207,7 @@ else if (menu_state == "friends_menu" && friends_state == "anadir") {
         if (vkey_pressed(vk_enter)) {
             // Lógica original de guardar nombre
             global.myName = (texto_input == "") ? "Jugador" : texto_input;
-            gmda_setNewname(global.myName);
+            // (antes: gmda_setNewname, Gamdato se quito del juego)
             global.registrado = 1;
             menu_delay = 5;
             scr_save_to_local();
@@ -268,18 +273,24 @@ var move = vkey_pressed(ord("S")) - vkey_pressed(ord("W"));
 				menu_state = "achievements";
 				break;
 
-				case 4: 
+				case 4: // RANKING (las cuentas con mas copas) (DatabaseFunctions)
+				    menu_state = "ranking";
+				    scr_ranking_abrir();
+				    menu_delay = 5;
+				break;
+
+				case 5: 
 				    menu_state = "profile";
 					show_debug_message(">>> ENTRANDO AL PERFIL");
 				break;
                 
-                case 5: // OPTIONS -> pantalla de AJUSTES
+                case 6: // OPTIONS -> pantalla de AJUSTES
 					menu_state = "options";
 					opt_sel = 0;
 					menu_delay = 5;
                 break;
 				
-                case 6: 
+                case 7: 
                     game_end();
                 break;
             }
@@ -776,7 +787,7 @@ if (menu_state == "profile") {
     }
 	
 if (vkey_pressed(ord("B")) && !input_activo) {
-	var PLAYER_ID = gmda_getPlayerid();
+	var PLAYER_ID = string(global.miFriendTag);   // antes era el ID de Gamdato
         var _id_buscado = get_string("Introduce el ID ÚNICO del jugador:", "");
         
         if (_id_buscado != "" && _id_buscado != string(PLAYER_ID)) {
@@ -888,6 +899,8 @@ if (estado_busqueda == "error" && mensaje_alpha <= 0) {
     estado_busqueda = "idle";
 }
 
+if (menu_state == "ranking") scr_ranking_step();   // (DatabaseFunctions)
+
 if (menu_state == "achievements") {
     if (vkey_pressed(vk_escape)) {
         menu_state = "main";
@@ -909,7 +922,7 @@ if (menu_state == "achievements") {
 if (estado_busqueda == "encontrado" && vkey_pressed(ord("F"))) {
     if (is_struct(datos_busqueda_resultado)) {
         var id_rival = string(ultimo_intento_busqueda); 
-        var mi_id = string(gmda_getPlayerid());
+        var mi_id = string(global.miFriendTag);   // antes era el ID de Gamdato
         
         // --- MODO TEST: Permitimos auto-envío ---
         // Comentamos el IF original para que nos deje pasar
@@ -931,21 +944,8 @@ if (estado_busqueda == "encontrado" && vkey_pressed(ord("F"))) {
 
 
 	if (menu_state == "mailbox") {
-    if (hay_solicitud_pendiente) {
-        // ACEPTAR
-        if (vkey_pressed(ord("Y"))) {
-            scr_aceptar_solicitud();
-            mensaje_texto = "Ahora eres amigo de " + string(global.nombre_ultimo_amigo) + "!";
-            mensaje_alpha = 3;
-        }
-        
-        // RECHAZAR
-        if (vkey_pressed(ord("N"))) {
-            DeleteSimpleData("solicitudes", string(global.miFriendTag));
-            hay_solicitud_pendiente = false;
-            show_debug_message(">>> Solicitud rechazada.");
-        }
-    }
+    // Buzon con varias solicitudes: W/S elegir, Y aceptar, N rechazar (DatabaseFunctions, BUZON)
+    scr_buzon_step();
     
     if (vkey_pressed(vk_escape)) {
         menu_state = "main";

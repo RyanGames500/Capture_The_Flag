@@ -1851,7 +1851,7 @@ function scr_sel_crear_jugador() {
 // Eventos: oBrain Async Grabacion (Other_73) -> scr_voz_async_grabacion
 //          oBrain Async Reproduccion (Other_74) -> scr_voz_async_play
 // ======================================================
-#macro VOZ_DEBUG    true    // contador de prueba (enviados / recibidos / volumen). Ponlo en false cuando ya funcione
+#macro VOZ_DEBUG    false    // contador de prueba (enviados / recibidos / volumen). Ponlo en false cuando ya funcione
 #macro VOZ_HZ       8000
 #macro VOZ_TROZO    3200    // bytes por envio (0.2 s a 8000 Hz 16 bits)
 #macro VOZ_UMBRAL   1200    // en ABIERTO: volumen minimo para mandar (de 32768). Sube si se manda ruido

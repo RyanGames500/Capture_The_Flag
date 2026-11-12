@@ -1,6 +1,12 @@
 function scr_enviar_solicitud_amistad(_tag_destino) {
+    // No te puedes mandar solicitud a ti mismo
+    if (string_upper(string(_tag_destino)) == string_upper(string(global.miFriendTag))) {
+        mensaje_texto = "NO TE PUEDES AGREGAR A TI MISMO";
+        mensaje_alpha = 3;
+        return;
+    }
     // 1. Obtenemos NUESTRA info (el que envía)
-    var mi_id_largo = string(gmda_getPlayerid());
+    var mi_id_largo = string(global.miFriendTag);   // antes era el ID de Gamdato; ahora tu Friend Tag
     var mi_nombre = global.myName;
     var mi_tag = string(global.miFriendTag); // Tu Tag de 6 letras
     
@@ -16,7 +22,8 @@ function scr_enviar_solicitud_amistad(_tag_destino) {
 
     // 3. GUARDAR EN LA NUBE
     // El documento AHORA es el Tag de 6 letras del amigo (ej: "7S7IIW")
-    SetSimpleData("solicitudes", string(_tag_destino), _data);
+    // Se agrega a su buzon (lista de hasta 5) en el servidor (DatabaseFunctions, BUZON)
+    scr_buzon_enviar(_tag_destino, _data);
     
     // 4. Feedback visual
     mensaje_texto = "Solicitud enviada al Tag: " + string(_tag_destino) + "!";
