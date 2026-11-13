@@ -81,6 +81,7 @@ function __arma_nueva(_tipo) {
 /// El número junto a cada arma es qué tan seguido sale dentro de su grupo.
 function scr_arma_al_azar(_nivel = 0) {
 	if (!variable_global_exists("armas_nuevas")) scr_armas_init();
+	if (EQ_MAPA_SOLO_FUERTES) _nivel = 3;   // con EQUIPAMIENTO en el mapa solo salen las fuertes
 	var _b = oBrain;
 	var _ops;
 	switch (_nivel) {
@@ -296,7 +297,7 @@ function scr_arma_generica_tiro(_w) {
 		_b.image_angle = _d;
 		_b.speed = _w.vel * ((_w.balas > 1) ? random_range(0.9, 1.1) : 1);
 		_b.life = _w.vida - ((_w.balas > 1) ? irandom(4) : 0);
-		_b.damage = _w.damage * damage_boost;
+		_b.damage = _w.damage * damage_boost + scr_pj_bono_auto(_w);   // pasiva del Asalto (scr_personajes)
 		_b.sprite_index = _w.silenciada ? spr_bala_silenciada : ((_w.balas > 1) ? sprBullet_escop : sprBullet_smg);
 		if (!global.ONLINE) _b.team = team;
 		if (_w.atraviesa > 1) _b.atraviesa = _w.atraviesa;
@@ -459,6 +460,10 @@ function scr_efx_aplicar(_ef, _ax, _ay, _de = -1, _quien = "", _bot = false) {
 			efx_red = EFX_RED_T;
 			_tumba = true;
 		break;
+		case "red_hab":   // red de la Exploradora (scr_personajes): 2 s quieto
+			efx_red = EXPLO_RED_T;
+			_tumba = true;
+		break;
 		case "fuego":
 			scr_efx_init2();
 			efx_fuego_t = EFX_FUEGO_T;
@@ -531,6 +536,7 @@ function scr_efx_color(_ef) {
 		case "zap":   return EFX_COL_ZAP;
 		case "hielo": return EFX_COL_HIELO;
 		case "red":   return EFX_COL_RED;
+		case "red_hab": return EFX_COL_RED;
 		case "iman":  return EFX_COL_IMAN;
 		case "fuego": return EFX_COL_FUEGO;
 		case "bomba_elec": return EFX_COL_ZAP;
@@ -645,6 +651,7 @@ function scr_efx_bala_draw(_ef, _x, _y, _dir) {
 			draw_line_width(_x, _y, _x - lengthdir_x(5, _dir), _y - lengthdir_y(5, _dir), 1.5);
 		break;
 		case "red":
+		case "red_hab":
 			draw_set_colour(EFX_COL_RED);
 			var _a = _t * 400;
 			for (var i = -1; i <= 1; i++) {
@@ -931,7 +938,8 @@ function scr_granada_lanzar_efecto(_tipo, _dir) {
 #macro ARMA_CAMBIO_T 15   // frames sin poder disparar al cambiar (0.25 s)
 
 function scr_slots_dos() {
-	return global.ONLINE && object_index == oPlayer;
+	// En linea tu oPlayer; en local tu oPlayer_offline (para el EQUIPAMIENTO, scr_armas)
+	return (global.ONLINE && object_index == oPlayer) || object_index == oPlayer_offline;
 }
 
 function scr_slot_init() {
@@ -1016,4 +1024,777 @@ function scr_arma_para_municion() {
 		return _g;
 	}
 	return noone;
+}
+
+// ======================================================
+// EQUIPAMIENTO (mezcla): antes de jugar eliges 2 armas (PRINCIPAL y SECUNDARIA).
+//   - Se desbloquean por NIVEL y luego se COMPRAN con MONEDAS (las gratis ya son tuyas).
+//   - Se MEJORAN hasta 3 estrellas: un poco mas de cargador y recarga mas rapida. El dano NUNCA sube.
+//   - Las MONEDAS se ganan jugando (ganar, perder, empatar, contra bots y en local con bots).
+//   - En el mapa ya solo salen granadas, municion y las armas fuertes (arriba al centro).
+//   Todo se guarda en el aparato (data.ini) y en tu cuenta (Neon) como "equipo".
+//   Sirve igual en linea y en local (sin internet).
+// ======================================================
+#macro EQ_MEJORA_MAX 3
+#macro EQ_MAPA_SOLO_FUERTES true   // ponlo en false para que vuelvan a salir todas las armas en el mapa
+#macro EQ_PRUEBA false             // PRUEBA: en la pantalla de equipamiento ALT = +1000 monedas y SUPR = borrar todo el equipamiento. Ponlo en false al terminar.
+
+function __eq_item(_id, _nombre, _spr, _lv, _precio) {
+	return { id: _id, nombre: _nombre, spr: _spr, lv: _lv, precio: _precio };
+}
+
+/// Lista de armas que se pueden equipar (en orden: nivel y precio)
+function scr_eq_catalogo() {
+	if (variable_global_exists("eq_cat") && is_array(global.eq_cat)) return global.eq_cat;
+	global.eq_cat = [
+		__eq_item("pistola",     "PISTOLA",        spr_gun,              1,  0),
+		__eq_item("g_luger",     "LUGER",          spr_arma_luger,       1,  0),
+		__eq_item("smg",         "SMG",            spr_smg,              1,  0),
+		__eq_item("g_mp5",       "MP5",            spr_arma_mp5,         1,  0),
+		__eq_item("g_glock",     "GLOCK 18",       spr_arma_glock,       3,  150),
+		__eq_item("g_silen",     "SILENCIADA",     spr_arma_silenciada,  4,  200),
+		__eq_item("g_uzi",       "UZI",            spr_arma_uzi,         5,  250),
+		__eq_item("m4",          "M4",             spr_M4,               7,  400),
+		__eq_item("g_mp5s",      "MP5 SILENCIADA", spr_arma_mp5s,        8,  450),
+		__eq_item("g_mp40",      "MP40",           spr_arma_mp40,        9,  500),
+		__eq_item("g_ak47",      "AK-47",          spr_arma_ak47,        10, 600),
+		__eq_item("g_carabina",  "CARABINA",       spr_arma_carabina,    11, 650),
+		__eq_item("escopeta",    "ESCOPETA",       spr_escopeta,         12, 700),
+		__eq_item("g_g36",       "G36",            spr_arma_g36,         13, 750),
+		__eq_item("g_recortada", "RECORTADA",      spr_arma_recortada,   14, 800),
+		__eq_item("g_scar",      "SCAR",           spr_arma_scar,        15, 900),
+		__eq_item("g_thompson",  "THOMPSON",       spr_arma_thompson,    16, 950),
+		__eq_item("g_deagle",    "DESERT EAGLE",   spr_arma_deagle,      18, 1100),
+		__eq_item("g_fal",       "FAL",            spr_arma_fal,         20, 1200),
+		__eq_item("g_revolver",  "REVOLVER",       spr_arma_revolver,    22, 1300)
+	];
+	return global.eq_cat;
+}
+
+function scr_eq_info(_id) {
+	var _c = scr_eq_catalogo();
+	for (var i = 0; i < array_length(_c); i++) if (_c[i].id == _id) return _c[i];
+	return undefined;
+}
+
+/// Lo que cuesta subir de _n estrellas a _n + 1
+function scr_eq_costo_mejora(_n) {
+	switch (_n) { case 0: return 200; case 1: return 400; }
+	return 600;
+}
+
+/// ¿Ya es tuya? (las gratis siempre)
+function __eq_tiene(_id) {
+	var _it = scr_eq_info(_id);
+	if (is_undefined(_it)) return false;
+	if (_it.precio <= 0) return true;
+	var _a = global.equipo.armas;
+	for (var i = 0; i < array_length(_a); i++) if (_a[i] == _id) return true;
+	return false;
+}
+
+function scr_eq_init() {
+	if (!variable_global_exists("equipo") || !is_struct(global.equipo)) global.equipo = {};
+	var _e = global.equipo;
+	if (!variable_struct_exists(_e, "monedas")) _e.monedas = 0;
+	if (!variable_struct_exists(_e, "armas") || !is_array(_e.armas)) _e.armas = [];
+	if (!variable_struct_exists(_e, "mej") || !is_struct(_e.mej)) _e.mej = {};
+	if (!variable_struct_exists(_e, "p")) _e.p = "smg";
+	if (!variable_struct_exists(_e, "s")) _e.s = "pistola";
+	_e.monedas = max(0, floor(real(_e.monedas)));
+	if (!__eq_tiene(_e.p)) _e.p = "smg";
+	if (!__eq_tiene(_e.s) || _e.s == _e.p) _e.s = (_e.p == "pistola") ? "smg" : "pistola";
+}
+
+function scr_eq_tiene(_id) { scr_eq_init(); return __eq_tiene(_id); }
+
+function scr_eq_mejora(_id) {
+	scr_eq_init();
+	var _m = global.equipo.mej;
+	if (!variable_struct_exists(_m, _id)) return 0;
+	return clamp(floor(real(_m[$ _id])), 0, EQ_MEJORA_MAX);
+}
+
+/// Comprar (sin revisar mas: lo revisa quien lo llama). Guarda.
+function scr_eq_comprar(_id) {
+	scr_eq_init();
+	var _it = scr_eq_info(_id);
+	if (is_undefined(_it) || __eq_tiene(_id)) return false;
+	if (global.lvl < _it.lv || global.equipo.monedas < _it.precio) return false;
+	global.equipo.monedas -= _it.precio;
+	array_push(global.equipo.armas, _id);
+	scr_xp_dar(40);   // comprar un arma da XP (scr_reloj)
+	scr_save_to_local();
+	return true;
+}
+
+/// Subir una estrella. Guarda.
+function scr_eq_mejorar(_id) {
+	scr_eq_init();
+	if (!__eq_tiene(_id)) return false;
+	var _n = scr_eq_mejora(_id);
+	if (_n >= EQ_MEJORA_MAX) return false;
+	var _c = scr_eq_costo_mejora(_n);
+	if (global.equipo.monedas < _c) return false;
+	global.equipo.monedas -= _c;
+	global.equipo.mej[$ _id] = _n + 1;
+	scr_xp_dar((_n == 0) ? 30 : ((_n == 1) ? 50 : 80));   // mejorar da XP: 1, 2 y 3 estrellas (scr_reloj)
+	scr_save_to_local();
+	return true;
+}
+
+/// Ponerla en la casilla 0 (principal) o 1 (secundaria). Si estaba en la otra, se cambian. Guarda.
+function scr_eq_equipar(_id, _slot) {
+	scr_eq_init();
+	if (!__eq_tiene(_id)) return false;
+	var _e = global.equipo;
+	if (_slot == 0) { if (_e.s == _id) _e.s = _e.p; _e.p = _id; }
+	else            { if (_e.p == _id) _e.p = _e.s; _e.s = _id; }
+	scr_save_to_local();
+	return true;
+}
+
+/// Monedas ganadas (no guarda: quien lo llama guarda despues)
+function scr_eq_premio(_n) {
+	scr_eq_init();
+	_n = floor(_n);
+	if (_n <= 0) return;
+	global.equipo.monedas += _n;
+	fb_toast("+" + string(_n) + " MONEDAS", "Usalas en EQUIPMENT", make_color_rgb(255, 212, 71), "star");
+}
+
+/// Lo que viene de la cuenta: monedas de la cuenta, armas y mejoras se juntan (no se pierde nada)
+function scr_eq_aplicar_cuenta(_q) {
+	if (!is_struct(_q)) return;
+	scr_eq_init();
+	var _e = global.equipo;
+	if (variable_struct_exists(_q, "monedas")) _e.monedas = max(0, floor(real(_q.monedas)));
+	if (variable_struct_exists(_q, "armas") && is_array(_q.armas)) {
+		for (var i = 0; i < array_length(_q.armas); i++) {
+			var _id = string(_q.armas[i]);
+			if (!is_undefined(scr_eq_info(_id)) && !__eq_tiene(_id)) array_push(_e.armas, _id);
+		}
+	}
+	if (variable_struct_exists(_q, "mej") && is_struct(_q.mej)) {
+		var _k = variable_struct_get_names(_q.mej);
+		for (var j = 0; j < array_length(_k); j++) {
+			if (is_undefined(scr_eq_info(_k[j]))) continue;
+			_e.mej[$ _k[j]] = max(scr_eq_mejora(_k[j]), clamp(floor(real(_q.mej[$ _k[j]])), 0, EQ_MEJORA_MAX));
+		}
+	}
+	if (variable_struct_exists(_q, "p") && __eq_tiene(string(_q.p))) _e.p = string(_q.p);
+	if (variable_struct_exists(_q, "s") && __eq_tiene(string(_q.s))) _e.s = string(_q.s);
+	scr_eq_init();
+}
+
+/// Las 4 armas de siempre por si oBrain todavia no existe (en el menu). Mismos numeros que oBrain.
+function __eq_vieja(_id) {
+	var _rs = room_speed;
+	switch (_id) {
+		case "pistola":  return { sprite_suelo: spr_gun, sprite: spr_gun, object: oGun, subimage: 0, ammo: 10, maxAmmo: 10, frequency: _rs / 2, type2: "gun", damage: 10, ammoType: "gun", clipSize: 30, reloadTime: _rs * 1.2, index: 0 };
+		case "smg":      return { sprite_suelo: spr_smg, sprite: spr_smg, object: oGun, subimage: 0, ammo: 30, maxAmmo: 30, frequency: _rs / 8, type2: "smg", damage: 12, ammoType: "smg", clipSize: 30, reloadTime: _rs * 1.2, index: 0 };
+		case "m4":       return { sprite_suelo: spr_M4, sprite: spr_M4, object: oGun, subimage: 0, ammo: 30, maxAmmo: 30, frequency: _rs / 10, type2: "m4", damage: 15, ammoType: "rifle", clipSize: 30, reloadTime: _rs * 1.5, index: 0 };
+		case "escopeta": return { sprite_suelo: spr_escopeta, sprite: spr_escopeta, object: oGun, subimage: 0, ammo: 6, maxAmmo: 6, frequency: _rs / 1.2, type2: "escop", damage: 16, pellets: 7, ammoType: "escop", clipSize: 30, reloadTime: _rs * 1.2, index: 0 };
+	}
+	return undefined;
+}
+
+/// El arma original (sin copiar)
+function scr_eq_base(_id) {
+	if (instance_exists(oBrain)) {
+		switch (_id) {
+			case "pistola":  return oBrain.weapon_struct_pistola;
+			case "smg":      return oBrain.weapon_struct_smg;
+			case "m4":       return oBrain.weapon_struct_m4;
+			case "escopeta": return oBrain.weapon_struct_escopeta;
+		}
+	}
+	var _v = __eq_vieja(_id);
+	if (!is_undefined(_v)) return _v;
+	if (!variable_global_exists("armas_nuevas")) scr_armas_init();
+	for (var i = 0; i < array_length(global.armas_nuevas); i++) if (global.armas_nuevas[i].type2 == _id) return global.armas_nuevas[i];
+	return undefined;
+}
+
+/// COPIA del arma lista para usar, con tus mejoras. _con_mejora = false para los bots.
+function scr_eq_arma(_id, _con_mejora = true) {
+	var _b = scr_eq_base(_id);
+	if (is_undefined(_b)) { _id = "pistola"; _b = scr_eq_base(_id); }
+	var _w = variable_clone(_b);
+	var _n = _con_mejora ? scr_eq_mejora(_id) : 0;
+	if (!variable_struct_exists(_w, "reloadTime")) _w.reloadTime = room_speed * 1.2;
+	if (_n > 0) {
+		_w.maxAmmo += max(1, round(_w.maxAmmo * 0.1 * _n));   // +10% de cargador por estrella (minimo 1 bala)
+		_w.reloadTime = round(_w.reloadTime * (1 - 0.08 * _n)); // -8% de recarga por estrella
+	}
+	_w.ammo = _w.maxAmmo;
+	_w.equipada = true;   // las del equipamiento no se tiran al morir (scr_drop_on_death)
+	_w.eq_id = _id;
+	return _w;
+}
+
+/// Balas de reserva al aparecer: 2 cargadores (sin pasar el tope)
+function scr_eq_reserva(_w) {
+	if (!is_struct(_w)) return;
+	var _t = _w.ammoType;
+	if (_t == "" || is_undefined(_t)) return;
+	var _cur = variable_struct_exists(reserve, _t) ? reserve[$ _t] : 0;
+	reserve[$ _t] = max(_cur, min(_w.maxAmmo * 2, scr_municion_tope(_t)));
+}
+
+/// Tu jugador aparece con sus 2 armas (oPlayer y oPlayer_offline: Create y Alarm_1)
+function scr_eq_dar() {
+	scr_eq_init();
+	if (array_length(guns) < 2) guns[1] = noone;
+	// UN TIRO (scr_reloj): todos con el francotirador y nada mas
+	if (scr_modo_tiro()) {
+		var _fr = scr_eq_arma("g_franco", false);
+		guns[0] = _fr;
+		guns[1] = noone;
+		weapon.index = 0;
+		reloading = false;
+		reload_timer = 0;
+		reserve[$ _fr.ammoType] = scr_municion_tope(_fr.ammoType);
+		return;
+	}
+	var _p = scr_eq_arma(global.equipo.p);
+	var _s = scr_eq_arma(global.equipo.s);
+	guns[0] = _p;
+	guns[1] = _s;
+	weapon.index = 0;
+	reloading = false;
+	reload_timer = 0;
+	scr_eq_reserva(_p);
+	scr_eq_reserva(_s);
+}
+
+/// Bot de local (oPlayer2_local): un arma de las de siempre al azar (sin mejoras)
+function scr_eq_dar_bot_local() {
+	var _ids = ["pistola", "smg", "m4", "escopeta"];
+	var _w = scr_eq_arma(_ids[irandom(array_length(_ids) - 1)], false);
+	guns[0] = _w;
+	weapon.index = 0;
+	reloading = false;
+	reload_timer = 0;
+	reserve[$ _w.ammoType] = _w.maxAmmo * 4;
+}
+
+/// Bot de sala (en linea): un arma del equipamiento al azar hasta nivel 12 (sin mejoras)
+function scr_botnet_equipo_azar() {
+	// UN TIRO (scr_reloj): los bots tambien con francotirador (balas sin fin)
+	if (scr_modo_tiro()) {
+		var _fw = scr_eq_arma("g_franco", false);
+		bot_w_src = _fw;
+		bot_w = scr_botnet_arma_datos(_fw);
+		ammo = bot_w.max;
+		bot_cargas = -1;
+		reloading = false;
+		bot_rafaga = 0;
+		WSI = bot_w.spr;
+		return;
+	}
+	var _c = scr_eq_catalogo();
+	var _ops = [];
+	for (var i = 0; i < array_length(_c); i++) if (_c[i].lv <= 12) array_push(_ops, _c[i].id);
+	if (array_length(_ops) == 0) return;
+	var _w = scr_eq_arma(_ops[irandom(array_length(_ops) - 1)], false);
+	if (!scr_botnet_arma_sirve(_w)) return;
+	bot_w_src = _w;
+	bot_w = scr_botnet_arma_datos(_w);
+	ammo = bot_w.max;
+	bot_cargas = 4;    // al acabarse vuelve a la pistola (y puede agarrar las del mapa)
+	reloading = false;
+	bot_rafaga = 0;
+	WSI = bot_w.spr;
+}
+
+/// Numeros para las barras (0 a 1): dano, cadencia, cargador, recarga
+function scr_eq_stats(_id, _n) {
+	var _b = scr_eq_base(_id);
+	if (is_undefined(_b)) return [0, 0, 0, 0];
+	var _bal = variable_struct_exists(_b, "balas") ? _b.balas : (variable_struct_exists(_b, "pellets") ? _b.pellets : 1);
+	var _rt = variable_struct_exists(_b, "reloadTime") ? _b.reloadTime : room_speed * 1.2;
+	var _car = _b.maxAmmo;
+	if (_n > 0) { _car += max(1, round(_car * 0.1 * _n)); _rt *= (1 - 0.08 * _n); }
+	var _fps = game_get_speed(gamespeed_fps);
+	return [
+		clamp(_b.damage * _bal / 60, 0.05, 1),
+		clamp((_fps / max(1, _b.frequency)) / 15, 0.05, 1),
+		clamp(_car / 50, 0.05, 1),
+		clamp(1 - (_rt / _fps) / 3, 0.05, 1)
+	];
+}
+
+// ------------------------------------------------------
+// PANTALLA DE EQUIPAMIENTO (oMenu: menu_state == "equipo")
+// Se dibuja en una "hoja" de 720x405 que se agranda a tu pantalla (PC, celular y HTML5).
+// Teclado: W/S elegir, A/D casilla, ENTER comprar/equipar, M mejorar, ESC volver.
+// ------------------------------------------------------
+#macro EQ_FILA 33
+#macro EQ_LISTA_Y 62
+#macro EQ_LISTA_FIN 386
+
+function scr_eq_abrir() {
+	scr_eq_init();
+	global.eq_ui = {
+		sel: 0, slot: 0, scroll: 0, abierto_t: 0, drag: false, drag_y: 0,
+		fx: "", fx_t: -1, fx_id: "", fx_n0: 0, fx_n1: 0, fx_costo: 0,
+		mon_vis: global.equipo.monedas, msg: "", msg_t: 0, parts: [], S: 1, ox: 0, oy: 0
+	};
+	// Empieza en tu arma principal
+	var _c = scr_eq_catalogo();
+	for (var i = 0; i < array_length(_c); i++) if (_c[i].id == global.equipo.p) global.eq_ui.sel = i;
+	__eq_ver_sel();
+}
+
+function __eq_geo() {
+	var _q = global.eq_ui;
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	_q.S = min(_gw / 720, _gh / 405);
+	_q.ox = (_gw - 720 * _q.S) / 2;
+	_q.oy = (_gh - 405 * _q.S) / 2;
+}
+function __eq_x(_x) { return global.eq_ui.ox + _x * global.eq_ui.S; }
+function __eq_y(_y) { return global.eq_ui.oy + _y * global.eq_ui.S; }
+
+/// Que la elegida se vea en la lista
+function __eq_ver_sel() {
+	var _q = global.eq_ui;
+	var _vis = EQ_LISTA_FIN - EQ_LISTA_Y;
+	var _top = _q.sel * EQ_FILA;
+	if (_top < _q.scroll) _q.scroll = _top;
+	if (_top + EQ_FILA > _q.scroll + _vis) _q.scroll = _top + EQ_FILA - _vis;
+	__eq_scroll_tope();
+}
+function __eq_scroll_tope() {
+	var _q = global.eq_ui;
+	var _max = max(0, array_length(scr_eq_catalogo()) * EQ_FILA - (EQ_LISTA_FIN - EQ_LISTA_Y));
+	_q.scroll = clamp(_q.scroll, 0, _max);
+}
+
+/// Los botones del arma elegida: [{x1,y1,x2,y2,acc,txt,col,on}]
+function __eq_botones() {
+	var _q = global.eq_ui;
+	var _cat0 = scr_eq_catalogo();
+	var _it = _cat0[_q.sel];
+	var _x1 = 292, _y1 = 172, _x2 = 686, _y2 = 285, _mid = (_x1 + _x2) / 2;
+	var _oro = make_color_rgb(255, 212, 71), _verde = make_color_rgb(78, 220, 140), _azul = make_color_rgb(31, 155, 255);
+	var _gris = make_color_rgb(70, 78, 100), _rojo = make_color_rgb(80, 40, 46);
+	if (!scr_eq_tiene(_it.id)) {
+		if (global.lvl < _it.lv) return [{ x1: _x1, y1: _y1, x2: _x2, y2: _y2, acc: "", txt: "SE ABRE EN NIVEL " + string(_it.lv), col: _rojo, on: false, tc: make_color_rgb(229, 72, 77) }];
+		return [{ x1: _x1, y1: _y1, x2: _x2, y2: _y2, acc: "comprar", txt: "COMPRAR  -  " + string(_it.precio), col: _oro, on: true, tc: make_color_rgb(11, 15, 26) }];
+	}
+	var _n = scr_eq_mejora(_it.id);
+	var _b1 = (_n >= EQ_MEJORA_MAX)
+		? { x1: _x1, y1: _y1, x2: _mid - 6, y2: _y2, acc: "", txt: "MEJORA MAXIMA", col: _gris, on: false, tc: make_color_rgb(169, 180, 208) }
+		: { x1: _x1, y1: _y1, x2: _mid - 6, y2: _y2, acc: "mejorar", txt: "MEJORAR - " + string(scr_eq_costo_mejora(_n)), col: _verde, on: true, tc: make_color_rgb(11, 15, 26) };
+	var _ya = (_q.slot == 0) ? (global.equipo.p == _it.id) : (global.equipo.s == _it.id);
+	var _b2 = _ya
+		? { x1: _mid + 6, y1: _y1, x2: _x2, y2: _y2, acc: "", txt: "EQUIPADA", col: _gris, on: false, tc: make_color_rgb(169, 180, 208) }
+		: { x1: _mid + 6, y1: _y1, x2: _x2, y2: _y2, acc: "equipar", txt: "EQUIPAR", col: _azul, on: true, tc: c_white };
+	return [_b1, _b2];
+}
+
+function __eq_msg(_t) {
+	global.eq_ui.msg = _t;
+	global.eq_ui.msg_t = 100;
+	if (global.sfx) audio_play_sound(snd_empy, 5, false, 0.6);
+}
+
+function __eq_chispas(_x, _y, _n, _cols) {
+	var _q = global.eq_ui;
+	repeat (_n) {
+		var _a = random(360), _v = random_range(2, 6);
+		array_push(_q.parts, { x: _x, y: _y, vx: lengthdir_x(_v, _a), vy: lengthdir_y(_v, _a) * 0.7 - 1, col: _cols[irandom(array_length(_cols) - 1)], s: random_range(2, 4.5), vida: irandom_range(40, 70), v0: 70 });
+	}
+}
+
+function __eq_hacer(_acc) {
+	var _q = global.eq_ui;
+	var _cat0 = scr_eq_catalogo();
+	var _it = _cat0[_q.sel];
+	var _oro = make_color_rgb(255, 212, 71), _verde = make_color_rgb(78, 220, 140);
+	switch (_acc) {
+		case "comprar":
+			if (global.lvl < _it.lv) { __eq_msg("NECESITAS NIVEL " + string(_it.lv)); break; }
+			if (global.equipo.monedas < _it.precio) { __eq_msg("TE FALTAN " + string(_it.precio - global.equipo.monedas) + " MONEDAS"); break; }
+			if (scr_eq_comprar(_it.id)) {
+				_q.fx = "compra"; _q.fx_t = 0; _q.fx_id = _it.id; _q.fx_costo = _it.precio;
+				__eq_chispas(377, 126, 40, [_oro, c_white, make_color_rgb(255, 240, 170)]);
+				if (global.sfx) audio_play_sound(snd_levelup, 5, false, 0.8, 0, 1.2);
+			}
+		break;
+		case "mejorar":
+			var _n = scr_eq_mejora(_it.id);
+			if (_n >= EQ_MEJORA_MAX) { __eq_msg("YA ESTA AL MAXIMO"); break; }
+			var _c = scr_eq_costo_mejora(_n);
+			if (global.equipo.monedas < _c) { __eq_msg("TE FALTAN " + string(_c - global.equipo.monedas) + " MONEDAS"); break; }
+			if (scr_eq_mejorar(_it.id)) {
+				_q.fx = "mejora"; _q.fx_t = 0; _q.fx_id = _it.id; _q.fx_n0 = _n; _q.fx_n1 = _n + 1; _q.fx_costo = _c;
+				__eq_chispas(377, 126, 46, [_oro, c_white, _verde, make_color_rgb(255, 240, 170)]);
+				if (global.sfx) audio_play_sound(snd_levelup, 5, false, 0.9);
+			}
+		break;
+		case "equipar":
+			if (scr_eq_equipar(_it.id, _q.slot)) {
+				_q.fx = "equipa"; _q.fx_t = 0; _q.fx_id = _it.id;
+				if (global.sfx) audio_play_sound(snd_ammo_pickup, 5, false, 0.8, 0, 1.3);
+			}
+		break;
+	}
+}
+
+/// Step de oMenu cuando menu_state == "equipo"
+function scr_eq_step() {
+	if (!variable_global_exists("eq_ui") || !is_struct(global.eq_ui)) scr_eq_abrir();
+	scr_eq_init();
+	__eq_geo();
+	var _q = global.eq_ui;
+	var _cat = scr_eq_catalogo();
+	var _n = array_length(_cat);
+	_q.abierto_t++;
+
+	// Animaciones
+	if (_q.fx_t >= 0) { _q.fx_t++; if (_q.fx_t > 150) { _q.fx_t = -1; _q.fx = ""; } }
+	_q.mon_vis = lerp(_q.mon_vis, global.equipo.monedas, 0.1);
+	if (abs(_q.mon_vis - global.equipo.monedas) < 1) _q.mon_vis = global.equipo.monedas;
+	if (_q.msg_t > 0) _q.msg_t--;
+	for (var i = array_length(_q.parts) - 1; i >= 0; i--) {
+		var _p = _q.parts[i];
+		_p.x += _p.vx; _p.y += _p.vy; _p.vy += 0.12; _p.vx *= 0.97; _p.vida -= 1;
+		if (_p.vida <= 0) array_delete(_q.parts, i, 1);
+	}
+
+	// Los primeros frames no (el mismo ENTER o toque que la abrio)
+	if (_q.abierto_t <= 5) return;
+
+	if (vkey_pressed(vk_escape)) { menu_state = "main"; menu_delay = 5; return; }
+
+	// Teclado
+	var _mv = vkey_pressed(ord("S")) - vkey_pressed(ord("W"));
+	if (_mv != 0) {
+		_q.sel = clamp(_q.sel + _mv, 0, _n - 1);
+		__eq_ver_sel();
+		if (global.sfx) audio_play_sound(snd_scroll, 5, false, 0.4);
+	}
+	var _lr = vkey_pressed(ord("D")) - vkey_pressed(ord("A"));
+	if (_lr != 0) _q.slot = (_lr > 0) ? 1 : 0;
+	if (vkey_pressed(vk_enter)) __eq_hacer(scr_eq_tiene(_cat[_q.sel].id) ? "equipar" : "comprar");
+	if (keyboard_check_pressed(ord("M"))) __eq_hacer("mejorar");
+
+	// PRUEBA: ALT = +1000 monedas (solo en esta pantalla y solo con EQ_PRUEBA en true)
+	if (EQ_PRUEBA && keyboard_check_pressed(vk_alt)) {
+		global.equipo.monedas += 1000;
+		scr_save_to_local();
+		__eq_chispas(520, 30, 24, [make_color_rgb(255, 212, 71), c_white]);
+		if (global.sfx) audio_play_sound(snd_ammo_pickup, 5, false, 0.8, 0, 1.5);
+	}
+	// PRUEBA: SUPR (Delete) = borrar monedas, armas compradas y mejoras (en el aparato y en tu cuenta)
+	if (EQ_PRUEBA && keyboard_check_pressed(vk_delete)) {
+		global.equipo = { monedas: 0, armas: [], mej: {}, p: "smg", s: "pistola" };
+		scr_eq_init();
+		scr_save_to_local();   // tambien manda el equipamiento vacio a tu cuenta
+		_q.mon_vis = 0;
+		_q.fx = ""; _q.fx_t = -1; _q.parts = [];
+		_q.sel = 0; _q.scroll = 0;
+		__eq_msg("EQUIPAMIENTO BORRADO");
+	}
+
+	// Rueda del mouse en la lista
+	var _rueda = mouse_wheel_down() - mouse_wheel_up();
+	if (_rueda != 0) { _q.scroll += _rueda * EQ_FILA; __eq_scroll_tope(); }
+
+	// Toques y clics (en coordenadas de la hoja)
+	var _px = (device_mouse_x_to_gui(0) - _q.ox) / _q.S;
+	var _py = (device_mouse_y_to_gui(0) - _q.oy) / _q.S;
+	if (device_mouse_check_button_pressed(0, mb_left)) {
+		if (point_in_rectangle(_px, _py, 610, 8, 712, 36)) { menu_state = "main"; menu_delay = 5; return; }   // VOLVER
+		if (point_in_rectangle(_px, _py, 12, 54, 262, EQ_LISTA_FIN + 4)) {
+			var _f = floor((_py - EQ_LISTA_Y + _q.scroll) / EQ_FILA);
+			if (_f >= 0 && _f < _n && _py >= EQ_LISTA_Y) {
+				if (_f != _q.sel && global.sfx) audio_play_sound(snd_scroll, 5, false, 0.4);
+				_q.sel = _f;
+			}
+			_q.drag = true;
+			_q.drag_y = _py;
+		}
+		var _sw = (720 - 286) / 2;
+		for (var k = 0; k < 2; k++) {
+			var _sx1 = 274 + k * (_sw + 6);
+			if (point_in_rectangle(_px, _py, _sx1, 311, _sx1 + _sw - 6, EQ_LISTA_FIN + 4)) _q.slot = k;
+		}
+		var _bs = __eq_botones();
+		for (var b = 0; b < array_length(_bs); b++) {
+			var _bt = _bs[b];
+			if (_bt.acc != "" && point_in_rectangle(_px, _py, _bt.x1, _bt.y1, _bt.x2, _bt.y2)) __eq_hacer(_bt.acc);
+		}
+	}
+	if (_q.drag) {
+		if (device_mouse_check_button(0, mb_left)) {
+			_q.scroll -= (_py - _q.drag_y);
+			_q.drag_y = _py;
+			__eq_scroll_tope();
+		} else _q.drag = false;
+	}
+}
+
+// --- dibujo ---
+function __eq_rect(_x1, _y1, _x2, _y2, _r, _col, _a, _borde = false) {
+	draw_set_color(_col);
+	draw_set_alpha(_a);
+	var _S = global.eq_ui.S;
+	draw_roundrect_ext(__eq_x(_x1), __eq_y(_y1), __eq_x(_x2), __eq_y(_y2), _r * _S, _r * _S, _borde);
+	draw_set_alpha(1);
+}
+
+/// Panel con sombra y borde oscuro (estetica del menu nuevo)
+function __eq_caja(_x1, _y1, _x2, _y2, _r, _col) {
+	__eq_rect(_x1, _y1 + 5, _x2, _y2 + 5, _r, c_black, 0.45);
+	__eq_rect(_x1, _y1, _x2, _y2, _r, _col, 1);
+	__eq_rect(_x1, _y1, _x2, _y2, _r, make_color_rgb(11, 15, 26), 1, true);
+}
+/// Boton con relieve (sombra, brillo arriba y borde oscuro)
+function __eq_boton(_x1, _y1, _x2, _y2, _r, _col) {
+	__eq_rect(_x1, _y1 + 5, _x2, _y2 + 5, _r, merge_colour(_col, c_black, 0.55), 1);
+	__eq_rect(_x1, _y1, _x2, _y2, _r, _col, 1);
+	__eq_rect(_x1 + 5, _y1 + 4, _x2 - 5, _y1 + (_y2 - _y1) * 0.42, _r * 0.6, merge_colour(_col, c_white, 0.25), 1);
+	__eq_rect(_x1, _y1, _x2, _y2, _r, make_color_rgb(11, 15, 26), 1, true);
+}
+
+function __eq_txt(_x, _y, _s, _px, _col, _ha, _a = 1, _font = fnt_menu) {
+	draw_set_font(_font);
+	draw_set_halign(_ha);
+	draw_set_valign(fa_middle);
+	draw_set_color(_col);
+	draw_set_alpha(_a);
+	var _k = (_px * global.eq_ui.S) / max(1, string_height("A"));
+	draw_text_transformed(__eq_x(_x), __eq_y(_y), _s, _k, _k, 0);
+	draw_set_alpha(1);
+}
+
+/// Sprite centrado en (_cx,_cy) que quepa en _w x _h. _blanco = brillo blanco encima (0 a 1)
+function __eq_spr(_spr, _cx, _cy, _w, _h, _a = 1, _blanco = 0) {
+	var _sw = sprite_get_width(_spr), _sh = sprite_get_height(_spr);
+	var _k = min(_w / _sw, _h / _sh) * global.eq_ui.S;
+	var _x = __eq_x(_cx) - (_sw / 2 - sprite_get_xoffset(_spr)) * _k;
+	var _y = __eq_y(_cy) - (_sh / 2 - sprite_get_yoffset(_spr)) * _k;
+	draw_sprite_ext(_spr, 0, _x, _y, _k, _k, 0, c_white, _a);
+	if (_blanco > 0) {
+		gpu_set_blendmode(bm_add);
+		repeat (2) draw_sprite_ext(_spr, 0, _x, _y, _k, _k, 0, c_white, _blanco);
+		gpu_set_blendmode(bm_normal);
+	}
+}
+
+function __eq_estrella(_cx, _cy, _r, _col, _a = 1) {
+	var _S = global.eq_ui.S;
+	var _x = __eq_x(_cx), _y = __eq_y(_cy);
+	draw_set_color(_col);
+	draw_set_alpha(_a);
+	draw_primitive_begin(pr_trianglefan);
+	draw_vertex(_x, _y);
+	for (var j = 0; j <= 10; j++) {
+		var _rr = ((j mod 2) == 0 ? _r : _r * 0.45) * _S;
+		var _ang = 90 + j * 36;
+		draw_vertex(_x + lengthdir_x(_rr, _ang), _y + lengthdir_y(_rr, _ang));
+	}
+	draw_primitive_end();
+	draw_set_alpha(1);
+}
+
+function __eq_moneda(_cx, _cy, _r) {
+	var _S = global.eq_ui.S;
+	draw_set_color(make_color_rgb(255, 212, 71));
+	draw_circle(__eq_x(_cx), __eq_y(_cy), _r * _S, false);
+	draw_set_color(make_color_rgb(214, 160, 30));
+	draw_circle(__eq_x(_cx), __eq_y(_cy), _r * 0.55 * _S, false);
+}
+
+function __eq_ease(_x) { _x = clamp(_x, 0, 1); return 1 - power(1 - _x, 3); }
+function __eq_back(_x) { _x = clamp(_x, 0, 1); var _c = 1.7; return 1 + (_c + 1) * power(_x - 1, 3) + _c * power(_x - 1, 2); }
+
+/// Draw GUI de oMenu cuando menu_state == "equipo"
+function scr_eq_draw() {
+	if (!variable_global_exists("eq_ui") || !is_struct(global.eq_ui)) scr_eq_abrir();
+	scr_eq_init();
+	__eq_geo();
+	var _q = global.eq_ui;
+	var _cat = scr_eq_catalogo();
+	var _n = array_length(_cat);
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	var _tinta = make_color_rgb(11, 15, 26), _panel = make_color_rgb(20, 24, 50), _caja = make_color_rgb(150, 160, 185);
+	var _oro = make_color_rgb(255, 212, 71), _azul = make_color_rgb(31, 155, 255), _gris = make_color_rgb(169, 180, 208);
+	var _verde = make_color_rgb(78, 220, 140), _rojo = make_color_rgb(229, 72, 77), _apag = make_color_rgb(60, 66, 86);
+	var _fx = _q.fx, _t = _q.fx_t;
+
+	// Fondo (toda la pantalla) y barra de arriba (estetica del menu nuevo)
+	if (MN_NUEVO) __mn_fondo_wh(_gw, _gh);
+	else { draw_set_color(make_color_rgb(16, 20, 34)); draw_rectangle(0, 0, _gw, _gh, false); }
+	draw_set_color(_tinta);
+	draw_set_alpha(0.75);
+	draw_rectangle(0, 0, _gw, __eq_y(44), false);
+	draw_set_alpha(1);
+	__eq_txt(18, 22, "EQUIPAMIENTO", 20, c_white, fa_left);
+	__eq_txt(452, 22, "NV " + string(global.lvl), 15, _azul, fa_left);
+	__eq_moneda(512, 22, 8);
+	__eq_txt(526, 22, string(round(_q.mon_vis)), 15, _oro, fa_left);
+	if ((_fx == "mejora" || _fx == "compra") && _t >= 6 && _t < 60) {
+		var _ft = (_t - 6) / 54;
+		__eq_txt(526, 40 - 10 * __eq_ease(_ft), "-" + string(_q.fx_costo), 11, _rojo, fa_left, 1 - _ft);
+	}
+	__eq_boton(610, 8, 712, 36, 6, make_color_rgb(44, 54, 110));
+	__eq_txt(661, 22, "VOLVER", 12, c_white, fa_center);
+
+	// --- LISTA ---
+	__eq_caja(12, 54, 262, EQ_LISTA_FIN + 4, 10, _panel);
+	for (var i = 0; i < _n; i++) {
+		var _it = _cat[i];
+		var _y = EQ_LISTA_Y + i * EQ_FILA - _q.scroll;
+		if (_y < EQ_LISTA_Y - 1 || _y + 29 > EQ_LISTA_FIN + 1) continue;
+		var _mia = scr_eq_tiene(_it.id);
+		if (i == _q.sel) {
+			__eq_rect(18, _y, 256, _y + 29, 6, make_color_rgb(40, 60, 100), 1);
+			__eq_rect(18, _y, 256, _y + 29, 6, _azul, 1, true);
+		}
+		__eq_rect(24, _y + 3, 74, _y + 26, 4, _caja, _mia ? 1 : 0.55);
+		__eq_spr(_it.spr, 49, _y + 14.5, 44, 17, _mia ? 1 : 0.5);
+		__eq_txt(84, _y + 15, _it.nombre, 12, _mia ? c_white : _gris, fa_left);
+		if (_mia) {
+			// Estrellitas de mejora y marca de equipada
+			var _nm = scr_eq_mejora(_it.id);
+			for (var s = 0; s < _nm; s++) __eq_estrella(222 + s * 11, _y + 15, 4.5, _oro);
+			if (global.equipo.p == _it.id || global.equipo.s == _it.id) __eq_txt(250, _y + 15, (global.equipo.p == _it.id) ? "P" : "S", 11, _azul, fa_right);
+		} else if (global.lvl < _it.lv) {
+			__eq_txt(248, _y + 15, "NV " + string(_it.lv), 11, _rojo, fa_right);
+		} else {
+			__eq_moneda(212, _y + 15, 6);
+			__eq_txt(248, _y + 15, string(_it.precio), 11, _oro, fa_right);
+		}
+	}
+	// Barrita de scroll
+	var _tot = _n * EQ_FILA, _vis = EQ_LISTA_FIN - EQ_LISTA_Y;
+	if (_tot > _vis) {
+		var _bh = _vis * _vis / _tot;
+		var _by = EQ_LISTA_Y + (_vis - _bh) * (_q.scroll / (_tot - _vis));
+		__eq_rect(258, _by, 261, _by + _bh, 2, _gris, 0.4);
+	}
+
+	// --- DETALLE DEL ARMA ---
+	var _sel = _cat[_q.sel];
+	var _mia2 = scr_eq_tiene(_sel.id);
+	var _nmej = scr_eq_mejora(_sel.id);
+	var _es_fx = (_q.fx_id == _sel.id && _t >= 0);
+	__eq_caja(274, 54, 708, 301, 10, _panel);
+	__eq_txt(292, 74, _sel.nombre, 22, c_white, fa_left);
+	// Estrellas (la nueva salta con un aro)
+	for (var k = 0; k < EQ_MEJORA_MAX; k++) {
+		var _sx = 634 + k * 26;
+		var _llena = (k < _nmej);
+		if (_es_fx && _fx == "mejora" && k == _q.fx_n1 - 1) {
+			__eq_estrella(_sx, 74, 11, _apag);
+			if (_t >= 18) __eq_estrella(_sx, 74, 11 * __eq_back((_t - 18) / 21), _oro);
+			if (_t >= 18 && _t < 96) {
+				var _rp = (_t - 18) / 78;
+				draw_set_color(_oro);
+				draw_set_alpha(1 - _rp);
+				draw_circle(__eq_x(_sx), __eq_y(74), (10 + 30 * __eq_ease(_rp)) * _q.S, true);
+				draw_set_alpha(1);
+			}
+		} else __eq_estrella(_sx, 74, 11, _llena ? _oro : _apag);
+	}
+	// Caja del arma: brilla y salta al mejorar o comprar
+	var _glow = (_es_fx && (_fx == "mejora" || _fx == "compra")) ? max(0, 1 - _t / 54) : 0;
+	__eq_rect(292, 94, 462, 158, 8, merge_colour(_caja, c_white, _glow * 0.6), _mia2 ? 1 : 0.6);
+	if (_es_fx && (_fx == "mejora" || _fx == "compra") && _t < 72) __eq_rect(292, 94, 462, 158, 8, _oro, 1, true);
+	var _pop = (_es_fx && _t >= 0 && _t < 30 && (_fx == "mejora" || _fx == "compra")) ? 1 + 0.35 * sin(pi * _t / 30) : 1;
+	var _bl = (_es_fx && (_fx == "mejora" || _fx == "compra")) ? max(0, 1 - _t / 21) : 0;
+	__eq_spr(_sel.spr, 377, 126, 140 * _pop, 44 * _pop, _mia2 ? 1 : 0.55, _bl);
+	// Onda alrededor del arma
+	if (_es_fx && (_fx == "mejora" || _fx == "compra") && _t < 36) {
+		var _rq = _t / 36;
+		draw_set_color(make_color_rgb(255, 240, 170));
+		draw_set_alpha(0.8 * (1 - _rq));
+		var _rr = (20 + 120 * __eq_ease(_rq)) * _q.S;
+		draw_ellipse(__eq_x(377) - _rr, __eq_y(126) - _rr * 0.7, __eq_x(377) + _rr, __eq_y(126) + _rr * 0.7, true);
+		draw_set_alpha(1);
+	}
+	// Barras
+	var _st1 = scr_eq_stats(_sel.id, _nmej);
+	var _st0 = (_es_fx && _fx == "mejora") ? scr_eq_stats(_sel.id, _q.fx_n0) : _st1;
+	var _nom = ["DANO", "CADENCIA", "CARGADOR", "RECARGA"];
+	var _sube = (_es_fx && _fx == "mejora") ? __eq_ease((_t - 24) / 30) : 1;
+	for (var b = 0; b < 4; b++) {
+		var _yy = 102 + b * 16;
+		__eq_txt(476, _yy, _nom[b], 9, _gris, fa_left, 1, fnt_small);
+		__eq_rect(556, _yy - 4, 686, _yy + 4, 3, make_color_rgb(40, 46, 66), 1);
+		var _v = lerp(_st0[b], _st1[b], _sube);
+		var _cb = (b >= 2 && _es_fx && _fx == "mejora" && _t >= 24 && _t < 100) ? _verde : _azul;
+		__eq_rect(556, _yy - 4, 556 + 130 * _v, _yy + 4, 3, _cb, 1);
+		if (b >= 2 && _nmej > 0) __eq_txt(690, _yy, "+", 11, _verde, fa_left);
+	}
+	// Botones
+	var _bs = __eq_botones();
+	for (var j = 0; j < array_length(_bs); j++) {
+		var _bt = _bs[j];
+		__eq_boton(_bt.x1, _bt.y1, _bt.x2, _bt.y2, 10, _bt.col);
+		__eq_txt((_bt.x1 + _bt.x2) / 2, (_bt.y1 + _bt.y2) / 2, _bt.txt, (array_length(_bs) == 1) ? 15 : 13, _bt.tc, fa_center);
+	}
+	// Cartel de la mejora / compra
+	if (_es_fx && (_fx == "mejora" || _fx == "compra") && _t >= 21 && _t < 132) {
+		var _cp = _t - 21;
+		var _sc = (_cp < 18) ? __eq_back(_cp / 18) : 1;
+		var _ca = (_t < 114) ? 1 : 1 - (_t - 114) / 18;
+		var _ww = 115 * _sc, _hh = 20 * _sc;
+		__eq_rect(377 - _ww, 186 - _hh, 377 + _ww, 186 + _hh, 10, _tinta, 0.92 * _ca);
+		__eq_rect(377 - _ww, 186 - _hh, 377 + _ww, 186 + _hh, 10, _oro, _ca, true);
+		var _txt = (_fx == "mejora") ? (_sel.nombre + "  MEJORA  " + string(_q.fx_n1) + "/" + string(EQ_MEJORA_MAX)) : (_sel.nombre + "  ES TUYA!");
+		__eq_txt(377, 186, _txt, 15 * _sc, _oro, fa_center, _ca);
+	}
+	// Aviso (te faltan monedas, etc.)
+	if (_q.msg_t > 0) {
+		var _ma = min(1, _q.msg_t / 20);
+		__eq_rect(300, 228, 678, 256, 8, _tinta, 0.92 * _ma);
+		__eq_rect(300, 228, 678, 256, 8, _rojo, _ma, true);
+		__eq_txt(489, 242, _q.msg, 13, _rojo, fa_center, _ma);
+	}
+
+	// --- TUS 2 CASILLAS ---
+	var _sw = (720 - 286) / 2;
+	var _ids = [global.equipo.p, global.equipo.s];
+	var _labs = ["PRINCIPAL", "SECUNDARIA"];
+	for (var m = 0; m < 2; m++) {
+		var _sx1 = 274 + m * (_sw + 6), _sx2 = _sx1 + _sw - 6;
+		var _act = (_q.slot == m);
+		__eq_caja(_sx1, 311, _sx2, EQ_LISTA_FIN + 4, 10, _panel);
+		__eq_rect(_sx1, 311, _sx2, EQ_LISTA_FIN + 4, 10, _act ? _azul : make_color_rgb(60, 70, 100), 1, true);
+		if (_fx == "equipa" && _t < 24 && _act) __eq_rect(_sx1, 311, _sx2, EQ_LISTA_FIN + 4, 10, c_white, 0.35 * (1 - _t / 24));
+		__eq_txt(_sx1 + 14, 327, _labs[m], 11, _act ? _azul : _gris, fa_left);
+		var _ii = scr_eq_info(_ids[m]);
+		if (!is_undefined(_ii)) {
+			__eq_txt(_sx1 + 14, 355, _ii.nombre, (string_length(_ii.nombre) > 9) ? 13 : 17, c_white, fa_left);
+			__eq_rect(_sx2 - 100, 329, _sx2 - 12, 379, 6, _caja, 1);
+			__eq_spr(_ii.spr, _sx2 - 56, 354, 80, 34);
+			var _ns = scr_eq_mejora(_ii.id);
+			for (var s2 = 0; s2 < _ns; s2++) __eq_estrella(_sx1 + 20 + s2 * 13, 376, 5, _oro);
+		}
+		if (_act) __eq_txt(_sx2 - 108, 327, "ELIGIENDO", 9, _azul, fa_right, 1, fnt_small);
+	}
+
+	// Chispas
+	for (var p = 0; p < array_length(_q.parts); p++) {
+		var _pp = _q.parts[p];
+		draw_set_color(_pp.col);
+		draw_set_alpha(clamp(_pp.vida / 40, 0, 1));
+		var _ps = _pp.s * _q.S;
+		draw_rectangle(__eq_x(_pp.x), __eq_y(_pp.y), __eq_x(_pp.x) + _ps, __eq_y(_pp.y) + _ps, false);
+	}
+	draw_set_alpha(1);
+
+	// Ayuda (solo con teclado)
+	if (!touch_mode()) __eq_txt(360, 397, "W/S ELEGIR    A/D CASILLA    ENTER COMPRAR/EQUIPAR    M MEJORAR    ESC VOLVER", 8, _gris, fa_center, 0.6, fnt_small);
+
+	draw_set_halign(fa_left);
+	draw_set_valign(fa_top);
+	draw_set_color(c_white);
+	draw_set_alpha(1);
 }

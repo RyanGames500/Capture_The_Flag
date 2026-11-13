@@ -7,6 +7,7 @@
 /// En local, el de global.myTeam. Si no hay ninguno, por mi id (como antes).
 function scr_my_team() {
 	var _online = variable_global_exists("ONLINE") && global.ONLINE;
+	if (_online && room != rm_menu && scr_modo_jefe()) return "AZUL";   // JEFE GIGANTE: todos del mismo equipo (scr_reloj)
 	if (_online && variable_global_exists("serverTeam") && global.serverTeam != "") return global.serverTeam;
 	if (variable_global_exists("myTeam") && global.myTeam != "") return global.myTeam;
 	if (variable_global_exists("clientId")) return (global.clientId % 2 == 0) ? "AZUL" : "ROJO";
@@ -18,7 +19,9 @@ function scr_my_team() {
 function scr_spawn_en_base() {
 	var _team = scr_my_team();
 	var _base = (_team == "AZUL") ? obj_base_blue : obj_base_red;
-	if (instance_exists(_base)) {
+	if (scr_modo_todos() && scr_todos_spawn()) {
+		// TODOS CONTRA TODOS: lejos de los demas (scr_reloj)
+	} else if (instance_exists(_base)) {
 		x = _base.x;
 		y = _base.y;
 	} else {
@@ -32,6 +35,7 @@ function scr_spawn_en_base() {
 	if (variable_instance_exists(id, "push_h")) push_h = 0;
 	if (variable_instance_exists(id, "latest_x")) latest_x = x;
 	if (variable_instance_exists(id, "latest_y")) latest_y = y;
+	scr_lava_reubicar();   // PISO DE LAVA: si la base esta bajo la lava, al lugar seguro mas cercano (scr_reloj)
 }
 
 function scr_team_color(_team) {
@@ -350,6 +354,10 @@ function scr_botnet_crear_todos() {
 		with (_b) {
 			scr_botnet_init(_d.t, _nom, _pj);
 			bot_rol = _d.r;
+			// TODOS CONTRA TODOS: cada bot es su propio equipo (scr_reloj)
+			if (scr_modo_todos()) { team = "B" + string(i + 1); lobby_team = team; thisPlayerTeam = team; }
+			// JEFE GIGANTE: los bots ayudan contra el jefe (scr_reloj)
+			if (scr_modo_jefe()) { team = "AZUL"; lobby_team = team; thisPlayerTeam = team; }
 		}
 	}
 	if (array_length(global.botnet_defs) > 0) global.botnet_partida = true;
@@ -378,6 +386,7 @@ function scr_botnet_init(_team, _name, _pj) {
 
 	// Vida y movimiento del personaje (los mismos numeros que tu)
 	hp = bot_datos.vida;
+	if (scr_modo_tiro()) hp = 1;   // UN TIRO (scr_reloj)
 	max_health = hp;
 	enemyHealth = hp;
 	enemyHealth_net = hp;
@@ -425,6 +434,7 @@ function scr_botnet_init(_team, _name, _pj) {
 	bot_rafaga = 0;
 	bot_rafaga_t = 0;
 	scr_botnet_pistola();
+	scr_botnet_equipo_azar();   // EQUIPAMIENTO: empieza con un arma al azar (scr_armas)
 
 	// Habilidad de su personaje (scr_botnet_hab_usar)
 	bot_hab_cd = irandom_range(60, 180);
@@ -474,7 +484,9 @@ function scr_botnet_init(_team, _name, _pj) {
 function scr_botnet_a_base() {
 	var _base = (team == "AZUL") ? obj_base_blue : obj_base_red;
 	var _off = (((BOTNET_ID_BASE - clientId) mod 3) - 1) * 20;   // para que no salgan encimados
-	if (instance_exists(_base)) {
+	if (scr_modo_todos() && scr_todos_spawn()) {
+		// TODOS CONTRA TODOS: lejos de los demas (scr_reloj)
+	} else if (instance_exists(_base)) {
 		x = _base.x + _off;
 		y = _base.y;
 	} else {
@@ -488,6 +500,7 @@ function scr_botnet_a_base() {
 	push_h = 0;
 	net_x = x;
 	net_y = y;
+	scr_lava_reubicar();   // PISO DE LAVA (scr_reloj)
 }
 
 /// Lo que los demas necesitan para verlo (las mismas claves que manda oPlayer).
@@ -593,13 +606,17 @@ function scr_botnet_step() {
 	}
 
 	if (_activo && !_aturdido) scr_botnet_pensar();
+	// GRAVEDAD LOCA: de cabeza su mapa de caminos no sirve; camina y salta a lo simple (scr_reloj)
+	scr_grav_voltear();
+	var _gd = scr_grav_dir();
+	if (_activo && !_aturdido && _gd < 0) scr_grav_bot_teclas();
 	if (scr_efx_atrapado()) { key_left = false; key_right = false; key_jump = false; }   // en la red no camina
 	if (!_activo) weapon.angle = (image_xscale > 0) ? 0 : 180;
 
 	// --- MOVIMIENTO (igual que el bot del modo local) ---
 	if (drop_timer > 0) drop_timer--;
-	is_grounded = place_meeting(x, y + 1, obj_wall)
-	           || (place_meeting(x, y + 1, oPlataformaPasable) && !place_meeting(x, y, oPlataformaPasable) && drop_timer <= 0);
+	is_grounded = (_gd < 0) ? scr_grav_en_techo() : (place_meeting(x, y + 1, obj_wall)
+	           || (place_meeting(x, y + 1, oPlataformaPasable) && !place_meeting(x, y, oPlataformaPasable) && drop_timer <= 0));
 
 	if (key_jump && is_grounded && nav_quiere_pad) {
 		if (scr_salto_usar()) { is_grounded = false; key_jump = false; }
@@ -612,7 +629,7 @@ function scr_botnet_step() {
 		_vel *= scr_efx_vel_mult();                  // el congelador lo pone lento
 		if (abs(push_h) < 1) hsp = _move * _vel;
 		if (hsp != 0) image_xscale = sign(hsp) * 1.5;
-		if (key_jump && is_grounded) { vsp = jumpsp; is_grounded = false; }
+		if (key_jump && is_grounded) { vsp = jumpsp * _gd; is_grounded = false; }
 	}
 
 	if (abs(push_h) > 0.8) {
@@ -622,7 +639,7 @@ function scr_botnet_step() {
 		push_h = 0;
 	}
 
-	vsp += grv;
+	vsp += grv * _gd;
 
 	// Choque de lado
 	if (place_meeting(x + hsp, y, obj_wall)) {
@@ -631,8 +648,9 @@ function scr_botnet_step() {
 	}
 	x += hsp;
 
-	// Plataformas que se atraviesan
-	if (vsp > 0 && drop_timer <= 0) {
+	// Plataformas que se atraviesan (al reves te detienen por abajo)
+	if (_gd < 0) scr_grav_plataforma_techo();
+	if (vsp > 0 && drop_timer <= 0 && _gd > 0) {
 		var _pl = instance_place(x, y + vsp, oPlataformaPasable);
 		if (_pl != noone && bbox_bottom <= _pl.bbox_top) {
 			y = _pl.bbox_top - (bbox_bottom - y);
@@ -647,8 +665,8 @@ function scr_botnet_step() {
 	}
 	y += vsp;
 
-	// Se cayo del mapa
-	if (y > room_height + 120) {
+	// Se cayo del mapa (o salio por arriba con la gravedad al reves)
+	if (y > room_height + 120 || y < -200) {
 		last_reason = "caida";
 		last_killer = "";
 		last_killer_id = -1;
@@ -657,7 +675,7 @@ function scr_botnet_step() {
 
 	// --- COMO SE VE ---
 	if (!_aturdido) {
-		var _suelo = place_meeting(x, y + 1, obj_wall) || place_meeting(x, y + 1, oPlataformaPasable);
+		var _suelo = (_gd < 0) ? scr_grav_en_techo() : (place_meeting(x, y + 1, obj_wall) || place_meeting(x, y + 1, oPlataformaPasable));
 		if (!_suelo) state = PLAYERSTATE.JUMP;
 		else if (hsp != 0) state = PLAYERSTATE.WALK;
 		else state = PLAYERSTATE.IDLE;
@@ -687,6 +705,8 @@ function scr_botnet_step() {
 
 /// Que hace el bot: a donde va, a quien le dispara, cuando usa su habilidad.
 function scr_botnet_pensar() {
+	// JEFE GIGANTE: el bot se pone de lado del jefe y le dispara (scr_reloj)
+	if (scr_modo_jefe()) { scr_jefe_bot_pensar(); return; }
 	var _flag_rival = (team == "AZUL") ? oFlag : oFlag2;   // la que tiene que robar
 	var _flag_mia   = (team == "AZUL") ? oFlag2 : oFlag;   // la de su equipo
 	var _base       = (team == "AZUL") ? obj_base_blue : obj_base_red;
@@ -721,7 +741,20 @@ function scr_botnet_pensar() {
 	var _arma = (!has_flag && bot_w.tipo == "gun") ? scr_botnet_arma_cerca(220) : noone;   // un arma mejor cerca
 	var _compa_la_lleva = instance_exists(_flag_rival) && _flag_rival.has_flag && instance_exists(_flag_rival.portador_instancia) && _flag_rival.portador_instancia != id;
 
-	if (has_flag && instance_exists(_base)) {
+	if (scr_modo_duelo() || scr_modo_todos()) {
+		// DUELO POR PUNTOS y TODOS CONTRA TODOS: a buscar al rival mas cercano
+		if (_ene != noone) { _tx = _ene.x; _ty = _ene.y; _voy_al_rival = true; }
+	}
+	else if (scr_modo_rey() && variable_global_exists("rey_x")) {
+		// REY DE LA BANDERA: todos a la zona; si un rival esta cerca, a pelear
+		if (_veo && _ene_d < 200) { _tx = _ene.x; _ty = _ene.y; _voy_al_rival = true; }
+		else {
+			bot_patrulla_t--;
+			if (bot_patrulla_t <= 0) { bot_patrulla_t = room_speed * 2; bot_patrulla_x = irandom_range(-50, 50); }
+			_tx = global.rey_x + bot_patrulla_x; _ty = global.rey_y - 20;
+		}
+	}
+	else if (has_flag && instance_exists(_base)) {
 		// Llevo la bandera: directo a mi base
 		_tx = _base.x; _ty = _base.y;
 	}
@@ -765,6 +798,17 @@ function scr_botnet_pensar() {
 		_tx = _flag_rival.x; _ty = _flag_rival.y;
 	}
 
+	// PISO DE LAVA: si la lava va a subir o esta arriba y a donde va queda abajo, mejor a lo alto (scr_reloj)
+	if (scr_modo_lava() && variable_global_exists("lava_c")) {
+		var _alto = scr_lava_piso() + 6 - LAVA_ALTO;
+		var _lf = scr_lava_fase();
+		if ((_lf.f == 1 || _lf.f == 2 || (_lf.f == 0 && _lf.s <= LAVA_AVISO + 2)) && _ty > _alto - 30) {
+			var _sp = noone, _sd = 999999, _me = id;
+			with (oSpawnPoint) { if (y < _alto - 50) { var _dd = point_distance(x, y, _me.x, _me.y); if (_dd < _sd) { _sd = _dd; _sp = id; } } }
+			if (_sp != noone) { _tx = _sp.x; _ty = _sp.y; _voy_al_rival = false; }
+		}
+	}
+
 	// Si va a pelear y ya esta cerca, se planta a disparar
 	var _plantado = _voy_al_rival && _veo && _ene_d < 110 && abs(_ene.y - y) < 40;
 	if (!_plantado) scr_bot_nav_move(_tx, _ty);
@@ -774,7 +818,7 @@ function scr_botnet_pensar() {
 	if (bot_w.cohete) _alcance = BOTNET_VISTA + 120;
 	if (_veo && !has_flag) {
 		bot_error = lerp(bot_error, random_range(-9, 9), 0.15);
-		weapon.angle = point_direction(x, y - 18, _ene.x, _ene.y - 16) + bot_error;
+		weapon.angle = point_direction(x, y - 18 * scr_grav_signo(), _ene.x, _ene.y - 16 * ((_ene.image_yscale < 0) ? -1 : 1)) + bot_error;
 		if (hsp == 0) image_xscale = (_ene.x >= x) ? 1.5 : -1.5;
 		if (_ene_d <= _alcance && !reloading && ammo > 0 && weapon.frequency <= 0 && bot_rafaga <= 0 && random(100) < 35) scr_botnet_disparar();
 	} else {
@@ -891,7 +935,7 @@ function scr_botnet_disparar(_de_rafaga = false) {
 		_b.image_angle = _dir;
 		_b.speed = _d.vel * ((_d.balas > 1) ? random_range(0.9, 1.1) : 1);
 		_b.life = _d.vida;
-		_b.damage = _d.dano;
+		_b.damage = _d.dano + ((bot_pj == 0 && _d.cada <= 10 && _d.balas == 1 && !_d.cohete && _d.efecto == "") ? irandom_range(2, 3) : 0);   // pasiva del Asalto
 		_b.sprite_index = _d.bala;
 		if (_d.atraviesa > 1) _b.atraviesa = _d.atraviesa;
 		if (_d.cohete) {
@@ -948,12 +992,34 @@ function scr_botnet_hab_usar(_dist) {
 				_usar = true;
 			}
 		break;
-		case 3:
+		case 2:   // EXPLORADORA: la red cuando tiene al rival cerca (scr_personajes)
+			if (_dist < 260 && random(1) < 0.08) {
+				var _rd = weapon.angle;
+				var _rb = instance_create_layer(x + lengthdir_x(14, _rd), y - 20 + lengthdir_y(14, _rd), "Instances", oMyEntity);
+				_rb.owner_name = Name;
+				_rb.owner_team = team;
+				_rb.owner_id = id;
+				_rb.bot_team = team;
+				_rb.bot_src = id;
+				_rb.direction = _rd;
+				_rb.image_angle = _rd;
+				_rb.speed = EXPLO_RED_VEL;
+				_rb.life = 90;
+				_rb.damage = EXPLO_RED_DANO;
+				_rb.sprite_index = sprBullet_smg;
+				_rb.efecto = "red_hab";
+				_rb.gravity = 0.32;
+				_rb.gravity_direction = 270;
+				_rb.image_xscale = 1.5;
+				_rb.image_yscale = 1.5;
+				if (global.sfx && scr_botnet_se_ve(x, y)) audio_play_sound(snd_escop, 5, false, 0.6, 0, 1.4);
+				_usar = true;
+			}
+		break;
+		case 3:   // SARGENTO: se cura 30 al instante cuando esta herido (scr_personajes)
 			if (hp < max_health * 0.5) {
-				var _bq = instance_create_layer(x, bbox_bottom - 6, "Instances", oBotiquin);
-				_bq.team = team;
-				var _m = { x: _bq.x, y: _bq.y, team: team };
-				with (oOtherPlayer) if (!es_bot) SendEventToClient(clientId, "hab_botiquin", _m);
+				hp = min(max_health, hp + SARG_CURA);
+				repeat (4) instance_create_layer(x + random_range(-14, 14), y - random_range(4, 30), "Instances", oHealFX);
 				if (global.sfx && scr_botnet_se_ve(x, y)) audio_play_sound(snd_ammo_pickup, 5, false, 1, 0, 0.8);
 				_usar = true;
 			}
@@ -1020,7 +1086,7 @@ function scr_botnet_golpe(_t) {
 	var _m = { x: x, y: y, dir: _dir };
 	with (oOtherPlayer) if (!es_bot) SendEventToClient(clientId, "fx_melee", _m);
 	if (global.sfx && scr_botnet_se_ve(x, y)) audio_play_sound(snd_melee, 1, false);
-	scr_botnet_pegar(_t, BOTNET_GOLPE, point_direction(x, y, _t.x, _t.y));
+	scr_botnet_pegar(_t, BOTNET_GOLPE + ((bot_pj == 1) ? TANQUE_GOLPE_EXTRA : 0), point_direction(x, y, _t.x, _t.y));   // pasiva del Tanque
 }
 
 /// El bot le pega a alguien: a tu jugador, a otra persona o a otro bot.
@@ -1084,6 +1150,11 @@ function scr_botnet_dano(_b, _m, _from) {
 			hit_bloqueo_timer = 20;
 			if (has_flag) scr_botnet_soltar(-6, 25);
 		}
+		// Explosion de barril: lo avienta hacia afuera (sin soltar la bandera)
+		if (_why == "explosion" && variable_struct_exists(_m, "angle")) {
+			if (bot_cor_t <= 0) { push_h = lengthdir_x(16, real(_m.angle)); vsp = -6; }
+			hit_bloqueo_timer = 15;
+		}
 	}
 }
 
@@ -1111,6 +1182,7 @@ function scr_botnet_soltar(_vy, _alto, _px = undefined, _py = undefined) {
 /// Robar, anotar y devolver (el lider lo decide, como cuando anota el host).
 function scr_botnet_banderas() {
 	if (isDead || global.game_over) return;
+	if (scr_modo_sin_banderas()) return;   // REY DE LA BANDERA y DUELO POR PUNTOS: no hay banderas que robar
 	var _obj  = (team == "AZUL") ? oFlag : oFlag2;          // la rival
 	var _mia  = (team == "AZUL") ? oFlag2 : oFlag;          // la de su equipo
 	var _base = (team == "AZUL") ? obj_base_blue : obj_base_red;
@@ -1196,6 +1268,8 @@ function scr_botnet_morir() {
 	var _msg;
 	if (last_reason == "crush") _msg = Name + " murio aplastado";
 	else if (last_reason == "caida") _msg = Name + " se cayo del mapa";
+	else if (last_reason == "lava") _msg = Name + " cayo en la lava";
+	else if (last_reason == "bomba") _msg = Name + " exploto con la bomba";
 	else _msg = ((last_killer != "") ? last_killer : "Alguien") + " elimino a " + Name;
 	scrAddKillFeed(_msg);
 	var _m = { msg: _msg };
@@ -1222,6 +1296,7 @@ function scr_botnet_revivir() {
 	sprite_index = bot_anim.idle;
 	bot_invul = 120;
 	scr_botnet_pistola();
+	scr_botnet_equipo_azar();   // EQUIPAMIENTO (scr_armas)
 	bot_hab_cd = irandom_range(30, 90);
 	nav_path = [];
 	nav_escape = 0;
@@ -1785,6 +1860,50 @@ function scr_partida_estado_nuevo() {
 	if (instance_exists(oIntroVersus)) instance_destroy(oIntroVersus);
 }
 
+/// LIMPIEZA AL VOLVER AL MENU (oMenu, Create). Salgas como salgas de la partida (SALIR, ESC,
+/// pausa, abandono, contra bots, sala privada, sin conexion), al llegar al menu no queda nada
+/// pegado de la partida anterior. No toca el modo sin internet ni tu personaje elegido.
+function scr_menu_limpiar() {
+	if (room != rm_menu) return;
+	global.game_over   = false;
+	global.pausa       = false;
+	global.puntos_azul = 0;
+	global.puntos_rojo = 0;
+	global.winner_team = 0;
+	global.mi_listo    = false;
+	global.rival_listo = false;
+	global.sala_listo  = false;
+	global.sel_tarde   = false;
+	global.revancha_rival = false;
+	if (variable_global_exists("fest") && is_struct(global.fest)) global.fest.t = 0;
+	// Bots de la partida anterior
+	global.botq           = false;
+	global.botq_pendiente = false;
+	global.bot_partida    = false;
+	global.botnet_defs    = [];
+	global.botnet_partida = false;
+	// Efectos y modos (cada modo se vuelve a armar al empezar la siguiente partida)
+	global.boom_fx = [];
+	global.boom_flash = 0;
+	if (variable_global_exists("jefe") && is_struct(global.jefe)) global.jefe.cuarto = -1;   // JEFE: se arma de nuevo
+	// TODOS CONTRA TODOS te deja un "equipo" raro ("J5"): en el menu vuelves a AZUL o ROJO normal
+	if (variable_global_exists("myTeam") && global.myTeam != "AZUL" && global.myTeam != "ROJO") global.myTeam = "";
+	if (instance_exists(oBrain)) with (oBrain) {
+		intro_disparada   = false;
+		timer_intro       = 60 * 60;
+		victory_alpha     = 0;
+		victory_index     = 0;
+		puntos_procesados = false;
+		abandono_activo   = false;
+		abandono_check    = -1;
+		ammo_spawned      = false;
+		weapons_spawned   = false;
+		kill_feed         = [];
+		alerts            = [];
+	}
+	if (instance_exists(oIntroVersus)) instance_destroy(oIntroVersus);
+}
+
 // ======================================================
 // SEGURO DE SELECCION: nadie se queda sin personaje
 // Si la partida en linea ya arranco (paso la intro) y yo no tengo personaje, a los 0.75 s
@@ -1851,7 +1970,7 @@ function scr_sel_crear_jugador() {
 // Eventos: oBrain Async Grabacion (Other_73) -> scr_voz_async_grabacion
 //          oBrain Async Reproduccion (Other_74) -> scr_voz_async_play
 // ======================================================
-#macro VOZ_DEBUG    true    // contador de prueba (enviados / recibidos / volumen). Ponlo en false cuando ya funcione
+#macro VOZ_DEBUG    false    // contador de prueba (enviados / recibidos / volumen). Ponlo en false cuando ya funcione
 #macro VOZ_HZ       8000
 #macro VOZ_TROZO    3200    // bytes por envio (0.2 s a 8000 Hz 16 bits)
 #macro VOZ_UMBRAL   1200    // en ABIERTO: volumen minimo para mandar (de 32768). Sube si se manda ruido
@@ -2603,8 +2722,8 @@ function scr_sala_listo_step() {
 /// EMPATE: no se ganan ni se pierden trofeos, solo +10 XP por jugar (en sala privada nada)
 function scr_empate_premio() {
 	if (scr_fin_es_privada()) return;
-	global.xp += 10;
-	while (global.xp >= 100) { global.lvl += 1; global.xp -= 100; }
+	scr_eq_premio(25);   // monedas por jugar (scr_armas, EQUIPAMIENTO)
+	scr_xp_dar(15);   // nivel (scr_reloj)
 	scr_save_to_local();
 	scr_save_to_cloud();
 	show_debug_message(">>> FIN: EMPATE, +10 XP");
@@ -2734,3 +2853,4 @@ function scr_voz_hud() {
 	draw_text_transformed(_p.bx, _p.y + _p.r + 2, "B", 0.5, 0.5, 0);
 	draw_set_halign(fa_left);
 }
+

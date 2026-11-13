@@ -150,3 +150,6 @@ if (has_shield) {
 
 // Contra el bot de partida rápida: coraza y estela del impulso de su personaje
 if (variable_instance_exists(id, "hab_cor_t")) __hab_draw(hab_cor_t > 0, hab_dash_vis > 0, 0, 0, 0);
+
+// Atrapado en la red de la Exploradora (scr_personajes)
+if (variable_instance_exists(id, "red_t") && red_t > 0) scr_efx_draw_cuerpo(4);

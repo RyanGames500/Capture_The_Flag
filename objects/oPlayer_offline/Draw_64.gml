@@ -23,6 +23,8 @@ scr_hitmarker_draw();
 scr_respawn_draw(state == PLAYERSTATE2.DEAD);
 if (state == PLAYERSTATE2.DEAD) exit;
 
+// HUD NUEVO (draw_player_profile): tu carta arriba a la izquierda y tu arma arriba a la derecha
+if (MN_NUEVO) { scr_hud_nuevo(); } else {
 // --- CONFIGURACIÓN BASE ---
 var _escala = 4; 
 var _xx = 40; 
@@ -140,10 +142,40 @@ else {
     draw_text_transformed_color(_centro_x, _by + _alto_cuadro + 10, "MELEE", 1, 1, 0, c_aqua, c_aqua, c_aqua, c_aqua, 1);
 }
 
+// --- SEGUNDA ARMA: cuadro chico a la izquierda (igual que en linea) (scr_armas, SEGUNDA ARMA) ---
+var _gx_base = _bx - 40;
+if (scr_slots_dos()) {
+    scr_slot_init();
+    var _e2 = 2.4;
+    var _w2 = sprite_get_width(spr_HUD_Box) * _e2;
+    var _h2 = sprite_get_height(spr_HUD_Box) * _e2;
+    var _x2 = _bx - _w2 - 14;
+    var _y2 = _by + (_alto_cuadro - _h2) / 2;
+    slot2_x1 = _x2 - 6; slot2_y1 = _y2 - 6; slot2_x2 = _x2 + _w2 + 6; slot2_y2 = _y2 + _h2 + 30;   // donde se toca
+    var _o2 = guns[1 - weapon.index];
+    var _a2 = (_o2 != noone) ? 0.8 : 0.35;
+    draw_sprite_ext(spr_HUD_Box, 0, _x2, _y2, _e2, _e2, 0, c_white, _a2);
+    if (_o2 != noone && is_struct(_o2)) {
+        draw_sprite_ext(_o2.sprite, 0, _x2 + _w2 / 2, _y2 + _h2 / 2, _e2 - 0.8, _e2 - 0.8, 0, scr_arma_tinte(_o2), 0.85);
+        draw_set_font(fnt_menu);
+        draw_set_halign(fa_center);
+        var _t2 = (_o2.ammoType == "") ? "x" + string(_o2.ammo) : string(_o2.ammo);
+        draw_text_transformed_color(_x2 + _w2 / 2, _y2 + _h2 + 8, _t2, 0.7, 0.7, 0, c_ltgray, c_ltgray, c_ltgray, c_ltgray, 1);
+        if (!touch_mode()) {
+            // Tecla para cambiar
+            draw_set_color(make_color_rgb(44, 49, 69));
+            draw_roundrect(_x2 + _w2 - 18, _y2 - 8, _x2 + _w2 + 4, _y2 + 12, false);
+            draw_set_color(c_white);
+            draw_text_transformed(_x2 + _w2 - 7, _y2 + 2, "E", 0.6, 0.6, 0);
+        }
+    }
+    _gx_base = _x2 - 40;
+}
+
 // --- 4. INDICADOR DE GRANADAS (Extra siempre visible) ---
 // Lo dibujamos justo al lado izquierdo del cuadro principal
 if (granadas > 0) {
-    var _gx = _bx - 40;
+    var _gx = _gx_base;
     var _gy = _by + (_alto_cuadro / 2);
     
     // Icono de granada pequeñito
@@ -155,3 +187,4 @@ if (granadas > 0) {
 
 // Reset final
 draw_set_halign(fa_left);
+}

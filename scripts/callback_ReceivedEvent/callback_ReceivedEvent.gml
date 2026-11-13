@@ -264,6 +264,71 @@ case "sync_ajustes":
     if (!oBrain.AmIPseudoHost) scr_ajustes_aplicar(theMessageStruct);
 break;
 
+case "sync_todos":
+    // TODOS CONTRA TODOS: la tabla y la ultima baja (scr_reloj)
+    if (!oBrain.AmIPseudoHost && room != rm_menu && is_struct(theMessageStruct)) scr_todos_sync(theMessageStruct);
+break;
+
+case "todos_baja":
+    // TODOS CONTRA TODOS: alguien cayo en su pantalla; el lider le da la baja al que lo elimino
+    if (oBrain.AmIPseudoHost && room != rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "k")) {
+        scr_todos_baja(string(theMessageStruct.k), variable_struct_exists(theMessageStruct, "x") ? real(theMessageStruct.x) : room_width / 2, variable_struct_exists(theMessageStruct, "y") ? real(theMessageStruct.y) : room_height / 2);
+    }
+break;
+
+case "jefe_sync":
+    // JEFE GIGANTE: el lider manda donde va el jefe, su vida y que hace (scr_reloj)
+    if (!oBrain.AmIPseudoHost) scr_jefe_sync(theMessageStruct);
+break;
+
+case "jefe_hit":
+    // JEFE GIGANTE: alguien le pego al jefe; el lider le baja la vida (scr_reloj)
+    if (oBrain.AmIPseudoHost && scr_modo_jefe() && room != rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "d") && is_numeric(theMessageStruct.d)) {
+        if (variable_global_exists("jefe")) __jefe_restar(clamp(real(theMessageStruct.d), 0, 500));
+    }
+break;
+
+case "jefe_golpe":
+    // JEFE GIGANTE: un punetazo o un pisoton del jefe (scr_reloj)
+    if (!oBrain.AmIPseudoHost) scr_jefe_impacto(theMessageStruct);
+break;
+
+case "jefe_fuego":
+    // JEFE GIGANTE: la lluvia de fuego (scr_reloj)
+    if (!oBrain.AmIPseudoHost) scr_jefe_fuego_recibir(theMessageStruct);
+break;
+
+case "sync_duelo":
+    // DUELO POR PUNTOS: el lider manda las bajas de cada equipo (scr_reloj)
+    if (!oBrain.AmIPseudoHost && room != rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "a") && variable_struct_exists(theMessageStruct, "r") && is_numeric(theMessageStruct.a) && is_numeric(theMessageStruct.r)) {
+        scr_duelo_sync(theMessageStruct.a, theMessageStruct.r);
+    }
+break;
+
+case "sync_lava":
+    // PISO DE LAVA: el lider manda en que parte del ciclo va la lava (scr_reloj)
+    if (!oBrain.AmIPseudoHost && room != rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "c") && is_numeric(theMessageStruct.c)) {
+        scr_lava_sync(theMessageStruct.c);
+    }
+break;
+
+case "sync_rey":
+    // REY DE LA BANDERA: el lider manda las barras y quien tiene la zona (scr_reloj)
+    if (!oBrain.AmIPseudoHost && room != rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "a") && variable_struct_exists(theMessageStruct, "r") && variable_struct_exists(theMessageStruct, "c")) {
+        if (!variable_global_exists("rey_a")) scr_rey_reset();
+        global.rey_a = real(theMessageStruct.a);
+        global.rey_r = real(theMessageStruct.r);
+        if (real(theMessageStruct.c) != global.rey_c) scr_rey_cambio(real(theMessageStruct.c));
+    }
+break;
+
+case "sync_grav":
+    // GRAVEDAD LOCA: el lider dice hacia donde va la gravedad y cuanto falta (scr_reloj)
+    if (!oBrain.AmIPseudoHost && room != rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "d") && variable_struct_exists(theMessageStruct, "s") && is_numeric(theMessageStruct.d) && is_numeric(theMessageStruct.s)) {
+        scr_grav_poner(theMessageStruct.d, theMessageStruct.s);
+    }
+break;
+
 case "sync_reloj":
     // Reloj de la partida: lo lleva el líder
     if (!oBrain.AmIPseudoHost && room != rm_menu && is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "s") && is_numeric(theMessageStruct.s)) {
@@ -505,6 +570,26 @@ case "apply_powerup":
 }
 break;
 
+case "barrel_hit":
+{
+    // Otro jugador le pego a un barril: le bajo la misma vida y muestro el golpe (scr_fx).
+    // Aqui nunca revienta: revienta en la pantalla del que le dio el ultimo tiro ("barrel_dead").
+    if (is_struct(theMessageStruct) && variable_struct_exists(theMessageStruct, "bx") && variable_struct_exists(theMessageStruct, "d")) {
+        var _hbx = theMessageStruct.bx, _hby = theMessageStruct.by;
+        var _hb = instance_nearest(_hbx, _hby, oExplosiveBarrel);
+        if (_hb != noone && point_distance(_hb.x, _hb.y, _hbx, _hby) < (scr_modo_grav() ? 80 : 15)) {
+            var _hd = real(theMessageStruct.d);
+            var _hhx = variable_struct_exists(theMessageStruct, "hx") ? real(theMessageStruct.hx) : _hb.x;
+            var _hhy = variable_struct_exists(theMessageStruct, "hy") ? real(theMessageStruct.hy) : _hb.y;
+            with (_hb) {
+                hp = max(1, hp - _hd);
+                scr_barril_golpe(_hd, _hhx, _hhy);
+            }
+        }
+    }
+}
+break;
+
 case "barrel_dead":
 {
     var _bx = theMessageStruct.bx;
@@ -515,11 +600,11 @@ case "barrel_dead":
     var _inst = instance_nearest(_bx, _by, oExplosiveBarrel); 
     
     if (_inst != noone) {
-        if (point_distance(_inst.x, _inst.y, _bx, _by) < 15) {
+        if (point_distance(_inst.x, _inst.y, _bx, _by) < (scr_modo_grav() ? 80 : 15)) {   // GRAVEDAD LOCA: pueden ir cayendo
             
-            instance_create_layer(_inst.x, _inst.y, "Weapons", oExplosionFX);
-            scrCamShake(10);
-            if (global.sfx) audio_play_sound(sndMissileExplode, 10, false);
+ 
+            // Explosion grande con tus sprites (scr_fx)
+            with (_inst) scr_barril_boom((bbox_left + bbox_right) / 2, bbox_bottom, object_index != oBarrilSmall);
             
             _inst.hp = 0;
             _inst.exploded = true; 
@@ -901,6 +986,12 @@ case "hit":
         health -= dmg;
         fx_damage_number(x, bbox_top - 8, dmg, 3);
         scr_efx_recibir_jugador(theMessageStruct);   // zap, hielo, red o iman (scr_armas)
+        // --- EXPLOSION DE BARRIL: te avienta hacia afuera (sin soltar la bandera) ---
+        if (theMessageStruct.reason == "explosion" && variable_struct_exists(theMessageStruct, "angle")) {
+            if (!scr_hab_coraza_activa()) { push_h = lengthdir_x(16, theMessageStruct.angle); vsp = -6; }
+            state = PLAYERSTATE.HIT;
+            hit_bloqueo_timer = 15;
+        }
         // --- 🥊 LÓGICA DE BOXEO (Empuje y Bandera) ---
         if (theMessageStruct.reason == "boxeo") {
             
@@ -1179,6 +1270,13 @@ case "finalizar_partida":
     global.game_over = true;
     // Usamos theMessageStruct que es tu variable de red
     global.winner_team = theMessageStruct.winner;
+    // TODOS CONTRA TODOS: gane si el que gano soy yo (scr_reloj)
+    if (variable_struct_exists(theMessageStruct, "ffa")) {
+        global.todos_win = string(theMessageStruct.ffa);
+        global.todos_win_n = variable_struct_exists(theMessageStruct, "ffn") ? string(theMessageStruct.ffn) : "";
+        if (variable_struct_exists(theMessageStruct, "l") && is_array(theMessageStruct.l)) global.todos_lista = theMessageStruct.l;
+        global.winner_team = (global.todos_win == global.myTeam) ? 2 : 1;
+    }
     
     // 🏆 PROCESO DE PROGRESO PERSONAL (CLIENTE)
     // El seguro "puntos_procesados" evita que esto se repita

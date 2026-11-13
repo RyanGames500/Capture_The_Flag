@@ -1,4 +1,7 @@
 function scr_save_to_local() {
+    // Antes de guardar: ¿ganaste algun logro? (solo en linea) (DatabaseFunctions, LOGROS)
+    scr_logros_revisar();
+
     // Abrimos el archivo local
     ini_open("data.ini");
     
@@ -17,7 +20,19 @@ function scr_save_to_local() {
 	ini_write_real("Stats", "returned", global.flags_returned); // <--- NUEVO
     ini_write_real("Stats", "kills", global.kills);            // <--- NUEVO
 	ini_write_real("Stats", "losses", global.losses);
+	ini_write_real("Stats", "copas", global.copas);   // antes solo las guardaba Gamdato
 	ini_write_string("Social", "miFriendTag", global.miFriendTag);
+	// Logros (DatabaseFunctions, LOGROS)
+	scr_logros_init();
+	ini_write_string("Logros", "lista", json_stringify(global.logros));
+	// Inventario: icono, skin puesta y desbloqueables (DatabaseFunctions, INVENTARIO)
+	scr_inv_init();
+	ini_write_real("Inventario", "avatar", global.avatar_id);
+	ini_write_string("Inventario", "skin", string(global.skin_actual));
+	ini_write_string("Inventario", "desbloqueados", json_stringify(global.desbloqueados));
+	// Equipamiento: monedas, armas, mejoras y tus 2 armas (scr_armas, EQUIPAMIENTO)
+	scr_eq_init();
+	ini_write_string("Equipo", "datos", json_stringify(global.equipo));
 
 	// GUARDAR AMIGOS EN ARCHIVO APARTE
     var _file = file_text_open_write("amigos_data.json");
@@ -31,4 +46,7 @@ function scr_save_to_local() {
     ini_close();
     
     show_debug_message(">>> Datos guardados en data.ini");
+
+    // Si entraste a tu cuenta, tambien se guarda ahi (DatabaseFunctions, CUENTAS)
+    scr_cuenta_guardar();
 }

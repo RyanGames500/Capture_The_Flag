@@ -111,6 +111,9 @@ if (_bot_bala && instance_exists(oPlayer)) {
 	}
 }
 
+// JEFE GIGANTE: si la bala le pega al jefe, ahi se queda (scr_reloj)
+if (scr_modo_jefe() && scr_jefe_bala()) exit;
+
 var target_enemy = instance_place(x, y, oOtherPlayer);
 if (_bot_bala && target_enemy != noone && (target_enemy.team == _mi_eq || target_enemy == bot_src)) target_enemy = noone;
 if (target_enemy == noone && _barrido && !_cruza_muro) target_enemy = scr_bala_rival_en_tramo(x, y, x + hspeed, y + vspeed, _mi_eq);

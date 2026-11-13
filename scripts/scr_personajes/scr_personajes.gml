@@ -1,9 +1,13 @@
 // ======================================================
 // PERSONAJES (en línea): stats, pasivas y habilidad en la Q
 //   0 ASALTO       Impulso  — se lanza hacia adelante, las balas no le pegan mientras
-//   1 TANQUE       Coraza   — 4 s con la mitad de daño y el guante no lo empuja
-//   2 EXPLORADORA  Gancho   — se jala a una plataforma o pared
-//   3 SARGENTO     Botiquín — cura a él y a sus aliados cerca
+//                  Pasiva: las armas automaticas hacen 2 a 3 de dano extra por bala
+//   1 TANQUE       Coraza   — 4 s con la mitad de daño (camina a 2.5 con ella puesta)
+//                  Pasiva: el golpe cuerpo a cuerpo hace 4 de dano extra
+//   2 EXPLORADORA  Red      — lanza una red que deja quieto al rival 2 s
+//                  Pasiva: los rivales no la ven en el mini mapa ni en los circulitos del borde
+//   3 SARGENTO     Botiquín — se cura 30 de vida al instante
+//                  Pasiva: puede disparar llevando la bandera (solo pistolas y subfusiles)
 // Cada quien usa su habilidad en su juego: los demás la ven por sharedProperties
 // (_HCO, _HDA, _HGF/_HGX/_HGY) y el botiquín por el evento "hab_botiquin".
 // El que recibe el daño es el que aplica la coraza (evento "hit"), como ya pasaba con el escudo.
@@ -13,7 +17,7 @@
 #macro HAB_DASH_INVUL      12     // frames sin que le peguen (0.2 s)
 #macro HAB_CORAZA_T        240    // 4 s
 #macro HAB_CORAZA_DANO     0.5    // recibe la mitad
-#macro HAB_CORAZA_VEL      0.85   // camina un poco más lento con la coraza
+#macro HAB_CORAZA_VEL      (2.5 / 2.8)   // con la coraza el Tanque camina a 2.5
 #macro HAB_GANCHO_ALCANCE  260
 #macro HAB_GANCHO_VEL      22     // lo que avanza la punta por frame
 #macro HAB_GANCHO_JALON    13     // lo que te jala por frame
@@ -21,17 +25,22 @@
 #macro HAB_BOTI_RADIO      80
 #macro HAB_BOTI_CURA       8      // vida por segundo
 #macro SARG_REGEN_ESPERA   300    // 5 s sin recibir daño
-#macro SARG_REGEN          2      // vida por segundo
-#macro ASALTO_RECARGA      0.75   // recarga un 25% más rápido
+#macro SARG_REGEN          0      // (ya no: la pasiva del Sargento ahora es disparar con la bandera)
+#macro ASALTO_RECARGA      1      // (ya no: la pasiva del Asalto ahora es dano extra con automaticas)
+#macro TANQUE_GOLPE_EXTRA  4      // pasiva del Tanque
+#macro SARG_CURA           30     // botiquin del Sargento: se cura esto al instante
+#macro EXPLO_RED_T         120    // red de la Exploradora: 2 s quieto
+#macro EXPLO_RED_VEL       10
+#macro EXPLO_RED_DANO      5
 
 /// Datos de cada personaje. La vida ya va ×1.5 (las armas pegan fuerte).
 function scr_pj_datos(_i) {
 	switch (_i) {
-		case 1: return { nombre: "TANQUE",      hab: "CORAZA",   vida: 250, vel: 2.6, salto: -13,   bandera: 0.85, cd: 15, col: make_color_rgb(255, 77, 94) };
-		case 2: return { nombre: "EXPLORADORA", hab: "GANCHO",   vida: 125, vel: 3.8, salto: -15,   bandera: 0.65, cd: 6,  col: make_color_rgb(94, 224, 138) };
-		case 3: return { nombre: "SARGENTO",    hab: "BOTIQUIN", vida: 170, vel: 3.0, salto: -13.5, bandera: 0.70, cd: 18, col: make_color_rgb(215, 124, 255) };
+		case 1: return { nombre: "TANQUE",      hab: "CORAZA",   vida: 220, vel: 2.8, salto: -13,   bandera: 0.85, cd: 15, col: make_color_rgb(255, 77, 94) };
+		case 2: return { nombre: "EXPLORADORA", hab: "RED",      vida: 140, vel: 3.4, salto: -15,   bandera: 0.65, cd: 12, col: make_color_rgb(94, 224, 138) };
+		case 3: return { nombre: "SARGENTO",    hab: "BOTIQUIN", vida: 180, vel: 3.0, salto: -13.5, bandera: 0.70, cd: 18, col: make_color_rgb(215, 124, 255) };
 	}
-	return { nombre: "ASALTO", hab: "IMPULSO", vida: 150, vel: 3.2, salto: -14, bandera: 0.70, cd: 7, col: make_color_rgb(255, 212, 71) };
+	return { nombre: "ASALTO", hab: "IMPULSO", vida: 160, vel: 3.2, salto: -14, bandera: 0.70, cd: 7, col: make_color_rgb(255, 212, 71) };
 }
 
 /// Pone los stats del personaje elegido (oPlayer Create).
@@ -40,10 +49,55 @@ function scr_pj_aplicar() {
 	walksp_base = pj.vel;
 	jumpsp = pj.salto;
 	max_health = pj.vida;
+	if (scr_modo_tiro()) max_health = 1;   // UN TIRO: 1 golpe = 1 baja (scr_reloj)
 	health = max_health;
+	melee_damage = 20 + ((mi_clase == 1) ? TANQUE_GOLPE_EXTRA : 0);   // PASIVA TANQUE
 	hab_cd = 0;
 	hab_cd_max = 1;
 	scr_hab_reset();
+}
+
+// ------------------------------------------------------
+// PASIVAS NUEVAS
+// ------------------------------------------------------
+/// ¿Este personaje tiene personaje? (en local solo contra el bot de partida rapida)
+function __pj_activo() {
+	if (!variable_instance_exists(id, "mi_clase") || mi_clase < 0) return false;
+	if ((object_index == oPlayer_offline || object_index == oPlayer2_local) && !global.bot_partida) return false;
+	return true;
+}
+
+/// PASIVA ASALTO: dano extra por bala con armas automaticas (rapidas y de 1 bala)
+function scr_pj_bono_auto(_w) {
+	if (!__pj_activo() || mi_clase != 0 || !is_struct(_w)) return 0;
+	if (!variable_struct_exists(_w, "frequency") || _w.frequency > 10) return 0;
+	if (variable_struct_exists(_w, "balas") && _w.balas > 1) return 0;
+	if (variable_struct_exists(_w, "cohete") && _w.cohete) return 0;
+	if (variable_struct_exists(_w, "efecto") && _w.efecto != "") return 0;
+	return irandom_range(2, 3);
+}
+
+/// PASIVA SARGENTO: puede disparar con la bandera si trae pistola o subfusil
+/// (no: ametralladora, lanzallamas, railgun, bazooka, francotirador, escopeta, armas con efecto)
+function scr_pj_dispara_con_bandera() {
+	if (!__pj_activo() || mi_clase != 3) return false;
+	if (!variable_instance_exists(id, "guns")) return false;
+	var _w = guns[weapon.index];
+	if (_w == noone || !is_struct(_w)) return false;
+	var _t = variable_struct_exists(_w, "ammoType") ? _w.ammoType : "";
+	if (_t != "gun" && _t != "smg") return false;
+	if (variable_struct_exists(_w, "giro") && _w.giro > 0) return false;
+	if (variable_struct_exists(_w, "efecto") && _w.efecto != "") return false;
+	return true;
+}
+
+/// PASIVA EXPLORADORA: ¿este jugador (oOtherPlayer o el bot de local) es una Exploradora rival?
+/// Si es asi no sale en el mini mapa ni en los circulitos del borde.
+function scr_pj_oculto(_mi_team) {
+	var _t = variable_instance_exists(id, "team") ? string(team) : "";
+	if (_t == _mi_team) return false;
+	if (object_index == oPlayer2_local) return variable_instance_exists(id, "mi_clase") && mi_clase == 2;
+	return variable_instance_exists(id, "mySelectedPJ") && mySelectedPJ == 2;
 }
 
 /// Limpia lo que esté activo (al aparecer y al reaparecer).
@@ -143,7 +197,7 @@ function scr_hab_step() {
 	switch (mi_clase) {
 		case 0: _ok = scr_hab_impulso();  break;
 		case 1: _ok = scr_hab_coraza();   break;
-		case 2: _ok = scr_hab_gancho();   break;
+		case 2: _ok = scr_hab_red();      break;   // antes: gancho
 		case 3: _ok = scr_hab_botiquin(); break;
 	}
 	if (_ok) {
@@ -184,14 +238,35 @@ function scr_hab_gancho() {
 	return true;
 }
 
+/// BOTIQUIN: se cura 30 al instante (solo a el)
 function scr_hab_botiquin() {
-	var _b = instance_create_layer(x, bbox_bottom - 6, "Instances", oBotiquin);
-	_b.team = global.myTeam;
+	if (health >= max_health) return false;   // con la vida llena no se gasta
+	health = min(max_health, health + SARG_CURA);
+	repeat (4) instance_create_layer(x + random_range(-14, 14), y - random_range(4, 30), "Instances", oHealFX);
 	if (global.sfx) audio_play_sound(snd_ammo_pickup, 5, false, 1, 0, 0.8);
-	if (global.ONLINE) {
-		var _s = { x: _b.x, y: _b.y, team: global.myTeam };
-		with (oOtherPlayer) SendEventToClient(clientId, "hab_botiquin", _s);
-	}
+	return true;
+}
+
+/// RED de la Exploradora: una red en arco; al que le pega queda quieto 2 s (scr_armas: efecto "red_hab")
+function scr_hab_red() {
+	var _dir = point_direction(x, y - 20, aim_x(), aim_y());
+	var _b = instance_create_layer(x + lengthdir_x(14, _dir), y - 20 + lengthdir_y(14, _dir), "Instances", global.ONLINE ? oMyEntity : oPlayer_bullet);
+	_b.owner_name = global.myName;
+	_b.owner_team = global.myTeam;
+	_b.owner_id = id;
+	_b.direction = _dir;
+	_b.image_angle = _dir;
+	_b.speed = EXPLO_RED_VEL;
+	_b.life = 90;
+	_b.damage = EXPLO_RED_DANO;
+	_b.sprite_index = sprBullet_smg;
+	_b.efecto = "red_hab";
+	_b.gravity = 0.32;
+	_b.gravity_direction = 270;
+	_b.image_xscale = 1.5;
+	_b.image_yscale = 1.5;
+	if (!global.ONLINE) _b.team = team;
+	if (global.sfx) audio_play_sound(snd_escop, 5, false, 0.6, 0, 1.4);
 	return true;
 }
 
@@ -290,8 +365,8 @@ function scr_hab_draw() {
 	if (!variable_instance_exists(id, "hab_cd") || state == PLAYERSTATE.DEAD) exit;
 	__hab_draw(hab_cor_t > 0, hab_dash_vis > 0, hab_g_fase, hab_g_x, hab_g_y);
 
-	// PASIVA EXPLORADORA: flecha hacia el que se robó mi bandera
-	if (mi_clase == 2) {
+	// (la flecha de la Exploradora hacia el ladron se quito: su pasiva ahora es no salir en el mini mapa)
+	if (false) {
 		var _ladron = noone;
 		with (oOtherPlayer) if (has_flag && team != global.myTeam) _ladron = id;
 		if (_ladron != noone) {

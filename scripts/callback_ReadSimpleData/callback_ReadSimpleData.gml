@@ -1,5 +1,15 @@
 function callback_ReadSimpleData(readId, data) {
      if (!instance_exists(oMenu)) return;
+    // BUZON: la lectura de tus solicitudes (oMenu Alarm_3). Si no hay nada, el buzon queda vacio.
+    if (variable_instance_exists(oMenu, "request_solicitud") && readId == oMenu.request_solicitud) {
+        if (is_struct(data) && variable_struct_exists(data, "lista") && is_array(data.lista)) scr_buzon_recibir(data.lista);
+        else if (is_struct(data) && variable_struct_exists(data, "desde_id")) scr_buzon_recibir([data]);
+        else scr_buzon_recibir([]);
+        return;
+    }
+    // Una lectura que no encontro nada y NO es la busqueda de amigos (buzon, duelos...): se ignora.
+    // Antes se confundia con la busqueda: buscabas por ID y saltaba a "buscar por nombre".
+    if (!is_struct(data) && (!variable_instance_exists(oMenu, "request_datos_rival") || readId != oMenu.request_datos_rival)) return;
     // --- 1. SI EL DOCUMENTO NO EXISTE (data == -1) ---
     if (data == -1) {
         if (oMenu.estado_busqueda == "buscando") {
@@ -18,11 +28,14 @@ function callback_ReadSimpleData(readId, data) {
 
     // --- 2. SI HAY DATOS (ÉXITO) ---
     
-    // A. ¿ES UNA SOLICITUD DE AMISTAD?
-    if (variable_struct_exists(data, "desde_id")) {
+    // A. ¿ES TU BUZON? (ahora es una lista de hasta 5 solicitudes; DatabaseFunctions, BUZON)
+    if (variable_struct_exists(data, "lista") && is_array(data.lista)) {
+        scr_buzon_recibir(data.lista);
+    }
+    // (formato viejo: una sola solicitud)
+    else if (variable_struct_exists(data, "desde_id")) {
         show_debug_message(">>> CALLBACK: ¡SOLICITUD DE AMISTAD DETECTADA!");
-        oMenu.datos_solicitud_recibida = data;
-        oMenu.hay_solicitud_pendiente = true;
+        scr_buzon_recibir([data]);
     } 
     
     // B. ¿ES UN RESULTADO DE BÚSQUEDA POR NOMBRE?

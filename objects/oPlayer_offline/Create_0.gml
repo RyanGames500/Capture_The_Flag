@@ -135,3 +135,6 @@ spr_idle = spr_player_idle;
 spr_walk = spr_player_walk;
 spr_dead = spr_player_dead;
 max_health = 100;
+
+// EQUIPAMIENTO: 2 armas tambien en local (scr_armas)
+scr_eq_dar();

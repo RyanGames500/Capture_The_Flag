@@ -1,4 +1,9 @@
-function callback_ShowAllClientsInRoom(_array_of_clients) {
+function callback_ShowAllClientsInRoom(_array_of_clients, _sala = "") {
+    // Partida rapida: cuantos hay en la cola (pantalla BUSCANDO JUGADORES, draw_player_profile)
+    if (is_array(_array_of_clients) && string(_sala) != "" && string_pos("auto_matchmake", string(_sala)) == 1 && string(_sala) == string(global.roomId)) {
+        global.qp_en_cola = max(1, array_length(_array_of_clients));
+        return;
+    }
     if (instance_exists(oMenu) && oMenu.menu_state == "verifying") {
         
         var _codigo = global.codigo_a_verificar;

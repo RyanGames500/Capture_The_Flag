@@ -72,6 +72,7 @@ if (bot != noone)
         // Daño al bot: escudo, invulnerabilidad y quién mató en un solo lugar (scr_dano_local)
         var _dmg = is_rocket ? damage_rocket : damage;
         var _ok = scr_dano_bot(bot, _dmg, global.myName);
+        if (_ok && variable_instance_exists(id, "efecto") && efecto == "red_hab") bot.red_t = EXPLO_RED_T;   // red de la Exploradora (scr_personajes)
         if (_ok && global.sfx) audio_play_sound(snd_hit, 10, false);
         if (_ok) fx_sparks(x, y, direction + 180, is_rocket ? 4 : 8, is_rocket);   // chispas en el bot (como en linea)
         if (is_rocket) {

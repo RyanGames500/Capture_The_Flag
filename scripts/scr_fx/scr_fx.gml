@@ -460,6 +460,17 @@ function minimapa_draw() {
     // ---------- Fondo ----------
     var _pad = (_modo == 2) ? 18 * _u : 6 * _u;
     var _padv = (_modo == 2) ? 16 * _u : 6 * _u;
+    if (MN_NUEVO) {
+        // Marco redondo con sombra y borde oscuro (estetica nueva)
+        var _rr = 10 * _u;
+        draw_set_alpha(0.45); draw_set_colour(c_black);
+        draw_roundrect_ext(_mx - _pad, _my - _padv + 4, _mx + _mw + _pad, _my + _mh + _padv + 4, _rr, _rr, false);
+        draw_set_alpha(0.88); draw_set_colour(make_color_rgb(20, 24, 50));
+        draw_roundrect_ext(_mx - _pad, _my - _padv, _mx + _mw + _pad, _my + _mh + _padv, _rr, _rr, false);
+        draw_set_alpha(1); draw_set_colour(_tinta);
+        draw_roundrect_ext(_mx - _pad, _my - _padv, _mx + _mw + _pad, _my + _mh + _padv, _rr, _rr, true);
+        draw_roundrect_ext(_mx - _pad + 1, _my - _padv + 1, _mx + _mw + _pad - 1, _my + _mh + _padv - 1, _rr, _rr, true);
+    } else {
     draw_set_alpha(0.72);
     draw_set_colour(_tinta);
     draw_rectangle(_mx - _pad, _my - _padv, _mx + _mw + _pad, _my + _mh + _padv, false);
@@ -469,6 +480,7 @@ function minimapa_draw() {
     draw_set_alpha(1);
     draw_set_colour(_azul);
     draw_rectangle(_mx - _pad, _my - _padv, _mx - _pad + 40 * _u, _my - _padv + 1, false);
+    }
 
     // ---------- El nivel (se guarda en una superficie para no redibujarlo cada frame) ----------
     if (_modo != 2) {
@@ -520,8 +532,15 @@ function minimapa_draw() {
 
     // ---------- Banderas (parpadean si alguien la lleva) ----------
     var _fsc = (12 * _u) / 17;
+    if (!scr_modo_sin_banderas()) {   // REY DE LA BANDERA y DUELO POR PUNTOS: no hay banderas (scr_reloj)
     with (oFlag)  { if (!has_flag || _blink) draw_sprite_ext(spr_flag_red,  0, _mx + clamp(x * _kx, 0, _mw), (_modo == 2) ? _my - 9 * _u : _py(y, _my, _ky, _mh, _modo) - 6 * _u, _fsc, _fsc, 0, c_white, 1); }
     with (oFlag2) { if (!has_flag || _blink) draw_sprite_ext(spr_flag_blue, 0, _mx + clamp(x * _kx, 0, _mw), (_modo == 2) ? _my - 9 * _u : _py(y, _my, _ky, _mh, _modo) - 6 * _u, _fsc, _fsc, 0, c_white, 1); }
+    } else if (scr_modo_rey() && variable_global_exists("rey_x")) {
+        // La zona en el mini mapa
+        draw_set_colour(make_color_rgb(255, 212, 71));
+        var _zx = _mx + clamp(global.rey_x * _kx, 0, _mw), _zy = _py(global.rey_y, _my, _ky, _mh, _modo);
+        draw_rectangle(_zx - 5 * _u, _zy - 6 * _u, _zx + 5 * _u, _zy, false);
+    }
 
     // ---------- Jugadores (todos: aliados y enemigos) ----------
     var _r = 3 * _u;
@@ -535,12 +554,14 @@ function minimapa_draw() {
     // Otros jugadores en linea
     with (oOtherPlayer) {
         if (!visible || state == PLAYERSTATE.DEAD) continue;
+        if (scr_pj_oculto(_mi_team)) continue;   // Exploradora rival: no sale (scr_personajes)
         var _t = variable_instance_exists(id, "team") ? string(team) : _rival;
         _dibujar(x, (bbox_top + bbox_bottom) / 2, (_t == "AZUL") ? _azul : _rojo, false, _mx, _my, _kx, _ky, _mw, _mh, _modo, _r, _py);
     }
     // Rival en local (bot / jugador 2)
     with (oPlayer2_local) {
         if (!visible) continue;
+        if (scr_pj_oculto(_mi_team)) continue;   // Exploradora rival: no sale (scr_personajes)
         var _t2 = variable_instance_exists(id, "team") ? string(team) : _rival;
         _dibujar(x, (bbox_top + bbox_bottom) / 2, (_t2 == "AZUL") ? _azul : _rojo, false, _mx, _my, _kx, _ky, _mw, _mh, _modo, _r, _py);
     }
@@ -619,6 +640,7 @@ function scr_musica_elegir() {
 
     if (global.game_over) {
         if (global.winner_team == 3) return ["mus_victoria", false];   // EMPATE
+        if (scr_modo_todos()) return [(global.winner_team == 2) ? "mus_victoria" : "mus_derrota", false];   // TODOS CONTRA TODOS
         var _gana = (global.winner_team == 1) ? "ROJO" : "AZUL";
         return [(scr_my_team() == _gana) ? "mus_victoria" : "mus_derrota", false];
     }
@@ -724,6 +746,29 @@ function scr_fin_festejo_step() {
             _f.col  = make_color_rgb(242, 182, 50);
             _f.gana = "EMPATE";
             _f.txt  = "TIEMPO!";
+        }
+        // REY DE LA BANDERA: la camara va a la zona (ahi se gano), no a la base (scr_reloj)
+        if (scr_modo_rey() && variable_global_exists("rey_x")) {
+            _f.x = global.rey_x;
+            _f.y = global.rey_y;
+            if (!_empate && !(instance_exists(oBrain) && oBrain.reloj_fin)) _f.txt = "REY!";
+        }
+        if (scr_modo_duelo() && _f.txt == "CAPTURA!") _f.txt = "VICTORIA!";   // DUELO POR PUNTOS: no se capturo nada
+        // DUELO POR PUNTOS: la camara va donde fue la ultima baja (la que gano), no a la base
+        if (scr_modo_duelo() && variable_global_exists("duelo_ult_x")) { _f.x = global.duelo_ult_x; _f.y = global.duelo_ult_y; }
+        // TODOS CONTRA TODOS: la camara va a la ultima baja y gana una persona (scr_reloj)
+        if (scr_modo_todos() && variable_global_exists("todos_win")) {
+            if (variable_global_exists("todos_ult_x")) { _f.x = global.todos_ult_x; _f.y = global.todos_ult_y; }
+            _f.col = scr_todos_color(global.todos_win);
+            _f.gana = "GANA " + string_upper(string(global.todos_win_n));
+            _f.txt = "VICTORIA!";
+        }
+        // JEFE GIGANTE: la camara va al jefe (scr_reloj)
+        if (scr_modo_jefe() && variable_global_exists("jefe")) {
+            _f.x = global.jefe.x;
+            _f.y = global.jefe.y - 60;
+            if (global.winner_team == 2) { _f.col = make_color_rgb(242, 182, 50); _f.gana = "JEFE DERROTADO"; _f.txt = "VICTORIA!"; }
+            else { _f.col = make_color_rgb(229, 72, 77); _f.gana = "GANA EL JEFE"; _f.txt = (instance_exists(oBrain) && oBrain.reloj_fin) ? "TIEMPO!" : "DERROTA"; }
         }
         _f.conf = [];
         var _oro = make_color_rgb(242, 182, 50);
@@ -1012,4 +1057,170 @@ function scr_bandera_aura_draw() {
     draw_set_alpha(1);
     gpu_set_blendmode(bm_normal);
     draw_set_colour(c_white);
+}
+
+// ======================================================
+// EXPLOSION GRANDE DE LOS BARRILES (la ve cada pantalla sola)
+//   Usa tus sprites de explosion (spr_explode grande en el centro y spr_explode2 alrededor),
+//   mas destello, onda expansiva, escombros y humo (dibujados en la pantalla, encima del mapa).
+// ======================================================
+/// _grande: true = barril rojo, false = verde (un poco mas chica)
+function scr_barril_boom(_x, _y, _grande) {
+	var _k = _grande ? 1 : 0.75;
+	// Bola de fuego: tu spr_explode, bien grande
+	var _e = instance_create_layer(_x, _y - 10 * _k, "Weapons", oExplosionFX);
+	_e.sprite_index = spr_explode;
+	_e.image_index = 0;
+	_e.image_xscale = 3.4 * _k;
+	_e.image_yscale = 3.4 * _k;
+	// Explosiones mas chicas alrededor (spr_explode2), un poquito despues
+	repeat (_grande ? 4 : 3) {
+		var _ang = random(360), _d = random_range(30, 60) * _k;
+		var _e2 = instance_create_layer(_x + lengthdir_x(_d, _ang), _y - 20 * _k + lengthdir_y(_d * 0.6, _ang), "Weapons", oExplosionFX);
+		_e2.sprite_index = spr_explode2;
+		_e2.image_index = 0;
+		_e2.image_speed = random_range(0.8, 1.2);
+		var _s = random_range(1.4, 2.0) * _k;
+		_e2.image_xscale = _s;
+		_e2.image_yscale = _s;
+	}
+	scrCamShake(_grande ? 22 : 14);
+	if (global.sfx) audio_play_sound(sndMissileExplode, 10, false, 1, 0, _grande ? 0.85 : 1.1);
+	// Onda, escombros y humo (scr_boom_draw)
+	if (!variable_global_exists("boom_fx")) global.boom_fx = [];
+	var _deb = [];
+	repeat (16) array_push(_deb, [random_range(-8, 8), random_range(-12, -4), choose(make_color_rgb(80, 40, 30), make_color_rgb(200, 60, 40), make_color_rgb(60, 60, 60))]);
+	array_push(global.boom_fx, { x: _x, y: _y, t: 0, k: _k, d: _deb });
+	if (array_length(global.boom_fx) > 8) array_delete(global.boom_fx, 0, 1);
+	// Destello solo si se ve en tu pantalla
+	var _cam = view_camera[0];
+	var _vx = camera_get_view_x(_cam), _vy = camera_get_view_y(_cam);
+	if (_x > _vx - 100 && _x < _vx + camera_get_view_width(_cam) + 100 && _y > _vy - 100 && _y < _vy + camera_get_view_height(_cam) + 100) global.boom_flash = _grande ? 1 : 0.6;
+}
+
+/// oBrain Step
+function scr_boom_step() {
+	if (!variable_global_exists("boom_fx")) { global.boom_fx = []; global.boom_flash = 0; }
+	for (var _i = array_length(global.boom_fx) - 1; _i >= 0; _i--) {
+		global.boom_fx[_i].t += 1;
+		if (global.boom_fx[_i].t > room_speed * 2) array_delete(global.boom_fx, _i, 1);
+	}
+	if (global.boom_flash > 0) global.boom_flash = max(0, global.boom_flash - 1 / (room_speed * 0.15));
+}
+
+/// oBrain Draw GUI: onda expansiva, escombros, humo y destello
+function scr_boom_draw() {
+	if (!variable_global_exists("boom_fx") || room == rm_menu) return;
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	var _cam = view_camera[0];
+	var _cvx = camera_get_view_x(_cam), _cvy = camera_get_view_y(_cam);
+	var _kx = _gw / max(1, camera_get_view_width(_cam)), _ky = _gh / max(1, camera_get_view_height(_cam));
+	for (var _i = 0; _i < array_length(global.boom_fx); _i++) {
+		var _b = global.boom_fx[_i];
+		var _dt = _b.t / room_speed;
+		var _sx = (_b.x - _cvx) * _kx, _sy = (_b.y - 40 * _b.k - _cvy) * _ky;
+		if (_sx < -400 || _sx > _gw + 400 || _sy < -400 || _sy > _gh + 400) continue;
+		// Humo que sube
+		for (var _j = 0; _j < 8; _j++) {
+			var _tt = _dt - 0.15 - _j * 0.05;
+			if (_tt <= 0 || _tt >= 2) continue;
+			var _an = _j * 0.8;
+			draw_set_alpha(0.55 * (1 - _tt / 2));
+			draw_set_color(make_color_rgb(70 + _j * 5, 70 + _j * 5, 75 + _j * 5));
+			draw_circle(_sx + cos(_an) * 50 * _tt * _kx * _b.k, _sy - (10 + _tt * 60) * _ky + sin(_an) * 20 * _ky, (20 + _tt * 30) * _kx * _b.k, false);
+		}
+		// Onda expansiva
+		var _rr = _dt * 320 * _b.k;
+		if (_rr < 260 * _b.k) {
+			draw_set_alpha(0.85 * (1 - _rr / (260 * _b.k)));
+			draw_set_color(c_white);
+			for (var _w = 0; _w < 3; _w++) draw_ellipse(_sx - _rr * _kx - _w, _sy - _rr * 0.6 * _ky - _w, _sx + _rr * _kx + _w, _sy + _rr * 0.6 * _ky + _w, true);
+		}
+		// Escombros que saltan y caen
+		draw_set_alpha(1);
+		for (var _j = 0; _j < array_length(_b.d); _j++) {
+			var _q = _b.d[_j];
+			var _f = _dt * 30;
+			var _px = _sx + _q[0] * _f * _kx * _b.k, _py = _sy + 10 * _ky + (_q[1] * _f + 0.35 * _f * _f) * _ky;
+			if (_py > _sy + 60 * _ky) continue;
+			draw_set_color(_q[2]);
+			draw_rectangle(_px - 4 * _kx, _py - 3 * _ky, _px + 4 * _kx, _py + 3 * _ky, false);
+		}
+	}
+	// Destello
+	if (global.boom_flash > 0) {
+		draw_set_alpha(0.55 * global.boom_flash);
+		draw_set_color(make_color_rgb(255, 240, 200));
+		draw_rectangle(0, 0, _gw, _gh, false);
+	}
+	draw_set_alpha(1);
+	draw_set_color(c_white);
+}
+
+// ======================================================
+// BARRILES: efecto al recibir dano (lo ven todos igual: cada golpe se avisa con "barrel_hit")
+//   Destello blanco, tiembla, chispas, numero de dano, barrita de vida, se oscurece,
+//   echa humo a la mitad y parpadea un "!" cuando esta por reventar.
+// ======================================================
+/// Con el barril: recibio un golpe en (_hx, _hy)
+function scr_barril_golpe(_d, _hx, _hy) {
+	if (!variable_instance_exists(id, "hp_max")) hp_max = max(1, hp);
+	golpe_t = 8;
+	if (!variable_instance_exists(id, "chispas")) chispas = [];
+	repeat (10) array_push(chispas, { x: _hx, y: _hy, vx: random_range(-4, 4), vy: random_range(-5, -1), t: 0 });
+	fx_damage_number(_hx, _hy - 10, _d, 1);
+	if (global.sfx) audio_play_sound(snd_hitmarker, 3, false, 0.35, 0, 0.7);
+}
+
+/// Draw del barril (oExplosiveBarrel; el verde lo hereda)
+function scr_barril_draw() {
+	if (!variable_instance_exists(id, "hp_max")) hp_max = max(1, hp);
+	if (!variable_instance_exists(id, "golpe_t")) golpe_t = 0;
+	var _p = clamp(hp / hp_max, 0, 1);
+	var _sx = (golpe_t > 0) ? random_range(-3, 3) : 0;
+	var _k = 0.55 + 0.45 * _p;                         // se oscurece con el dano
+	var _col = make_color_rgb(255 * _k, 255 * _k, 255 * _k);
+	draw_sprite_ext(sprite_index, image_index, x + _sx, y, image_xscale, image_yscale, image_angle, _col, image_alpha);
+	// Destello blanco
+	if (golpe_t > 4) {
+		gpu_set_fog(true, c_white, 0, 0);
+		draw_sprite_ext(sprite_index, image_index, x + _sx, y, image_xscale, image_yscale, image_angle, c_white, 0.85);
+		gpu_set_fog(false, c_white, 0, 0);
+	}
+	var _cx = (bbox_left + bbox_right) / 2;
+	// Humo a la mitad de vida
+	if (_p <= 0.5) {
+		for (var _i = 0; _i < 4; _i++) {
+			var _tt = frac(current_time / 1250 + _i * 0.25);
+			draw_set_alpha(0.6 * (1 - _tt));
+			draw_set_color(make_color_rgb(90, 90, 95));
+			draw_circle(_cx - 8 + _i * 4, bbox_top - 6 - _tt * 50, 6 + _tt * 14, false);
+		}
+		draw_set_alpha(1);
+	}
+	// Chispas del golpe
+	if (variable_instance_exists(id, "chispas")) {
+		draw_set_color(make_color_rgb(255, 220, 90));
+		for (var _i = 0; _i < array_length(chispas); _i++) {
+			var _c = chispas[_i];
+			draw_rectangle(_c.x - 2, _c.y - 2, _c.x + 2, _c.y + 2, false);
+		}
+	}
+	// Barrita de vida (solo si ya le pegaron)
+	if (_p < 1) {
+		var _bw = 50, _x0 = _cx - _bw / 2, _y0 = bbox_top - 16;
+		draw_set_color(make_color_rgb(11, 15, 26));
+		draw_rectangle(_x0 - 2, _y0 - 2, _x0 + _bw + 2, _y0 + 6, false);
+		draw_set_color((_p > 0.5) ? make_color_rgb(78, 220, 140) : ((_p > 0.25) ? make_color_rgb(255, 212, 71) : make_color_rgb(229, 72, 77)));
+		draw_rectangle(_x0, _y0, _x0 + _bw * _p, _y0 + 4, false);
+		// "!" cuando esta por reventar
+		if (_p <= 0.25 && (current_time div 125) mod 2 == 0) {
+			draw_set_font(fnt_menu); draw_set_halign(fa_center); draw_set_valign(fa_middle);
+			draw_set_color(make_color_rgb(255, 90, 60));
+			draw_text_transformed(_cx, _y0 - 18, "!", 0.8, 0.8, 0);
+			draw_set_halign(fa_left); draw_set_valign(fa_top);
+		}
+	}
+	draw_set_color(c_white);
+	draw_set_alpha(1);
 }

@@ -18,6 +18,7 @@ if (global.ONLINE) {
 for (var i = 0; i < array_length(guns); i++) {
     guns[i] = noone;
 }
+scr_eq_dar();   // EQUIPAMIENTO: vuelves con tus 2 armas (scr_armas)
 health = max_health;   // la vida de tu personaje (scr_personajes)
 scr_hab_reset();
 isDead = false;

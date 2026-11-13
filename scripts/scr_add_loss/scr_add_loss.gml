@@ -1,6 +1,7 @@
 function scr_add_loss() {
+    scr_eq_premio(20);   // monedas (scr_armas, EQUIPAMIENTO)
     global.losses += 1;
-    global.xp += 5; // Opcional: Dar un poquito de XP aunque pierda por "consolación"
+    scr_xp_dar(10);   // XP aunque pierdas (scr_reloj)
 	global.copas = max(0, global.copas - 15);
     
     //scr_check_levelup();

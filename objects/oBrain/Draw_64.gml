@@ -1,8 +1,8 @@
 fx_draw_gui();
 
 var player_name=global.myName;
-var player_ID=gmda_getPlayerid();
-var status=gmda_status();
+// (Gamdato se quito: ya no hay ID ni estado de Gamdato)
+
 
 if (!variable_global_exists("revancha_pendiente")) {
     global.revancha_pendiente = false;
@@ -13,36 +13,8 @@ draw_set_font(fnt_menu)
 //draw_text(100,300+30,"Name: "+player_name);
 //draw_text(100,300+60,"Status: "+string(status));
 
-// Obtener los datos globales de puntaje
-var globalscores = gmda_getTabledata(gmda_globaltable, 1);
+// (Aqui estaba la tabla de puntuaciones de Gamdato. Ahora esta la pantalla RANKING del menu.)
 
-// Dibujar los encabezados
-//draw_text(480, 220, "Name:");
-//draw_text(760, 220, "Score:");
-
-// Si existen puntajes globales
-if (globalscores > 0) {
-    var tablesize = ds_map_size(globalscores);
-    var rowinfo;
-    
-    // Iterar sobre los puntajes y nombres
-    for (var i = 1; i <= tablesize; i++) {
-        rowinfo = ds_map_find_value(globalscores, string(i));
-        var name = ds_map_find_value(rowinfo, "name");
-        var xscore = ds_map_find_value(rowinfo, "score");
-        
-        // Dibujar cada fila de la tabla con nombres y puntajes
-        //draw_text(480, 220 + 32 * i, string(i) + ". " + string(name));
-        //draw_text(780, 220 + 32 * i, string(xscore));
-    }
-}
-
-if is_closing=true and room == rm_menu
-{
-gmda_draw_table(25,330,globalscores,player_name)//y=590
-
-
-}
 
 
 if (global.game_over == false) 
@@ -133,6 +105,16 @@ for (var i = 0; i < array_length(kill_feed); i++)
     var dx = _kf_x - it.xoff;
     var dy = _kf_y + i * line_step + it.yoff;
 
+    // Chip redondo detras (estetica nueva)
+    if (MN_NUEVO) {
+        var _kw = string_width(it.text) * scale;
+        var _kh = string_height(it.text) * scale;
+        draw_set_alpha(it.a * 0.9);
+        draw_set_color(make_color_rgb(20, 24, 50));
+        draw_roundrect_ext(dx - _kw - 10, dy - 3, dx + 10, dy + _kh + 1, 8, 8, false);
+        draw_set_color(make_color_rgb(11, 15, 26));
+        draw_roundrect_ext(dx - _kw - 10, dy - 3, dx + 10, dy + _kh + 1, 8, 8, true);
+    }
     // sombra
     draw_set_alpha(it.a);
     draw_set_color(c_black);
@@ -185,8 +167,16 @@ if (!global.game_over) {
     if (room != rm_menu) {
         // Marcador vivo, flechas, banners, anotacion y avisos (scr_feedback).
         // Ahora funciona tanto en linea como en local.
-        fb_draw_marcador(_mx_base, 14);
+        scr_boom_draw();   // explosiones de barriles: onda, escombros, humo y destello (scr_fx)
+        scr_lava_draw();   // PISO DE LAVA: la lava y el aviso (scr_reloj)
+        if (scr_modo_rey()) scr_rey_draw_marcador(_mx_base, 14);   // REY DE LA BANDERA: barras (scr_reloj)
+        else if (scr_modo_duelo()) { scr_duelo_draw_marcador(_mx_base, 14); scr_duelo_draw(); }   // DUELO POR PUNTOS (scr_reloj)
+        else if (scr_modo_todos()) scr_todos_draw();   // TODOS CONTRA TODOS: mis bajas, lugar y tabla (scr_reloj)
+        else if (scr_modo_jefe()) scr_jefe_draw_gui(_mx_base, 14);   // JEFE GIGANTE: su barra de vida y el reloj (scr_reloj)
+        else fb_draw_marcador(_mx_base, 14);
         fb_draw_gui();
+        scr_bomba_draw();   // BANDERA BOMBA: la cuenta encima de cada bandera (scr_reloj)
+        scr_grav_draw();    // GRAVEDAD LOCA: cuanto falta para el giro (scr_reloj)
         minimapa_draw(); // mini mapa (se apaga o cambia en AJUSTES)
     } else {
 
@@ -234,6 +224,7 @@ if (!global.game_over) {
 
 // --- MENÚ DE PAUSA FLOTANTE ---
 if (global.pausa && !global.game_over) {
+    if (MN_NUEVO) { scr_mn_draw_pausa(pause_index); } else {   // pausa nueva (draw_player_profile)
     var mid_x = display_get_gui_width() / 2;
     var mid_y = display_get_gui_height() / 2;
     
@@ -263,6 +254,7 @@ if (global.pausa && !global.game_over) {
         draw_set_color(color);
         draw_text_transformed(mid_x, mid_y + (i * 50), texto, escala, escala, 0);
     }
+    }
     // Voz de tu equipo: silenciar a alguien (sala privada, scr_objetivo)
     scr_voz_draw_panel();
 }
@@ -273,6 +265,10 @@ if (room != rm_menu) scr_ms_aviso_draw();
 // --- 4. PANTALLA DE RESULTADOS (diseno A: GANASTE / PERDISTE, marcador, equipos, premio) ---
 if (global.game_over && !abandono_activo)
 {
+    // Pantalla nueva: VICTORIA / DERROTA / EMPATE con tu personaje (draw_player_profile)
+    if (MN_NUEVO) {
+        scr_fin_nuevo_draw();
+    } else {
     var gw = display_get_gui_width();
     var gh = display_get_gui_height();
     var mid_x = gw / 2;
@@ -291,6 +287,7 @@ if (global.game_over && !abandono_activo)
     var _col_ganador = (_gana_eq == "ROJO") ? _rojo_c : _azul_c;
     var _empate  = (global.winner_team == 3);   // EMPATE: nadie gana (scr_reloj)
     if (_empate) { _gane = false; _col_ganador = _oro_c; }
+    if (scr_modo_todos()) { _gane = (global.winner_team == 2); _col_ganador = scr_todos_color(global.todos_win); }   // TODOS CONTRA TODOS (scr_reloj)
     var _en_linea = global.ONLINE;
     var _con_bots = global.bot_partida || (variable_global_exists("botnet_partida") && global.botnet_partida);
 
@@ -304,6 +301,15 @@ if (global.game_over && !abandono_activo)
             var _tm = (team != "") ? team : lobby_team;
             var _it = [string(Name), es_bot ? 2 : 0];
             if (_tm == "ROJO") array_push(_l_ro, _it); else array_push(_l_az, _it);
+        }
+    }
+    // TODOS CONTRA TODOS: la tabla final en las dos columnas (scr_reloj)
+    if (_en_linea && scr_modo_todos() && variable_global_exists("todos_lista")) {
+        _l_az = []; _l_ro = [];
+        for (var _q2 = 0; _q2 < array_length(global.todos_lista); _q2++) {
+            var _e2 = global.todos_lista[_q2];
+            var _it2 = [string(_q2 + 1) + ". " + string(_e2[1]) + " (" + string(_e2[2]) + ")", (_e2[0] == global.myTeam) ? 1 : 0];
+            if (_q2 mod 2 == 0) array_push(_l_az, _it2); else array_push(_l_ro, _it2);
         }
     }
     var _filas = max(array_length(_l_az), array_length(_l_ro));
@@ -373,7 +379,7 @@ if (global.game_over && !abandono_activo)
     _cy += 52;
     draw_set_font(fnt_small);
     draw_set_color(_empate ? make_color_rgb(207, 211, 224) : _col_ganador);
-    draw_text_transformed(mid_x, _cy, _empate ? "NADIE GANA" : ("VICTORIA " + _gana_eq), 1, 1, 0);
+    draw_text_transformed(mid_x, _cy, _empate ? "NADIE GANA" : (scr_modo_todos() ? ("GANA " + string_upper(string(global.todos_win_n))) : ("VICTORIA " + _gana_eq)), 1, 1, 0);
 
     // Marcador: tus banderas a cada lado y el numero en medio
     _cy += 64;
@@ -399,7 +405,7 @@ if (global.game_over && !abandono_activo)
 
     // Equipos (en linea): tu en dorado, los bots en gris
     if (_en_linea) {
-        var _cols = [[_l_az, _azul_c, "EQUIPO AZUL", mid_x - 140], [_l_ro, _rojo_c, "EQUIPO ROJO", mid_x + 140]];
+        var _cols = [[_l_az, _azul_c, scr_modo_todos() ? "TABLA" : "EQUIPO AZUL", mid_x - 140], [_l_ro, _rojo_c, scr_modo_todos() ? "TABLA" : "EQUIPO ROJO", mid_x + 140]];
         for (var t = 0; t < 2; t++) {
             var _c = _cols[t];
             draw_set_color(_c[1]);
@@ -462,6 +468,7 @@ if (global.game_over && !abandono_activo)
             draw_text_transformed(bx + btn_w / 2, by + btn_h / 2, opciones_vic[i], b_scale, b_scale, 0);
         }
     }
+    } // fin pantalla vieja
 }
 
 // Resets
@@ -473,6 +480,7 @@ draw_set_valign(fa_top);
 
 
 if ((!intro_disparada || scr_sel_tarde()) && room != rm_menu && (global.ONLINE == true || global.bot_partida)) {   // tambien si te quedaste sin personaje
+if (MN_NUEVO) { scr_mn_draw_seleccion(); } else {   // seleccion nueva (draw_player_profile)
     var sw = display_get_gui_width();
     var sh = display_get_gui_height();
     var _yo = scr_my_team();   // mi equipo desde que entro a la sala (antes salía vacío y todo se veía rojo)
@@ -560,6 +568,7 @@ if ((!intro_disparada || scr_sel_tarde()) && room != rm_menu && (global.ONLINE =
     draw_set_halign(fa_left);
     draw_set_valign(fa_top);
     draw_set_colour(c_white);
+}
 }
 	
 // ======================================================

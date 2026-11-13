@@ -1,6 +1,6 @@
 function scr_add_kill() {
     global.kills += 1;
-    global.xp += 10; // Opcional: ¡Dar un poco de XP por cada kill es motivador!
+    scr_xp_dar(3);   // un poquito de XP por cada baja (scr_reloj)
     
     // Guardamos el progreso inmediatamente
     scr_save_to_local();

@@ -22,6 +22,22 @@ function scr_trigger_intro(_azules, _rojos) {
             if (_yo == "AZUL") array_push(intro.lista_rojo, _bt); else array_push(intro.lista_azul, _bt);
         }
 
+        // TODOS CONTRA TODOS: no hay equipos, todos repartidos a los dos lados (scr_reloj)
+        if (scr_modo_todos()) {
+            var _todos = [];
+            for (var _j = 0; _j < array_length(intro.lista_azul); _j++) array_push(_todos, intro.lista_azul[_j]);
+            for (var _j = 0; _j < array_length(intro.lista_rojo); _j++) array_push(_todos, intro.lista_rojo[_j]);
+            intro.lista_azul = []; intro.lista_rojo = [];
+            for (var _j = 0; _j < array_length(_todos); _j++) { if (_j mod 2 == 0) array_push(intro.lista_azul, _todos[_j]); else array_push(intro.lista_rojo, _todos[_j]); }
+        }
+
+        // JEFE GIGANTE: todos de un lado y el jefe del otro (scr_reloj)
+        if (scr_modo_jefe()) {
+            for (var _j = 0; _j < array_length(intro.lista_rojo); _j++) array_push(intro.lista_azul, intro.lista_rojo[_j]);
+            intro.lista_rojo = [{ n: "EL JEFE", pj: 3 }];
+            intro.mi_equipo = "AZUL";
+        }
+
         if (instance_exists(oPlayer)) oPlayer.state = PLAYERSTATE.INTRO;
     }
 }

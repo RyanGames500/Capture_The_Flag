@@ -11,7 +11,7 @@ function gmda_draw_achievements(xc, yc) {
     var _verde = make_color_rgb(78, 255, 145);
     var _cols  = [_oro, _azul, _rojo];
 
-    var table = gmda_get_achievement_list();
+    var table = scr_logros_lista_map();   // la misma lista, ahora del juego (DatabaseFunctions, LOGROS)
     if (is_undefined(table)) exit;
     var size = ds_map_size(table);
 
@@ -28,7 +28,7 @@ function gmda_draw_achievements(xc, yc) {
         var descrip = ds_map_find_value(infoachievement, "descrip");
         var img_num = real(ds_map_find_value(infoachievement, "value"));
         var id_ach = ds_map_find_value(infoachievement, "ide");
-        var achieved = gmda_check_achievement(id_ach);
+        var achieved = scr_logro_tiene(id_ach);
 
         var ry = (rowspace * i) - oMenu.scroll_y;
 

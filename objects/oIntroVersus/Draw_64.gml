@@ -40,6 +40,8 @@ for (var _s = 0; _s < 2; _s++) {
     draw_set_halign(_left ? fa_left : fa_right);
     var _titulo = "EQUIPO " + _team;
     if (_team == mi_equipo) _titulo = _left ? _titulo + "  (TU EQUIPO)" : "(TU EQUIPO)  " + _titulo;
+    if (scr_modo_todos()) _titulo = "TODOS CONTRA TODOS";
+    if (scr_modo_jefe()) _titulo = _left ? "TU EQUIPO" : "EL JEFE";   // JEFE GIGANTE (scr_reloj)
     draw_text_transformed_color(_tx + 3, 175 + 3, _titulo, 1.2, 1.2, 0, c_black, c_black, c_black, c_black, _k);
     draw_text_transformed_color(_tx, 175, _titulo, 1.2, 1.2, 0, c_white, c_white, c_white, c_white, _k);
 
@@ -95,19 +97,23 @@ if (t > T_MISION) {
     draw_text_transformed_color(gw/2 + 3, _my - 110 + 3, "TU MISION", 1.1, 1.1, 0, c_black, c_black, c_black, c_black, _ma);
     draw_text_transformed_color(gw/2, _my - 110, "TU MISION", 1.1, 1.1, 0, c_yellow, c_yellow, c_orange, c_orange, _ma);
 
-    var _l1 = "ROBA LA BANDERA " + _rival;
-    var _l2 = "Y LLEVALA A TU BASE " + mi_equipo;
+    // La mision segun el modo (scr_reloj)
+    var _ml = scr_mision_lineas(_rival, mi_equipo);
+    var _l1 = _ml[0];
+    var _l2 = _ml[1];
     draw_text_transformed_color(gw/2 + 5, _my - 35 + 5, _l1, 2.2, 2.2, 0, c_black, c_black, c_black, c_black, _ma);
     draw_text_transformed_color(gw/2, _my - 35, _l1, 2.2, 2.2, 0, c_white, c_white, _cr, _cr, _ma);
     draw_text_transformed_color(gw/2 + 5, _my + 40 + 5, _l2, 2.2, 2.2, 0, c_black, c_black, c_black, c_black, _ma);
     draw_text_transformed_color(gw/2, _my + 40, _l2, 2.2, 2.2, 0, c_white, c_white, _cm, _cm, _ma);
 
-    var _fl = (_rival == "ROJO") ? spr_flag_red_big : spr_flag_blue_big;
-    var _fx2 = gw/2 + string_width(_l1) * 1.1 + 40;
-    draw_sprite_ext(_fl, 0, _fx2, _my - 40, 3, 3, 0, c_white, _ma);
+    if (_ml[3]) {
+        var _fl = (_rival == "ROJO") ? spr_flag_red_big : spr_flag_blue_big;
+        var _fx2 = gw/2 + string_width(_l1) * 1.1 + 40;
+        draw_sprite_ext(_fl, 0, _fx2, _my - 40, 3, 3, 0, c_white, _ma);
+    }
 
-    draw_text_transformed_color(gw/2 + 3, _my + 115 + 3, "PRIMERO EN 3 BANDERAS GANA", 1.1, 1.1, 0, c_black, c_black, c_black, c_black, _ma);
-    draw_text_transformed_color(gw/2, _my + 115, "PRIMERO EN 3 BANDERAS GANA", 1.1, 1.1, 0, c_white, c_white, c_white, c_white, _ma);
+    draw_text_transformed_color(gw/2 + 3, _my + 115 + 3, _ml[2], 1.1, 1.1, 0, c_black, c_black, c_black, c_black, _ma);
+    draw_text_transformed_color(gw/2, _my + 115, _ml[2], 1.1, 1.1, 0, c_white, c_white, c_white, c_white, _ma);
 }
 
 draw_set_alpha(1);

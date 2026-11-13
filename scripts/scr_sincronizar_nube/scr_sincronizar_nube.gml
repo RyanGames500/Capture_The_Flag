@@ -1,5 +1,5 @@
 function scr_sincronizar_nube() {
-    var ID_PLAYER = gmda_getPlayerid();
+    var ID_PLAYER = string(global.miFriendTag);   // antes era el ID de Gamdato (ya no existe)
     
     // 0. ASEGURARNOS DE TENER UN FRIEND TAG (Solo se genera una vez)
     // Si no tienes la variable global.miFriendTag, la generamos

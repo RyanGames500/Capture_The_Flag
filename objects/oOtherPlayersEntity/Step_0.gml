@@ -26,15 +26,16 @@ var target_y = EP._y;
 		x = real(EP._x);
 		y = real(EP._y);
 	}
-        image_angle = real(EP._IA);
-        image_xscale = real(EP._IMXS);
-		image_yscale = real(EP._IMYS);
-        sprite_index = EP._SI;
-		direction = EP._A;
-		is_rocket = EP._IR;
-		is_box = EP._IB;
-		x_base_remote = real(EP._XB); // Guardamos la base
-		y_base_remote = real(EP._YB); // Guardamos la base
+		// Cada dato solo si llego (una version vieja del juego o una entidad distinta puede no mandarlos todos)
+		if (variable_struct_exists(EP, "_IA"))   image_angle = real(EP._IA);
+		if (variable_struct_exists(EP, "_IMXS")) image_xscale = real(EP._IMXS);
+		if (variable_struct_exists(EP, "_IMYS")) image_yscale = real(EP._IMYS);
+		if (variable_struct_exists(EP, "_SI"))   sprite_index = EP._SI;
+		if (variable_struct_exists(EP, "_A"))    direction = EP._A;
+		is_rocket = variable_struct_exists(EP, "_IR") ? EP._IR : false;
+		is_box    = variable_struct_exists(EP, "_IB") ? EP._IB : false;
+		x_base_remote = variable_struct_exists(EP, "_XB") ? real(EP._XB) : x; // Guardamos la base
+		y_base_remote = variable_struct_exists(EP, "_YB") ? real(EP._YB) : y; // Guardamos la base
 		efecto = variable_struct_exists(EP, "_EF") ? string(EP._EF) : "";   // armas con efecto (scr_armas)
 }
 }catch(e){

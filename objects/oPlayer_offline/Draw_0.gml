@@ -79,7 +79,7 @@ if (state == PLAYERSTATE2.GRAPPLE) {
 // --- LÓGICA DE MANO Y ARMA (Sincronizada con Recoil) ---
 // ======================================================
 var dir = sign(image_xscale);
-var tiene_arma = (guns[weapon.index] != noone && !has_flag && !instance_exists(mi_guante));
+var tiene_arma = (guns[weapon.index] != noone && (!has_flag || scr_pj_dispara_con_bandera()) && !instance_exists(mi_guante));
 
 // 1. Punto de giro (Hombro de Adriana)
 var hombroX = x + (2 * dir); 

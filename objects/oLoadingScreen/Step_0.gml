@@ -7,10 +7,13 @@ if (state == "fade_in") {
 
 
 if (state == "waiting") {
-    var _status = gmda_status(); 
+    var _status = 1;   // (Gamdato se quito del juego: ya no hay que esperarlo)
 
     // 1. ESPERAR A QUE GAMDATO ESTÉ "READY"
-    if (_status == 1) { 
+    // Version puente: Gamdato ya no es necesario. Se espera maximo 2 segundos y se sigue igual.
+    if (!variable_instance_exists(id, "espera_gmda")) espera_gmda = 0;
+    espera_gmda++;
+    if (_status == 1 || espera_gmda > room_speed * 2) { 
         if (!gamdato_listo) {
             gamdato_listo = true;
             // Creamos un timer de 1 segundo (room_speed) para que la red se limpie
@@ -52,8 +55,7 @@ if (state == "waiting") {
         nube_cargada = true;
         
         // --- AQUÍ ES SEGURO ---
-        show_debug_message(">>> ROCKET CONECTADO. Ahora cargamos datos de la nube...");
-        gmda_loadgamesave(); 
+        show_debug_message(">>> ROCKET CONECTADO.");   // (la nube de Gamdato ya no se carga: tu progreso viene de tu cuenta)
     }
     }
 

@@ -117,6 +117,17 @@ function __touch_buttons_base(_mode, _W, _H) {
 	var _esc = string(vk_escape);
 
 	if (_mode == "menu") {
+		// Menu nuevo: esas pantallas se tocan directo, sin las flechas encima (draw_player_profile)
+		if (MN_NUEVO) {
+			if (room == rm_menu && instance_exists(oMenu)) {
+				var _st = oMenu.menu_state;
+				if (_st == "main" || _st == "modos" || _st == "tamano" || _st == "connecting" || _st == "equipo") return _b;
+			}
+			var _pau = variable_global_exists("pausa") && global.pausa;
+			var _fin = variable_global_exists("game_over") && global.game_over;
+			if (room != rm_menu && !_pau && !_fin && scr_mn_sel_activa()) return _b;
+			if (room != rm_menu && _pau && !_fin) return _b;   // la pausa nueva se toca directo
+		}
 		// En el menú principal también se navega con W y S; en el juego no, para no saltar
 		var _up = (room == rm_menu) ? [string(vk_up), string(ord("W"))] : [string(vk_up)];
 		var _dn = (room == rm_menu) ? [string(vk_down), string(ord("S"))] : [string(vk_down)];
@@ -227,6 +238,12 @@ function touch_icono(_ico, _x, _y, _s, _col) {
 			draw_line_width(_x - 14 * _s, _y + 14 * _s, _x + 8 * _s, _y - 8 * _s, 4 * _s);
 			draw_circle(_x + 10 * _s, _y - 10 * _s, 7 * _s, true);
 			draw_circle(_x + 10 * _s, _y - 10 * _s, 6 * _s, true);
+		break;
+		case "red":
+			for (var _ri = -2; _ri <= 2; _ri++) {
+				draw_line_width(_x + _ri * 7 * _s, _y - 16 * _s, _x + _ri * 7 * _s, _y + 16 * _s, 2 * _s);
+				draw_line_width(_x - 16 * _s, _y + _ri * 7 * _s, _x + 16 * _s, _y + _ri * 7 * _s, 2 * _s);
+			}
 		break;
 		case "botiquin":
 			draw_rectangle(_x - 5 * _s, _y - 16 * _s, _x + 5 * _s, _y + 16 * _s, false);

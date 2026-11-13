@@ -83,7 +83,7 @@ function scrPlayerWeaponUpdate_bot()
             bullet.life = 40;
             bullet.owner_team = global.myTeam;
             bullet.owner_id = id;
-			bullet.damage = w.damage * damage_boost; 
+			bullet.damage = w.damage * damage_boost + scr_pj_bono_auto(w);   // pasiva del Asalto (scr_personajes) 
 
 			if (damage_boost > 1) {
 			    bullet.image_blend = c_red;
@@ -158,7 +158,7 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
             bullet.speed = 11;
             bullet.direction = shot_dir;
             bullet.life = 35;
-			bullet.damage = w.damage * damage_boost; 
+			bullet.damage = w.damage * damage_boost + scr_pj_bono_auto(w);   // pasiva del Asalto (scr_personajes) 
 
 			if (damage_boost > 1) {
 			    bullet.image_blend = c_red;
@@ -385,7 +385,7 @@ if (global.ONLINE && instance_exists(oOtherPlayer))
             bullet.direction = shot_dir;
             bullet.image_angle = shot_dir;
             bullet.life = 45; // Más rango
-			bullet.damage = w.damage * damage_boost; 
+			bullet.damage = w.damage * damage_boost + scr_pj_bono_auto(w);   // pasiva del Asalto (scr_personajes) 
 
 			if (damage_boost > 1) {
 			    bullet.image_blend = c_red;

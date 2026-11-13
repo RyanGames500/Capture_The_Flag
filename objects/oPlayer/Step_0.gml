@@ -85,7 +85,11 @@ if (shield_timer > 0) {
 	}
 }
 
-if (place_meeting(x, y + 1, obj_wall) || place_meeting(x, y + 1, oPlataformaPasable))
+// GRAVEDAD LOCA: voltea al muñeco cuando cambia la gravedad (scr_reloj). _gd = 1 normal, -1 al reves
+scr_grav_voltear();
+var _gd = scr_grav_dir();
+
+if ((_gd > 0) ? (place_meeting(x, y + 1, obj_wall) || place_meeting(x, y + 1, oPlataformaPasable)) : scr_grav_en_techo())
 {
 	is_grounded = true;
 }
@@ -95,10 +99,10 @@ else
 }
 
 if (!variable_instance_exists(id, "fx_air")) { fx_air = 0; fx_last_s = 0; fx_prev_ground = is_grounded; }
-if (fx_prev_ground && !is_grounded && vsp < 0) fx_dust(x, bbox_bottom, 6, 0);
-if (!fx_prev_ground && is_grounded && fx_air > 8) fx_dust(x, bbox_bottom, 10, 0);
+if (fx_prev_ground && !is_grounded && vsp * _gd < 0) fx_dust(x, scr_grav_pies(), 6, 0);
+if (!fx_prev_ground && is_grounded && fx_air > 8) fx_dust(x, scr_grav_pies(), 10, 0);
 var _fx_s = sign(hsp);
-if (is_grounded && _fx_s != 0 && fx_last_s != 0 && _fx_s != fx_last_s && abs(hsp) > 1.5) fx_dust(x, bbox_bottom, 6, -_fx_s);
+if (is_grounded && _fx_s != 0 && fx_last_s != 0 && _fx_s != fx_last_s && abs(hsp) > 1.5) fx_dust(x, scr_grav_pies(), 6, -_fx_s);
 if (_fx_s != 0) fx_last_s = _fx_s;
 fx_air = is_grounded ? 0 : fx_air + 1;
 fx_prev_ground = is_grounded;
@@ -186,7 +190,7 @@ if (global.ONLINE && spawn_lock > 0)
 // Cambiar entre tus 2 armas: E, rueda del mouse o tocar el cuadro chico (scr_armas, SEGUNDA ARMA)
 scr_arma_cambio_step();
 
-var canShoot = (!has_flag) && (state != PLAYERSTATE.DEAD);
+var canShoot = (!has_flag || scr_pj_dispara_con_bandera()) && (state != PLAYERSTATE.DEAD);   // el Sargento si puede (scr_personajes)
 if (scr_efx_aturdido()) canShoot = false;   // aturdido o congelado: no dispara
 
 if (melee_active > 0)
@@ -283,7 +287,7 @@ if (vmouse_pressed(mb_right) && !scr_efx_aturdido())
 }
 
 if (state != PLAYERSTATE.DEAD) {
-	vsp += grv;
+	vsp += grv * _gd;   // GRAVEDAD LOCA: al reves cae hacia el techo
 }
 
 if (mi_clase == -1) {
@@ -310,7 +314,7 @@ switch (state) {
 
 		if (abs(push_h) < 1) hsp = 0;
 		sprite_index = anims[mi_clase].idle;
-		if (key_jump && is_grounded) { is_grounded = false; vsp = jumpsp; state = PLAYERSTATE.JUMP; }
+		if (key_jump && is_grounded) { is_grounded = false; vsp = jumpsp * _gd; state = PLAYERSTATE.JUMP; }
 		if (key_right || key_left) state = PLAYERSTATE.WALK;
 	break;
 
@@ -330,7 +334,7 @@ switch (state) {
 		if (hsp != 0) image_xscale = sign(hsp) * 1.5;
 
 		if (hsp == 0) state = PLAYERSTATE.IDLE;
-		if (key_jump && is_grounded) { is_grounded = false; vsp = jumpsp; state = PLAYERSTATE.JUMP; }
+		if (key_jump && is_grounded) { is_grounded = false; vsp = jumpsp * _gd; state = PLAYERSTATE.JUMP; }
 	break;
 
 	case PLAYERSTATE.JUMP:
@@ -381,7 +385,7 @@ switch (state) {
 			var move = key_right - key_left;
 			hsp = move * (has_flag ? walksp * scr_pj_mult_bandera() : walksp);
 			if (hsp != 0) image_xscale = sign(hsp) * 1.5;
-			if (key_jump && is_grounded) { is_grounded = false; vsp = jumpsp; state = PLAYERSTATE.JUMP; }
+			if (key_jump && is_grounded) { is_grounded = false; vsp = jumpsp * _gd; state = PLAYERSTATE.JUMP; }
 		}
 		if (image_index >= image_number - 1) state = PLAYERSTATE.IDLE;
 	break;
@@ -407,7 +411,7 @@ if (abs(push_h) > 0.8) {
 scr_hab_mov();
 
 var plat = instance_place(x, y + 1, oMovingPlatform);
-if (plat != noone && vsp >= 0)
+if (plat != noone && vsp >= 0 && _gd > 0)
 {
 	var my_bottom = bbox_bottom;
 	var plat_top  = plat.bbox_top;
@@ -415,7 +419,10 @@ if (plat != noone && vsp >= 0)
 	y += plat.dy;
 }
 
-if (vsp > 0)
+// GRAVEDAD LOCA: al reves las plataformas te detienen por abajo (scr_reloj)
+if (_gd < 0 && scr_grav_plataforma_techo() && state == PLAYERSTATE.JUMP) state = PLAYERSTATE.IDLE;
+
+if (vsp > 0 && _gd > 0)
 {
 	var plat2 = instance_place(x, y + vsp, oPlataformaPasable);
 	if (plat2 != noone)
@@ -448,6 +455,7 @@ y += vsp;
 
 if (health <= 0 && !isDead)
 {
+	scr_logros_racha_reset();   // te eliminaron: la racha de los logros vuelve a 0 (DatabaseFunctions)
 	reloading = false;
 	reload_timer = 0;
 
@@ -486,6 +494,11 @@ if (health <= 0 && !isDead)
 		localText = "Moriste aplastado";
 		remoteText = playerName + " murio aplastado";
 	}
+	else if (death_reason == "lava")
+	{
+		localText = "Te quemaste en la lava";
+		remoteText = playerName + " cayo en la lava";
+	}
 	else
 	{
 		var killerName = (last_killer != "") ? last_killer : "Alguien";
@@ -494,6 +507,13 @@ if (health <= 0 && !isDead)
 	}
 
 	scrAddKillFeed(localText);
+
+	// TODOS CONTRA TODOS: la baja es del ultimo que me pego (el lider la cuenta) (scr_reloj)
+	if (scr_modo_todos()) {
+		var _kil = (death_reason == "lava" || death_reason == "crush") ? "" : string(last_killer);
+		if (oBrain.AmIPseudoHost) scr_todos_baja(_kil, x, y);
+		else SendEventToClient(oBrain.pseudoHostClientId, "todos_baja", { k: _kil, x: x, y: y });
+	}
 
 	if (global.ONLINE && instance_exists(oOtherPlayer))
 	{
@@ -535,7 +555,7 @@ if (state == PLAYERSTATE.DEAD && has_flag == true)
 
 var objetivo = (global.myTeam == "AZUL") ? oFlag : oFlag2;
 
-if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD && !has_flag && !objetivo.has_flag)
+if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD && !has_flag && !objetivo.has_flag && !scr_bomba_no_coger() && !scr_modo_sin_banderas())   // (BANDERA BOMBA: el que la paso espera un ratito)
 {
 	has_flag = true;
 	with(objetivo) {
@@ -554,6 +574,9 @@ if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD
 	fb_banner_tienes();   // B: LA TIENES! (scr_feedback)
 }
 
+// BANDERA BOMBA: pasarla tocando a un aliado (scr_reloj)
+scr_bomba_jugador_step();
+
 var miBase = (global.myTeam == "AZUL") ? obj_base_blue : obj_base_red;
 
 if (place_meeting(x, y, miBase) && has_flag && !score_pending)
@@ -561,7 +584,7 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending)
 	// En sala privada no se suma nada (es partida entre amigos)
 	if (!scr_fin_es_privada()) {
 		global.flags_captured += 1;
-		global.xp += 25;
+		scr_xp_dar(10);   // capturar bandera (scr_reloj)
 
 		with(oBrain) {
 			save_state = "prepare";
@@ -631,7 +654,7 @@ if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (
 	// En sala privada no se suma nada (es partida entre amigos)
 	if (!scr_fin_es_privada()) {
 		global.flags_returned += 1;
-		global.xp += 15;
+		scr_xp_dar(5);    // devolver tu bandera (scr_reloj)
 
 		with(oBrain) {
 			save_state = "prepare";
@@ -718,7 +741,8 @@ global.sharedProperties = {
 	_HGY: round(hab_g_y)
 };
 
-if (global.xp >= 100)
+// El nivel ahora sube en scr_xp_dar y la pantalla sale al salir de la partida (scr_reloj)
+if (false)
 {
 	global.lvl += 1;
 	global.xp -= 100;

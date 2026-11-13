@@ -4,6 +4,9 @@ scr_musica_step();
 // --- CHAT DE VOZ de las salas privadas (scr_objetivo) ---
 scr_voz_step();
 
+// --- PRUEBA: F9 muestra el aviso de logro sin darte el logro (DatabaseFunctions) ---
+scr_logros_prueba_step();
+
 // --- El lider avisa cada segundo si la partida ya empezo (por si a alguien se le perdio el aviso) ---
 scr_sala_estado_step();
 
@@ -32,6 +35,30 @@ if (scr_bot_esperando()) {
 // --- CONTRA EL BOT: selección de personaje e intro (igual que en línea) ---
 scr_bot_selec_step();
 
+// BANDERA BOMBA: cuenta y explosion de las banderas (scr_reloj)
+scr_bomba_step();
+
+// GRAVEDAD LOCA: la cuenta del giro (scr_reloj)
+scr_grav_step();
+
+// REY DE LA BANDERA: quien tiene la zona y las barras (scr_reloj)
+scr_rey_step();
+
+// PISO DE LAVA: la lava sube y baja, y quema al que la toca (scr_reloj)
+scr_lava_step();
+
+// DUELO POR PUNTOS: cada baja suma 1 (scr_reloj)
+scr_duelo_step();
+
+// TODOS CONTRA TODOS: cada quien su equipo, bajas y tabla (scr_reloj)
+scr_todos_step();
+
+// JEFE GIGANTE: todos contra el jefe; lo mueve el lider (scr_reloj)
+scr_jefe_step();
+
+// Explosiones de barriles: onda, escombros y humo (scr_fx)
+scr_boom_step();
+
 // ======================================================
 // 🏆 LÓGICA DE VICTORIA Y PAUSA (MODO OFFLINE Y ONLINE)
 // ======================================================
@@ -51,8 +78,11 @@ if (global.pausa) {
     var move = vkey_pressed(vk_down) - vkey_pressed(vk_up);
     var max_index = (global.ONLINE || global.bot_partida) ? 1 : 2;
     pause_index = clamp(pause_index + move, 0, max_index);
+    // Pausa nueva: tocar una opcion la elige (draw_player_profile)
+    var _p_toque = scr_mn_pausa_toque();
+    if (_p_toque >= 0) pause_index = clamp(_p_toque, 0, max_index);
 
-    if (vkey_pressed(vk_enter)) {
+    if (vkey_pressed(vk_enter) || _p_toque >= 0) {
         if (global.ONLINE && scr_botq_activa()) {
             // Partida rapida contra el bot nuevo: CONTINUAR o SALIR (ya estas solo en tu sala)
             if (pause_index == 0) global.pausa = false;
@@ -107,6 +137,13 @@ if (global.ONLINE == false && global.game_over == false) {
             var _mi_eq = (global.myTeam == "ROJO") ? 1 : 2;
             scr_bot_premio(_ganador_local == _mi_eq);
         }
+        // Local con bots (no practica sola): unas pocas monedas (scr_armas, EQUIPAMIENTO)
+        else if (!global.bot_partida && !puntos_procesados && variable_global_exists("off_bots") && global.off_bots >= 1) {
+            puntos_procesados = true;
+            var _mi_eq2 = (global.myTeam == "ROJO") ? 1 : 2;
+            scr_eq_premio((_ganador_local == _mi_eq2) ? 15 : 5);
+            scr_save_to_local();
+        }
         with(oMouseIcon_falso) { window_set_cursor(cr_arrow); }
     }
 }
@@ -138,7 +175,7 @@ if (global.game_over == true && !abandono_activo && !scr_fin_festejo_activo()) {
         victory_index = clamp(victory_index + move, 0, array_length(_ops) - 1);
 
         // --- ACCION AL PRESIONAR ENTER ---
-        if (vkey_pressed(vk_enter)) {
+        if (vkey_pressed(vk_enter) || scr_fin_toque()) {   // o tocar un boton (pantalla nueva, draw_player_profile)
             switch (_ops[victory_index]) {
                 case "ENVIAR SOLICITUD": // partida rapida en linea
                     if (global.ultimo_rival_tag != "") {
@@ -324,6 +361,12 @@ if (global.game_over == false)
             if (global.puntos_rojo != global.puntos_azul) _ganador = (global.puntos_rojo > global.puntos_azul) ? 1 : 2;
             else if (scr_muerte_subita_acabo()) _ganador = 3;
         }
+        // REY DE LA BANDERA: gana el que llena su barra (o el que lleve mas al acabarse el tiempo)
+        if (scr_modo_rey()) _ganador = scr_rey_ganador();
+        // TODOS CONTRA TODOS: 2 si gane yo, 1 si gano otro (scr_reloj)
+        if (scr_modo_todos()) _ganador = scr_todos_ganador();
+        // JEFE GIGANTE: 2 si lo derrotaron, 1 si gano el jefe (scr_reloj)
+        if (scr_modo_jefe()) _ganador = scr_jefe_ganador();
 
         if (_ganador != 0) 
         {
@@ -340,6 +383,8 @@ if (global.game_over == false)
 
             // CAMBIO: Avisamos a TODOS los clientes que terminó la partida
             var _data = { winner: _ganador };
+            // TODOS CONTRA TODOS: cada quien sabe si gano por el que gano (scr_reloj)
+            if (scr_modo_todos()) { _data.ffa = global.todos_win; _data.ffn = global.todos_win_n; _data.l = global.todos_lista; }
             with(oOtherPlayer) {
                 SendEventToClient(clientId, "finalizar_partida", _data);
             }
@@ -446,8 +491,12 @@ if (oBrain.AmIPseudoHost)
 				    _nuevo = host_spawn_ammo(x, y, 25); 
 				}
 				// --- SPAWN DE ARMAS ---
+                else if (tipo_spawn == "weapon" && (scr_modo_tiro() || (EQ_MAPA_SOLO_FUERTES && (nivel == 1 || nivel == 2 || (nivel == 0 && random(100) < 70))))) {   // UN TIRO: solo municion
+                    // EQUIPAMIENTO: donde salian pistolas, subfusiles y rifles ahora sale municion o granadas (scr_armas)
+                    _nuevo = host_spawn_ammo(x, y, 25);
+                }
                 else if (tipo_spawn == "weapon") {
-                    var _struct_a_usar = arma_struct;
+                    var _struct_a_usar = EQ_MAPA_SOLO_FUERTES ? noone : arma_struct;   // con EQUIPAMIENTO solo las fuertes
                     if (_struct_a_usar == noone) {
                         // Según el nivel del punto (scr_armas): 1 pistolas/subfusiles, 2 rifles/escopetas, 3 fuertes, 0 de todo
                         _struct_a_usar = scr_arma_al_azar(nivel);
@@ -556,12 +605,17 @@ if (save_state == "sending") {
 // --- LÓGICA DE SELECCIÓN VERTICAL (Actualizada para 4 personajes) ---
 // Solo en línea o contra el bot (en el modo local no hay selección de personaje)
 if ((!intro_disparada || scr_sel_tarde()) && room != rm_menu && (global.ONLINE || global.bot_partida)) {   // scr_sel_tarde: te quedaste sin personaje (scr_objetivo)
+    // Seleccion nueva: tocar una carta elige ese personaje, tocar LISTO = ENTER (draw_player_profile)
+    var _sel_toque = scr_mn_sel_toque();
     if (!global.mi_listo) {
         var move = vkey_pressed(vk_down) - vkey_pressed(vk_up);
+        if (MN_NUEVO) move += vkey_pressed(vk_right) - vkey_pressed(vk_left);
+        var _pj_toque = (_sel_toque >= 0 && _sel_toque <= 3 && _sel_toque != global.pj_selected);
         
-        if (move != 0) {
+        if (move != 0 || _pj_toque) {
             // CAMBIO AQUÍ: Sumamos 4 y usamos % 4 para que el ciclo sea 0, 1, 2, 3
-            global.pj_selected = (global.pj_selected + move + 4) % 4; 
+            if (_pj_toque) global.pj_selected = _sel_toque;
+            else global.pj_selected = (global.pj_selected + sign(move) + 4) % 4; 
             
             // Sonido de cambio (opcional)
             if (global.sfx) audio_play_sound(snd_scroll, 1, false);
@@ -576,12 +630,12 @@ if ((!intro_disparada || scr_sel_tarde()) && room != rm_menu && (global.ONLINE |
 
 // oBrain - Step Event (Lógica de selección)
 
-if (global.bot_partida && !global.mi_listo && vkey_pressed(vk_enter)) {
+if (global.bot_partida && !global.mi_listo && (vkey_pressed(vk_enter) || _sel_toque == 4)) {
     // Contra el bot: tu jugador ya está en el mapa, solo quedas listo
     global.mi_listo = true;
     if (global.sfx) audio_play_sound(snd_ready, 1, false);
 }
-else if (!global.mi_listo && vkey_pressed(vk_enter)) {
+else if (!global.mi_listo && (vkey_pressed(vk_enter) || _sel_toque == 4)) {
     global.mi_listo = true;
     
     // 1. DETERMINAR POSICIÓN SEGÚN EQUIPO
@@ -648,7 +702,7 @@ if (abandono_check > 0) {
     if (abandono_check == 0) {
         abandono_check = -1;
 
-        if (global.ONLINE && room != rm_menu && !global.game_over && global.myTeam != "") {
+        if (global.ONLINE && room != rm_menu && !global.game_over && global.myTeam != "" && !scr_modo_jefe()) {   // JEFE: todos son del mismo equipo, si alguien se va se sigue
             var _mios = 1;      // yo
             var _rivales = 0;
             with (oOtherPlayer) {

@@ -1,6 +1,6 @@
 
 // Menú principal más limpio
-menu_options = ["PLAY","OFFLINE","FRIENDS","ACHIEVEMENTS", "PROFILE", "OPTIONS", "EXIT"];
+menu_options = ["PLAY","EQUIPMENT","OFFLINE","FRIENDS","ACHIEVEMENTS", "RANKING", "PROFILE", "OPTIONS", "EXIT"];   // EQUIPMENT nuevo (scr_armas)   // RANKING nuevo (DatabaseFunctions)
 index = 0;
 
 // Nueva lista para cuando elijas PLAY
@@ -150,9 +150,17 @@ reto_timer = 0; // Para efectos de brillo o tiempo límite
 // Controles táctiles en el celular (en PC no hace nada)
 touch_ensure();
 
-// Venimos de jugar contra el bot y eligió BUSCAR RIVAL: buscar partida rápida de una
+// Nada pegado de la partida anterior (scr_objetivo)
+scr_menu_limpiar();
+
+// Venimos de jugar contra el bot y eligió BUSCAR RIVAL: buscar partida rápida de una,
+// en el MISMO modo y cantidad de jugadores que antes (antes siempre buscaba 1 VS 1 clasico)
 if (variable_global_exists("bot_rebuscar") && global.bot_rebuscar) {
     global.bot_rebuscar = false;
+    var _tam = variable_global_exists("qp_tam") ? clamp(global.qp_tam, 1, 4) : 1;
+    var _mo  = scr_modo();
+    global.qp_tam = _tam;
+    global.max_players_allowed = _tam * 2;
     menu_state = "connecting";
-    ChangeRoom("auto_matchmake_2");
+    ChangeRoom("auto_matchmake_" + string(_tam * 2) + ((_mo > 0) ? "_m" + string(_mo) : ""));
 }

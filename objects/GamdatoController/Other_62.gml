@@ -1,2 +1,2 @@
 //ASYNC HTTP EVENT
-gmda_HTTPfunction(); //ASYNC HTTP FUNCTION
+// (Gamdato se quito del juego: ya no se usa)

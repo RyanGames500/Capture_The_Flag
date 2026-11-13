@@ -1,6 +1,21 @@
 // MUSICA: si todavia no existe oBrain (sin conexion), la lleva el menu (scr_fx)
 if (!instance_exists(oBrain)) scr_musica_step();
 
+// SUBISTE DE NIVEL: la pantalla bonita tapa el menu hasta que la cierres (draw_player_profile)
+if (scr_lvl_step()) exit;
+
+// REINICIAR PROGRESO (solo pruebas: DEV_REINICIAR en scr_reloj, CTRL + SUPR)
+scr_dev_reiniciar_step();
+
+// CUENTAS: pantalla de entrar / crear cuenta, chip del menu y franja de PERFIL (DatabaseFunctions)
+if (scr_cuenta_menu_step()) exit;
+
+// MENU NUEVO (draw_player_profile): las pantallas viejas pasan a las nuevas, y aqui se manejan
+// el menu principal, la pantalla de modos y la de cuantos jugadores
+scr_mn_redirigir();
+scr_mn_step();
+scr_mn_buscando_step();
+
 // ======================================================
 // TOQUES / CLICS DIRECTOS EN LOS BOTONES DEL MENU
 // El Draw GUI guarda donde esta cada boton (global.ui_taps) y aqui vemos si lo tocaron.
@@ -22,6 +37,8 @@ if (device_mouse_check_button_pressed(0, mb_left) && variable_global_exists("ui_
                 else { friend_selected = _tp.extra.i; _vk = -1; }
             }
             // Icono del selector de avatar: primer toque lo elige, segundo lo confirma
+            // Fila del buzon: la elige (y si tocaste ACEPTAR / RECHAZAR, se aplica a esa) (DatabaseFunctions)
+            if (_tp.extra.tipo == "buzon") buzon_sel = _tp.extra.i;
             if (_tp.extra.tipo == "avatar") {
                 if (avatar_seleccionado == _tp.extra.i) _vk = vk_enter;
                 else { avatar_seleccionado = _tp.extra.i; _vk = -1; }
@@ -63,7 +80,7 @@ if (mouse_check_button_pressed(mb_left)) {
         if (input_activo) {
             // Aplicamos la misma lógica que el ENTER
             global.myName = (texto_input == "") ? "Jugador" : texto_input;
-            gmda_setNewname((texto_input == "") ? "Jugador" : texto_input);
+            // (antes: gmda_setNewname, Gamdato se quito del juego)
 			global.registrado=1;
 			menu_delay = 5;
 	
@@ -184,7 +201,7 @@ else if (menu_state == "friends_menu" && friends_state == "anadir") {
             ultimo_intento_busqueda = _val; 
             
             // PASO 1: ID Directo
-            request_datos_rival = ReadSimpleData("perfiles", _val);
+            request_datos_rival = ReadSimpleData("perfiles", string_upper(_val));   // los ID van en mayusculas
             
             show_debug_message(">>> BUSCANDO EN NUBE: " + _val);
         }
@@ -202,7 +219,7 @@ else if (menu_state == "friends_menu" && friends_state == "anadir") {
         if (vkey_pressed(vk_enter)) {
             // Lógica original de guardar nombre
             global.myName = (texto_input == "") ? "Jugador" : texto_input;
-            gmda_setNewname(global.myName);
+            // (antes: gmda_setNewname, Gamdato se quito del juego)
             global.registrado = 1;
             menu_delay = 5;
             scr_save_to_local();
@@ -223,7 +240,7 @@ if (menu_delay > 0) {
 var move = vkey_pressed(ord("S")) - vkey_pressed(ord("W"));
 
 // --- ESTADO PRINCIPAL ---
-    if (menu_state == "main") {
+    if (menu_state == "main" && !MN_NUEVO) {   // (con el menu nuevo lo maneja scr_mn_step)
         index = clamp(index + move, 0, array_length(menu_options) - 1);
 
         if (vkey_pressed(vk_enter)) {
@@ -234,7 +251,13 @@ var move = vkey_pressed(ord("S")) - vkey_pressed(ord("W"));
 					exit;
                 break;
                 
-                case 1: 
+                case 1: // EQUIPMENT: tus 2 armas, comprar y mejorar (scr_armas, EQUIPAMIENTO)
+					menu_state = "equipo";
+					scr_eq_abrir();
+					menu_delay = 5;
+				break;
+
+                case 2: 
 					global.ONLINE = false;
 					if(global.ONLINE){
 					DisconnectFromServer();}
@@ -257,29 +280,35 @@ var move = vkey_pressed(ord("S")) - vkey_pressed(ord("W"));
                 break;
 
 
-				case 2: // FRIENDS
+				case 3: // FRIENDS
 				    menu_state = "friends_menu";
 				    friends_index = 0;
 				    friends_state = "main";
 					exit;
 				break;
 
-				case 3:
+				case 4:
 				menu_state = "achievements";
 				break;
 
-				case 4: 
+				case 5: // RANKING (las cuentas con mas copas) (DatabaseFunctions)
+				    menu_state = "ranking";
+				    scr_ranking_abrir();
+				    menu_delay = 5;
+				break;
+
+				case 6: 
 				    menu_state = "profile";
 					show_debug_message(">>> ENTRANDO AL PERFIL");
 				break;
                 
-                case 5: // OPTIONS -> pantalla de AJUSTES
+                case 7: // OPTIONS -> pantalla de AJUSTES
 					menu_state = "options";
 					opt_sel = 0;
 					menu_delay = 5;
                 break;
 				
-                case 6: 
+                case 8: 
                     game_end();
                 break;
             }
@@ -357,7 +386,7 @@ else if (menu_state == "setup_room") {
     var side_move = vkey_pressed(vk_right) - vkey_pressed(vk_left);
     if (side_move != 0) {
         switch (s_index) {
-            case 0: global.setup_modo = (global.setup_modo + side_move + 4) % 4; break; // MODO
+            case 0: var _nm = (scr_modo() == 8) ? 2 : 4; global.setup_modo = (global.setup_modo + side_move + _nm) % _nm; break; // MODO (JEFE: solo 2 o 4 jugadores)
             case 1: scr_ajustes_cambiar(1, side_move); break;                           // MAPA
             case 2: scr_ajustes_cambiar(0, side_move); break;                           // TIEMPO
             case 3: scr_ajustes_cambiar(2, side_move); break;                           // BANDERAS
@@ -365,10 +394,12 @@ else if (menu_state == "setup_room") {
     }
 
     // Cupo de la sala segun el modo: 1vs1 = 2, 2vs2 = 4, 3vs3 = 6, 4vs4 = 8
+    if (scr_modo() == 8) global.setup_modo = min(global.setup_modo, 1);   // JEFE GIGANTE: maximo 4 jugadores
     global.max_players_allowed = (global.setup_modo + 1) * 2;
 
     // Textos (siempre muestran lo que de verdad se va a jugar)
     var mod_text = ["1 VS 1", "2 VS 2", "3 VS 3", "4 VS 4"];
+    if (scr_modo() == 8) mod_text = ["2 JUGADORES", "4 JUGADORES", "4 JUGADORES", "4 JUGADORES"];   // JEFE: todos juntos
     setup_options[0] = "MODO: " + mod_text[global.setup_modo];
     setup_options[1] = "MAPA: " + scr_ajustes_texto(1);
     setup_options[2] = "TIEMPO: " + scr_ajustes_texto(0);
@@ -378,7 +409,7 @@ else if (menu_state == "setup_room") {
     if (vkey_pressed(vk_enter) && s_index == 4) { // CREAR SALA
 
         // si el input estaba activo o el texto cambio, actualizamos YA
-        if (texto_input != "Escribe tu nombre..." && texto_input != "") {
+        if (texto_input != "Escribe tu nombre..." && texto_input != "" && texto_input != "Name") {   // "Name" = el cuadro sin tocar (no es tu nombre)
             global.myName = texto_input;
         }
 
@@ -540,7 +571,7 @@ if (vkey_pressed(ord("P"))) {
     
     // Iniciamos la carga de datos del amigo
     estado_busqueda = "buscando";
-    request_datos_rival = ReadSimpleData("perfiles", _tag_objetivo);
+    request_datos_rival = ReadSimpleData("perfiles", string_upper(string(_tag_objetivo)));
     
     friends_state = "perfil_amigo"; 
     input_activo = false;
@@ -776,13 +807,13 @@ if (menu_state == "profile") {
     }
 	
 if (vkey_pressed(ord("B")) && !input_activo) {
-	var PLAYER_ID = gmda_getPlayerid();
+	var PLAYER_ID = string(global.miFriendTag);   // antes era el ID de Gamdato
         var _id_buscado = get_string("Introduce el ID ÚNICO del jugador:", "");
         
         if (_id_buscado != "" && _id_buscado != string(PLAYER_ID)) {
             estado_busqueda = "buscando";
             // PASO DIRECTO: Leemos el perfil usando el ID como nombre de documento
-            request_datos_rival = ReadSimpleData("perfiles", string(_id_buscado));
+            request_datos_rival = ReadSimpleData("perfiles", string_upper(string(_id_buscado)));
             
             show_debug_message(">>> BUSCADOR: Pidiendo perfil del ID: " + string(_id_buscado));
         }
@@ -867,7 +898,7 @@ if (estado_busqueda == "buscando" || estado_busqueda == "buscando_nombre" || est
         if (estado_busqueda == "buscando") {
             // Reintento rápido por nombre
             show_debug_message(">>> ID TARDA MUCHO, SALTANDO A NOMBRE...");
-            request_datos_rival = ReadSimpleData("perfiles", ultimo_intento_busqueda);
+            request_datos_rival = ReadSimpleData("perfiles", string_upper(string(ultimo_intento_busqueda)));
             estado_busqueda = "buscando_nombre";
             search_timer = 0; // Reset para otros 2 segundos
         } else {
@@ -887,6 +918,9 @@ if (estado_busqueda == "buscando" || estado_busqueda == "buscando_nombre" || est
 if (estado_busqueda == "error" && mensaje_alpha <= 0) {
     estado_busqueda = "idle";
 }
+
+if (menu_state == "ranking") scr_ranking_step();   // (DatabaseFunctions)
+if (menu_state == "equipo") scr_eq_step();        // EQUIPAMIENTO (scr_armas)
 
 if (menu_state == "achievements") {
     if (vkey_pressed(vk_escape)) {
@@ -909,7 +943,7 @@ if (menu_state == "achievements") {
 if (estado_busqueda == "encontrado" && vkey_pressed(ord("F"))) {
     if (is_struct(datos_busqueda_resultado)) {
         var id_rival = string(ultimo_intento_busqueda); 
-        var mi_id = string(gmda_getPlayerid());
+        var mi_id = string(global.miFriendTag);   // antes era el ID de Gamdato
         
         // --- MODO TEST: Permitimos auto-envío ---
         // Comentamos el IF original para que nos deje pasar
@@ -931,21 +965,8 @@ if (estado_busqueda == "encontrado" && vkey_pressed(ord("F"))) {
 
 
 	if (menu_state == "mailbox") {
-    if (hay_solicitud_pendiente) {
-        // ACEPTAR
-        if (vkey_pressed(ord("Y"))) {
-            scr_aceptar_solicitud();
-            mensaje_texto = "Ahora eres amigo de " + string(global.nombre_ultimo_amigo) + "!";
-            mensaje_alpha = 3;
-        }
-        
-        // RECHAZAR
-        if (vkey_pressed(ord("N"))) {
-            DeleteSimpleData("solicitudes", string(global.miFriendTag));
-            hay_solicitud_pendiente = false;
-            show_debug_message(">>> Solicitud rechazada.");
-        }
-    }
+    // Buzon con varias solicitudes: W/S elegir, Y aceptar, N rechazar (DatabaseFunctions, BUZON)
+    scr_buzon_step();
     
     if (vkey_pressed(vk_escape)) {
         menu_state = "main";

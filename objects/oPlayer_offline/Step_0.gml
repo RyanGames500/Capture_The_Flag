@@ -112,7 +112,7 @@ if (reloading) {
     }
 }
 
-var canShoot = (!has_flag) && (state != PLAYERSTATE2.DEAD);
+var canShoot = (!has_flag || scr_pj_dispara_con_bandera()) && (state != PLAYERSTATE2.DEAD);   // el Sargento si puede (scr_personajes)
 
 // --- DAÑO MELEE LOCAL ---
 if (melee_active > 0) {
@@ -167,6 +167,9 @@ if (state != PLAYERSTATE2.DEAD) vsp += grv;
 if (key_jump && is_grounded && (state == PLAYERSTATE2.IDLE || state == PLAYERSTATE2.WALK || state == PLAYERSTATE2.JUMP)) {
 	if (scr_salto_usar()) { is_grounded = false; key_jump = false; state = PLAYERSTATE2.JUMP; }
 }
+
+// Cambiar entre tus 2 armas: E, rueda del mouse o tocar el cuadro chico (scr_armas, SEGUNDA ARMA)
+scr_arma_cambio_step();
 
 // --- MÁQUINA DE ESTADOS ---
 switch (state) {
