@@ -224,7 +224,7 @@ function draw_player_profile(px, py) {
     draw_set_alpha(1);
     draw_set_halign(fa_right);
     draw_set_color(C_ORO);
-    draw_text_transformed(x0 + colw - 16, xy + 32 + 18, string(global.xp) + " / 100 XP", 0.6, 0.6, 0);
+    draw_text_transformed(x0 + colw - 16, xy + 32 + 18, string(global.xp) + " / " + string(scr_xp_necesaria(global.lvl)) + " XP", 0.6, 0.6, 0);
 
     var tx = x0 + 16;
     var tw = colw - 32;
@@ -232,7 +232,7 @@ function draw_player_profile(px, py) {
     draw_set_color(C_GRIS); draw_set_alpha(0.1);
     draw_rectangle(tx, ty, tx + tw, ty + 6, false);
     draw_set_alpha(1);
-    var fw = tw * clamp(global.xp / 100, 0, 1);
+    var fw = tw * clamp(global.xp / scr_xp_necesaria(global.lvl), 0, 1);
     if (fw > 1) {
         var segs = 40;
         var shine = ((current_time mod 2000) / 2000) * (fw + 60) - 30;
@@ -762,6 +762,7 @@ function __mn_col(_n) {
 		case "morado":  return make_color_rgb(160, 90, 255);
 		case "cian":    return make_color_rgb(80, 220, 255);
 		case "naranja": return make_color_rgb(255, 130, 40);
+		case "rosa":    return make_color_rgb(240, 90, 170);
 		case "boton":   return make_color_rgb(44, 54, 110);
 		case "panel":   return make_color_rgb(20, 24, 50);
 	}
@@ -868,6 +869,22 @@ function __mn_icono(_tipo, _cx, _cy, _k) {
 			draw_rectangle(_x - 8 * _s, _y - 9 * _s, _x + 8 * _s, _y - 3 * _s, false);
 			draw_rectangle(_x - 2 * _s, _y + 1 * _s, _x + 2 * _s, _y + 6 * _s, false);
 			draw_rectangle(_x - 6 * _s, _y + 6 * _s, _x + 6 * _s, _y + 9 * _s, false);
+		break;
+		case "skull":
+			draw_circle(_x, _y - 3 * _s, 13 * _s, false);
+			draw_rectangle(_x - 8 * _s, _y + 5 * _s, _x + 8 * _s, _y + 14 * _s, false);
+			draw_set_color(_ti);
+			draw_circle(_x - 5 * _s, _y - 3 * _s, 3.5 * _s, false); draw_circle(_x + 5 * _s, _y - 3 * _s, 3.5 * _s, false);
+			draw_line_width(_x - 3 * _s, _y + 8 * _s, _x - 3 * _s, _y + 14 * _s, 2 * _s); draw_line_width(_x + 3 * _s, _y + 8 * _s, _x + 3 * _s, _y + 14 * _s, 2 * _s);
+		break;
+		case "star":
+			for (var j = 0; j < 5; j++) {
+				var _a1 = 90 + j * 72;
+				draw_triangle(_x + lengthdir_x(16 * _s, _a1), _y + lengthdir_y(16 * _s, _a1),
+				              _x + lengthdir_x(7 * _s, _a1 + 36), _y + lengthdir_y(7 * _s, _a1 + 36),
+				              _x + lengthdir_x(7 * _s, _a1 - 36), _y + lengthdir_y(7 * _s, _a1 - 36), false);
+			}
+			draw_circle(_x, _y, 7 * _s, false);
 		break;
 		case "correo":
 			draw_rectangle(_x - 11 * _s, _y - 8 * _s, _x + 11 * _s, _y + 8 * _s, false);
@@ -1010,6 +1027,7 @@ function scr_mn_draw_main() {
 			break;
 		}
 	}
+	__mn_evento_draw(_px, _py);   // tarjeta del EVENTO (si hay uno)
 	__mn_msg_draw();
 	__mn_reset_draw();
 }
@@ -1025,19 +1043,26 @@ function __mn_modos() {
 		{ n: "GRAVEDAD LOCA",     d: "El techo es el piso",         col: "morado",  ico: "grav",  listo: true },
 		{ n: "UN TIRO",           d: "Francotirador y 1 de vida",   col: "cian",    ico: "aim",   listo: true },
 		{ n: "REY DE LA BANDERA", d: "Domina la zona",              col: "oro",     ico: "crown", listo: true },
-		{ n: "PISO DE LAVA",      d: "La lava sube",                col: "naranja", ico: "lava",  listo: true }
+		{ n: "PISO DE LAVA",      d: "La lava sube",                col: "naranja", ico: "lava",  listo: true },
+		{ n: "DUELO POR PUNTOS",  d: "Cada baja suma 1",            col: "verde",   ico: "skull", listo: true },
+		{ n: "TODOS CONTRA TODOS", d: "Cada quien por su cuenta",   col: "rosa",    ico: "star",  listo: true },
+		// 8: JEFE GIGANTE. No sale en la cuadricula (se jugara como EVENTO); para probarlo: tecla J en esta pantalla
+		{ n: "JEFE GIGANTE",      d: "Todos contra el jefe",        col: "rojo",    ico: "skull", listo: true }
 	];
 }
+/// Cuantas tarjetas salen en la cuadricula (4 x 2). El JEFE (8) no: va aparte.
+function __mn_modos_cuadricula() { return 8; }
 
 /// Rectangulo de la tarjeta i (en la pestana privada van un poco mas chicas y abajo)
 function __mn_carta_r(_i, _tab) {
+	// 4 columnas x 2 filas (8 modos)
 	if (_tab == 1) {
 		var _k = 0.8;
-		var _x = 72 + (_i mod 3) * 222 * _k, _y = 138 + (_i div 3) * 142 * _k;
-		return [_x, _y, _x + 208 * _k, _y + 128 * _k];
+		var _x = 89 + (_i mod 4) * 138, _y = 138 + (_i div 4) * 118;
+		return [_x, _y, _x + 160 * _k, _y + 132 * _k];
 	}
-	var _x2 = 36 + (_i mod 3) * 222, _y2 = 98 + (_i div 3) * 142;
-	return [_x2, _y2, _x2 + 208, _y2 + 128];
+	var _x2 = 22 + (_i mod 4) * 172, _y2 = 102 + (_i div 4) * 146;
+	return [_x2, _y2, _x2 + 160, _y2 + 132];
 }
 function __mn_tab_r(_i) { var _x = 110 + _i * 200; return [_x, 56, _x + 190, 90]; }
 function __mn_sub_r(_i) { var _x = 150 + _i * 215; return [_x, 98, _x + 200, 128]; }
@@ -1047,20 +1072,20 @@ function __mn_carta(_i, _tab, _hov) {
 	var _ms = __mn_modos();
 	var _m = _ms[_i];
 	var _r = __mn_carta_r(_i, _tab);
-	var _k = (_r[2] - _r[0]) / 208;
+	var _k = (_r[2] - _r[0]) / 160;
 	var _col = __mn_col(_m.col);
-	var _claro = (_m.col == "cian" || _m.col == "oro");
+	var _claro = (_m.col == "cian" || _m.col == "oro" || _m.col == "verde");
 	var _ti = __mn_col("tinta");
 	var _a = _m.listo ? 1 : 0.55;
 	__mn_rect(_r[0], _r[1] + 6, _r[2], _r[3] + 6, 14 * _k, __mn_osc(_col, 0.4), 1);
 	__mn_rect(_r[0], _r[1], _r[2], _r[3], 14 * _k, _m.listo ? _col : merge_colour(_col, make_color_rgb(70, 70, 90), 0.45), 1);
 	__mn_rect(_r[0], _r[1], _r[2], _r[3], 14 * _k, _hov ? c_white : _ti, 1, true);
-	__mn_rect(_r[0] + 8 * _k, _r[1] + 8 * _k, _r[0] + 64 * _k, _r[1] + 64 * _k, 10 * _k, __mn_osc(_col, 0.7), 1);
-	__mn_icono(_m.ico, _r[0] + 36 * _k, _r[1] + 36 * _k, _k);
-	__mn_rect(_r[2] - 62 * _k, _r[1] + 10 * _k, _r[2] - 8 * _k, _r[1] + 28 * _k, 6 * _k, _ti, 1);
-	__mn_txt(_r[2] - 35 * _k, _r[1] + 19 * _k, _m.listo ? "JUGAR" : "PRONTO", 8 * _k, _m.listo ? __mn_col("verde") : __mn_col("oro"), fa_center, false);
+	__mn_rect(_r[0] + 8 * _k, _r[1] + 8 * _k, _r[0] + 56 * _k, _r[1] + 56 * _k, 10 * _k, __mn_osc(_col, 0.7), 1);
+	__mn_icono(_m.ico, _r[0] + 32 * _k, _r[1] + 32 * _k, 0.85 * _k);
+	__mn_rect(_r[2] - 54 * _k, _r[1] + 10 * _k, _r[2] - 8 * _k, _r[1] + 28 * _k, 6 * _k, _ti, 1);
+	__mn_txt(_r[2] - 31 * _k, _r[1] + 19 * _k, _m.listo ? "JUGAR" : "PRONTO", 8 * _k, _m.listo ? __mn_col("verde") : __mn_col("oro"), fa_center, false);
 	var _tc = _claro ? _ti : c_white;
-	__mn_txt(_r[0] + 12 * _k, _r[3] - 38 * _k, _m.n, ((string_length(_m.n) < 14) ? 15 : 12) * _k, _tc, fa_left, !_claro, fnt_menu, _a > 0.9 ? 1 : 0.85);
+	__mn_txt(_r[0] + 12 * _k, _r[3] - 36 * _k, _m.n, ((string_length(_m.n) < 14) ? 13 : 10) * _k, _tc, fa_left, !_claro, fnt_menu, _a > 0.9 ? 1 : 0.85);
 	__mn_txt(_r[0] + 12 * _k, _r[3] - 16 * _k, _m.d, 9 * _k, _tc, fa_left, false, fnt_small);
 }
 
@@ -1097,7 +1122,7 @@ function scr_mn_draw_modos() {
 				__mn_boton(_r[0], _r[1], _r[2], _r[3], _on ? __mn_col("morado") : __mn_col("boton"), _sn[s], 11, c_white, !touch_mode() && __mn_dentro(_px, _py, _r), 10);
 			}
 		}
-		for (var i = 0; i < 6; i++) {
+		for (var i = 0; i < __mn_modos_cuadricula(); i++) {
 			var _hov = (!touch_mode() && __mn_dentro(_px, _py, __mn_carta_r(i, _q.tab))) || (!touch_mode() && _q.carta == i);
 			__mn_carta(i, _q.tab, _hov);
 		}
@@ -1129,6 +1154,8 @@ function __mn_modo_tams(_m) {
 	switch (_m) {
 		case 1: case 4: case 5: return [false, true, true, true];   // bandera bomba, rey de la bandera, piso de lava
 		case 3: return [true, true, true, false];                     // un tiro (4 vs 4 es demasiado caos)
+		case 7: return [false, true, true, true];                     // todos contra todos: de 4 a 8 jugadores
+		case 8: return [true, true, false, false];                    // jefe gigante: 2 o 4 jugadores (con mas es muy facil)
 	}
 	return [true, true, true, true];                                   // clasico y gravedad loca
 }
@@ -1152,6 +1179,7 @@ function scr_mn_draw_tamano() {
 	__mn_txt(190, 94, _m.d, 10, c_white, fa_left, false, fnt_small);
 	__mn_txt(360, 144, "CUANTOS JUGADORES?", 16, c_white);
 	var _lab = ["1 VS 1", "2 VS 2", "3 VS 3", "4 VS 4"];
+	if (_q.modo == 7 || _q.modo == 8) _lab = ["2 JUGADORES", "4 JUGADORES", "6 JUGADORES", "8 JUGADORES"];   // TODOS CONTRA TODOS y JEFE
 	for (var i = 0; i < 4; i++) {
 		var _r = __mn_tam_r(i);
 		var _ok = __mn_tam_listo(i);
@@ -1159,7 +1187,7 @@ function scr_mn_draw_tamano() {
 		__mn_rect(_r[0], _r[1] + 6, _r[2], _r[3] + 6, 14, make_color_rgb(10, 12, 30));
 		__mn_rect(_r[0], _r[1], _r[2], _r[3], 14, _ok ? __mn_col("boton") : make_color_rgb(34, 38, 62));
 		__mn_rect(_r[0], _r[1], _r[2], _r[3], 14, _hov ? c_white : __mn_col("tinta"), 1, true);
-		__mn_txt((_r[0] + _r[2]) / 2, _r[1] + 30, _lab[i], 20, _ok ? (_hov ? __mn_col("oro") : c_white) : __mn_col("gris"));
+		__mn_txt((_r[0] + _r[2]) / 2, _r[1] + 30, _lab[i], (_q.modo == 7 || _q.modo == 8) ? 12 : 20, _ok ? (_hov ? __mn_col("oro") : c_white) : __mn_col("gris"));
 		var _n = i + 1;
 		for (var j = 0; j < _n; j++) {
 			var _cx = (_r[0] + _r[2]) / 2 - _n * 13 + j * 26 + 13;
@@ -1202,6 +1230,8 @@ function scr_mn_redirigir() {
 
 /// Partida rapida (lo mismo que hacia PLAY -> PARTIDA RAPIDA)
 function __mn_partida_rapida() {
+	// Sin conexion no se puede buscar (antes se quedaba buscando para siempre o te mandaba al bot viejo)
+	if (!scr_cuenta_conectado()) { __mn_msg("SIN CONEXION, ESPERA UN MOMENTO"); return; }
 	if (global.myName == "") global.myName = "Player_" + string(irandom(999));
 	global.match_modo = global.mn_ui.modo;
 	global.qp_tam = clamp(global.mn_ui.tam + 1, 1, 4);         // jugadores por equipo
@@ -1253,6 +1283,56 @@ function __mn_elegir_modo(_i) {
 	if (global.sfx) audio_play_sound(snd_scroll, 5, false, 0.5);
 }
 
+// ------------------------------------------------------
+// TARJETA DEL EVENTO (menu principal, arriba a la derecha). Los eventos: DatabaseFunctions
+// ------------------------------------------------------
+function __mn_evento_r() { return [470, 46, 700, 198]; }
+
+function __mn_evento_draw(_px, _py) {
+	var _ev = scr_evento_actual();
+	if (is_undefined(_ev)) return;
+	var _x1 = 470, _y1 = 56, _x2 = 700, _y2 = 198;
+	var _act = _ev.activo;
+	var _ti = __mn_col("tinta");
+	var _hov = !touch_mode() && __mn_dentro(_px, _py, __mn_evento_r());
+	// Brillo que late cuando ya empezo
+	if (_act) {
+		var _g = 0.5 + 0.5 * sin(current_time / 200);
+		__mn_rect(_x1 - 5, _y1 - 5, _x2 + 5, _y2 + 5, 17, make_color_rgb(255, 90, 70), 0.35 + 0.45 * _g, true);
+		__mn_rect(_x1 - 4, _y1 - 4, _x2 + 4, _y2 + 4, 16, make_color_rgb(255, 90, 70), 0.25 + 0.35 * _g, true);
+	}
+	__mn_rect(_x1, _y1 + 6, _x2, _y2 + 6, 14, make_color_rgb(60, 15, 20));
+	__mn_rect(_x1, _y1, _x2, _y2, 14, _act ? make_color_rgb(120, 28, 40) : make_color_rgb(55, 40, 60));
+	__mn_rect(_x1, _y1, _x2, _y2, 14, _hov ? c_white : (_act ? __mn_col("oro") : __mn_col("gris")), 1, true);
+	// Cinta EVENTO / PRONTO
+	__mn_rect(_x1 + 10, _y1 - 10, _x1 + 92, _y1 + 10, 8, _act ? __mn_col("oro") : __mn_col("gris"));
+	__mn_txt(_x1 + 51, _y1, _act ? "EVENTO" : "PRONTO", 10, _ti, fa_center, false);
+	// Icono del modo, nombre y texto
+	__mn_rect(_x1 + 12, _y1 + 20, _x1 + 64, _y1 + 72, 10, _act ? make_color_rgb(70, 15, 25) : make_color_rgb(40, 30, 50));
+	var _ms = __mn_modos();
+	__mn_icono(_ms[_ev.m].ico, _x1 + 38, _y1 + 46, 1);
+	__mn_txt(_x1 + 74, _y1 + 32, _ev.n, 15, c_white, fa_left);
+	__mn_txt(_x1 + 74, _y1 + 52, _ev.x, 9, _act ? make_color_rgb(255, 220, 220) : __mn_col("gris"), fa_left, false, fnt_small);
+	// Cuenta regresiva
+	__mn_rect(_x1 + 12, _y1 + 82, _x2 - 12, _y1 + 106, 8, c_black);
+	__mn_txt((_x1 + _x2) / 2, _y1 + 94, (_act ? "TERMINA EN " : "EMPIEZA EN ") + scr_evento_tiempo(_act ? _ev.falta_fin : _ev.falta_ini), 11, _act ? __mn_col("oro") : __mn_col("gris"), fa_center, false);
+	if (_act) {
+		var _p = 1 + 0.05 * sin(current_time / 125);
+		var _bw = 60 * _p, _cx = (_x1 + _x2) / 2;
+		__mn_rect(_cx - _bw, _y1 + 112, _cx + _bw, _y1 + 134, 8, __mn_col("verde"));
+		__mn_txt(_cx, _y1 + 123, "JUGAR EVENTO", 11, _ti, fa_center, false);
+	} else {
+		__mn_txt((_x1 + _x2) / 2, _y1 + 123, "Empieza " + _ev.f, 8, __mn_col("gris"), fa_center, false, fnt_small);
+	}
+}
+
+/// Tocar la tarjeta (o la tecla E): si ya empezo, a elegir cuantos jugadores
+function __mn_evento_entrar(_ev) {
+	if (!_ev.activo) { __mn_msg(string_upper("Empieza " + _ev.f)); return; }
+	global.mn_ui.tab = 0;
+	__mn_elegir_modo(_ev.m);
+}
+
 /// Devuelve true si se encargo de este frame (el resto del Step de oMenu sigue igual)
 function scr_mn_step() {
 	if (!MN_NUEVO || !global.registrado) return false;
@@ -1268,6 +1348,10 @@ function scr_mn_step() {
 	var _px = (device_mouse_x_to_gui(0) - _q.ox) / _q.S, _py = (device_mouse_y_to_gui(0) - _q.oy) / _q.S;
 
 	if (menu_state == "main") {
+		// EVENTO: pedir la lista al servidor y entrar tocando su tarjeta (o con la E)
+		scr_eventos_step();
+		var _ev = scr_evento_actual();
+		if (!is_undefined(_ev) && ((_toque && __mn_dentro(_px, _py, __mn_evento_r())) || vkey_pressed(ord("E")))) { __mn_evento_entrar(_ev); return true; }
 		var _orden = __mn_main_orden();
 		var _mv = vkey_pressed(ord("S")) - vkey_pressed(ord("W"));
 		if (_mv != 0) _q.sel = clamp(_q.sel + _mv, 0, array_length(_orden) - 1);
@@ -1300,10 +1384,12 @@ function scr_mn_step() {
 		// Tarjetas: flechas para moverse, ENTER para elegir
 		var _lr = vkey_pressed(vk_right) - vkey_pressed(vk_left) + vkey_pressed(ord("D")) - vkey_pressed(ord("A"));
 		var _ud = vkey_pressed(vk_down) - vkey_pressed(vk_up) + vkey_pressed(ord("S")) - vkey_pressed(ord("W"));
-		if (_lr != 0 || _ud != 0) _q.carta = clamp(_q.carta + sign(_lr) + sign(_ud) * 3, 0, 5);
+		if (_lr != 0 || _ud != 0) _q.carta = clamp(_q.carta + sign(_lr) + sign(_ud) * 4, 0, __mn_modos_cuadricula() - 1);
 		if (vkey_pressed(vk_enter)) { __mn_elegir_modo(_q.carta); return true; }
+		// PRUEBA del JEFE GIGANTE (mientras hacemos lo de los eventos): tecla J
+		if (vkey_pressed(ord("J"))) { __mn_elegir_modo(8); return true; }
 		if (_toque) {
-			for (var i = 0; i < 6; i++) if (__mn_dentro(_px, _py, __mn_carta_r(i, _q.tab))) { _q.carta = i; __mn_elegir_modo(i); return true; }
+			for (var i = 0; i < __mn_modos_cuadricula(); i++) if (__mn_dentro(_px, _py, __mn_carta_r(i, _q.tab))) { _q.carta = i; __mn_elegir_modo(i); return true; }
 		}
 		return true;
 	}
@@ -1346,7 +1432,7 @@ function scr_mn_draw_buscando() {
 	__mn_rect(210, 30, 510, 62, 10, _hc);
 	__mn_rect(210, 30, 510, 62, 10, _ti, 1, true);
 	var _tn = variable_global_exists("qp_tam") ? global.qp_tam : 1;
-	__mn_txt(360, 47, _rnd ? (scr_modo_nombre() + "  -  " + string(_tn) + " VS " + string(_tn)) : ("SALA PRIVADA  -  " + scr_modo_nombre()), 13, c_white);
+	__mn_txt(360, 47, _rnd ? (scr_modo_nombre() + "  -  " + ((scr_modo() == 7 || scr_modo() == 8) ? string(_tn * 2) + " JUGADORES" : string(_tn) + " VS " + string(_tn))) : ("SALA PRIVADA  -  " + scr_modo_nombre()), 13, c_white);
 	var _dots = string_repeat(".", (current_time div 300) mod 4);
 	__mn_txt(360, 92, (_rnd ? ((_tn > 1) ? "BUSCANDO JUGADORES" : "BUSCANDO RIVAL") : "CREANDO SALA") + _dots, 20, c_white);
 	var _seg = floor((variable_struct_exists(_q, "busca_t") ? _q.busca_t : 0) / max(1, game_get_speed(gamespeed_fps)));
@@ -1558,6 +1644,21 @@ function scr_mn_draw_seleccion() {
 		if (_yo == "AZUL") array_push(_ro, _bt); else array_push(_az, _bt);
 	}
 
+	// TODOS CONTRA TODOS: no hay equipos, todos repartidos en las dos filas (scr_reloj)
+	if (scr_modo_todos()) {
+		var _todos = [];
+		for (var _j = 0; _j < array_length(_az); _j++) array_push(_todos, _az[_j]);
+		for (var _j = 0; _j < array_length(_ro); _j++) array_push(_todos, _ro[_j]);
+		_az = []; _ro = [];
+		for (var _j = 0; _j < array_length(_todos); _j++) { if (_j mod 2 == 0) array_push(_az, _todos[_j]); else array_push(_ro, _todos[_j]); }
+	}
+	// JEFE GIGANTE: todos juntos en TU EQUIPO y del otro lado solo el jefe (scr_reloj)
+	var _jefe = scr_modo_jefe();
+	if (_jefe) {
+		for (var _j = 0; _j < array_length(_ro); _j++) array_push(_az, _ro[_j]);
+		_ro = [];
+	}
+
 	// Las dos filas de cartas (se achican para que siempre quepan)
 	for (var t = 0; t < 2; t++) {
 		var _lst = (t == 0) ? _az : _ro;
@@ -1566,7 +1667,10 @@ function scr_mn_draw_seleccion() {
 		var _ancho = 322;
 		__mn_rect(_x0, 62, _x0 + _ancho, 80, 8, _col);
 		__mn_rect(_x0, 62, _x0 + _ancho, 80, 8, _ti, 1, true);
-		__mn_txt(_x0 + _ancho / 2, 71, (t == 0) ? "EQUIPO AZUL" : "EQUIPO ROJO", 10, c_white);
+		var _tit = scr_modo_todos() ? "JUGADORES" : ((t == 0) ? "EQUIPO AZUL" : "EQUIPO ROJO");
+		if (_jefe) _tit = (t == 0) ? "TU EQUIPO" : "EL JEFE";
+		__mn_txt(_x0 + _ancho / 2, 71, _tit, 10, c_white);
+		if (_jefe && t == 1) { __mn_jefe_carta(_x0 + _ancho / 2 - 50, 86, _x0 + _ancho / 2 + 50, 204); continue; }
 		var _n = max(1, array_length(_lst));
 		var _g = 6;
 		var _cw = min(90, (_ancho - (_n - 1) * _g) / _n);
@@ -1593,7 +1697,7 @@ function scr_mn_draw_seleccion() {
 	}
 	__mn_txt(360, 145, "VS", 24, __mn_col("oro"));
 	var _rival = (_yo == "AZUL") ? "ROJO" : "AZUL";
-	__mn_txt(360, 207, "ROBA LA BANDERA " + _rival + "  >  LLEVALA A TU BASE", 8, __mn_col("oro"), fa_center, false);
+	__mn_txt(360, 207, _jefe ? "TODOS JUNTOS  >  DERROTEN AL JEFE" : ("ROBA LA BANDERA " + _rival + "  >  LLEVALA A TU BASE"), 8, __mn_col("oro"), fa_center, false);
 
 	// Tu selector
 	__mn_rect(14, 216, 706, 398, 14, __mn_col("panel"));
@@ -1878,6 +1982,20 @@ function __mn_monito(_cx, _cy, _col, _s) {
 	__mn_rect(_cx + 6 * _s, _cy - 12 * _s, _cx + 10 * _s, _cy - 7 * _s, 0, __mn_col("tinta"));
 }
 
+/// JEFE GIGANTE: la carta del jefe (el Sargento en rojo, con un borde que brilla)
+function __mn_jefe_carta(_x1, _y1, _x2, _y2) {
+	var _ti = __mn_col("tinta");
+	var _p = 0.5 + 0.5 * sin(current_time / 250);
+	__mn_rect(_x1 - 4, _y1 - 4, _x2 + 4, _y2 + 4, 12, make_color_rgb(255, 90 + floor(80 * _p), 70), 1, true);
+	__mn_rect(_x1, _y1 + 4, _x2, _y2 + 4, 10, c_black, 0.6);
+	__mn_rect(_x1, _y1, _x2, _y2, 10, __mn_osc(__mn_col("rojo"), 0.35));
+	__mn_retrato(3, _x1 + 3, _y1 + 3, _x2 - 3, _y2 - 24, 1, make_color_rgb(255, 120, 130));
+	__mn_rect(_x1 + 3, _y2 - 24, _x2 - 3, _y2 - 3, 4, _ti);
+	__mn_rect(_x1, _y1, _x2, _y2, 10, _ti, 1, true);
+	__mn_txt((_x1 + _x2) / 2, _y2 - 17, "EL SARGENTO", 8, c_white, fa_center, false);
+	__mn_txt((_x1 + _x2) / 2, _y2 - 8, "GIGANTE", 6, __mn_col("gris"), fa_center, false, fnt_small);
+}
+
 function __mn_buscando_casillas(_tam) {
 	var _q = global.mn_ui;
 	_tam = clamp(_tam, 1, 4);
@@ -1887,18 +2005,27 @@ function __mn_buscando_casillas(_tam) {
 	while (array_length(global.qp_llegada) < _n) array_push(global.qp_llegada, current_time);
 	if (array_length(global.qp_llegada) > _n) array_resize(global.qp_llegada, _n);   // alguien cancelo
 
+	// JEFE GIGANTE: todas las casillas van en TU EQUIPO y del otro lado sale el jefe
+	var _jefe = (scr_modo() == 8);
+	var _tt = _jefe ? _tam * 2 : _tam;   // casillas de tu lado
 	var _lado = 290, _gap = 8;
-	var _sw = min(120, (_lado - (_tam - 1) * _gap) / _tam);
-	var _sh = (_tam <= 2) ? 170 : 150;
+	var _sw = min(120, (_lado - (_tt - 1) * _gap) / _tt);
+	var _sh = (_tt <= 2) ? 170 : 150;
 	var _y1 = 150, _y2 = _y1 + _sh;
 	var _a = current_time / 160;
 	for (var _e = 0; _e < 2; _e++) {
 		var _col = (_e == 0) ? __mn_col("azul") : __mn_col("rojo");
 		var _x0 = (_e == 0) ? 40 : 390;
-		var _ancho = _tam * _sw + (_tam - 1) * _gap;
+		if (_jefe && _e == 1) {
+			__mn_txt(_x0 + _lado / 2, 140, "EL JEFE", 9, _col, fa_center, false);
+			__mn_jefe_carta(_x0 + _lado / 2 - 61, _y1, _x0 + _lado / 2 + 61, _y2);
+			continue;
+		}
+		var _cnt = (_e == 0) ? _tt : _tam;
+		var _ancho = _cnt * _sw + (_cnt - 1) * _gap;
 		var _xs = _x0 + (_lado - _ancho) / 2;
-		__mn_txt(_x0 + _lado / 2, 140, (_e == 0) ? "TU EQUIPO" : "RIVALES", 9, _col, fa_center, false);
-		for (var _k = 0; _k < _tam; _k++) {
+		__mn_txt(_x0 + _lado / 2, 140, (scr_modo() == 7) ? "JUGADORES" : ((_e == 0) ? "TU EQUIPO" : "RIVALES"), 9, _col, fa_center, false);
+		for (var _k = 0; _k < _cnt; _k++) {
 			var _idx = _e * _tam + _k;
 			var _x1 = _xs + _k * (_sw + _gap), _x2 = _x1 + _sw;
 			var _cx = (_x1 + _x2) / 2, _cy = (_y1 + _y2) / 2;
@@ -1916,16 +2043,16 @@ function __mn_buscando_casillas(_tam) {
 				if (_idx == 0) {
 					// Tu: tu personaje de verdad
 					var _spr = __mn_pj_sprite();
-					var _alto = (_tam <= 2) ? 80 : 60;
+					var _alto = (_tt <= 2) ? 80 : 60;
 					var _sk = min(_alto / max(1, sprite_get_height(_spr)), (_sw - 16) / max(1, sprite_get_width(_spr))) * _q.S;
 					var _sw2 = sprite_get_width(_spr) * _sk, _sh2 = sprite_get_height(_spr) * _sk;
 					draw_sprite_ext(_spr, (current_time div 120) mod max(1, sprite_get_number(_spr)),
 						__mn_x(_cx) - _sw2 / 2 + sprite_get_xoffset(_spr) * _sk, __mn_y(_y2 - 40) - _sh2 + sprite_get_yoffset(_spr) * _sk, _sk, _sk, 0, c_white, 1);
-					__mn_txt(_cx, _y2 - 30, string_upper(string_copy(string(global.myName), 1, (_tam <= 2) ? 12 : 9)), (_tam <= 2) ? 10 : 8, c_white);
+					__mn_txt(_cx, _y2 - 30, string_upper(string_copy(string(global.myName), 1, (_tt <= 2) ? 12 : 9)), (_tt <= 2) ? 10 : 8, c_white);
 					__mn_txt(_cx, _y2 - 15, "TU", 8, __mn_col("oro"));
 				} else {
-					__mn_monito(_cx, _cy - 14, _col, (_tam <= 2) ? 1.15 : 0.9);
-					__mn_txt(_cx, _y2 - 30, "JUGADOR", (_tam <= 2) ? 10 : 8, c_white);
+					__mn_monito(_cx, _cy - 14, _col, (_tt <= 2) ? 1.15 : 0.9);
+					__mn_txt(_cx, _y2 - 30, "JUGADOR", (_tt <= 2) ? 10 : 8, c_white);
 					// check verde
 					draw_set_color(__mn_col("verde"));
 					draw_circle(__mn_x(_cx), __mn_y(_y2 - 15), 7 * _q.S, false);
@@ -1937,17 +2064,386 @@ function __mn_buscando_casillas(_tam) {
 				// Casilla vacia: buscando (puntitos que giran)
 				__mn_rect(_x1, _y1, _x2, _y2, 12, make_color_rgb(22, 26, 56));
 				__mn_rect(_x1, _y1, _x2, _y2, 12, make_color_rgb(60, 70, 110), 1, true);
-				var _r = (_tam <= 2) ? 14 : 11;
+				var _r = (_tt <= 2) ? 14 : 11;
 				for (var j = 0; j < 8; j++) {
 					var _ang = _a + _idx * 0.6 + j * 0.785;
 					var _cc = 80 + floor(170 * (j / 8));
 					draw_set_color(make_color_rgb(_cc, _cc, _cc));
 					draw_circle(__mn_x(_cx + _r * cos(_ang)), __mn_y(_cy - 10 + _r * sin(_ang)), 3.5 * _q.S, false);
 				}
-				__mn_txt(_cx, _y2 - 22, "BUSCANDO", (_tam <= 2) ? 9 : 7, __mn_col("gris"), fa_center, false);
+				__mn_txt(_cx, _y2 - 22, "BUSCANDO", (_tt <= 2) ? 9 : 7, __mn_col("gris"), fa_center, false);
 			}
 		}
 	}
 	draw_set_color(c_white);
 	__mn_txt(360, 235, "VS", 28, __mn_col("oro"));
+}
+
+// ======================================================
+// PANTALLA DE FIN NUEVA: VICTORIA / DERROTA / EMPATE (todos los modos)
+//   Cada uno ve SU resultado: el que gano (y su equipo) VICTORIA, los demas DERROTA.
+//   Tu personaje celebrando o triste, con su emote (pulgar arriba o llorando), lo que ganaste
+//   y los botones de siempre (scr_fin_opciones). Va en el Draw GUI de oBrain (con oBrain).
+// ======================================================
+/// 1 gane, 0 perdi, 2 empate
+function scr_fin_resultado() {
+	if (global.winner_team == 3) return 2;
+	if (scr_modo_todos()) return (global.winner_team == 2) ? 1 : 0;
+	var _gana = (global.winner_team == 1) ? "ROJO" : "AZUL";
+	return (scr_my_team() == _gana) ? 1 : 0;
+}
+
+/// Rectangulo del boton i de n (en la pantalla). Lo usan el dibujo y el toque.
+function scr_fin_btn_r(_i, _n) {
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	var _u = clamp(min(_gw / 1280, _gh / 720), 0.6, 2);
+	var _bw = 300 * _u, _bh = 66 * _u, _sep = 40 * _u;
+	var _tot = _n * _bw + (_n - 1) * _sep;
+	var _x = _gw / 2 - _tot / 2 + _i * (_bw + _sep);
+	var _y = _gh - _bh - 30 * _u;
+	return [_x, _y, _x + _bw, _y + _bh];
+}
+
+/// ¿Tocaron un boton? (oBrain Step) Si si, lo deja elegido y devuelve true.
+function scr_fin_toque() {
+	if (!MN_NUEVO || !device_mouse_check_button_pressed(0, mb_left)) return false;
+	var _ops = scr_fin_opciones();
+	var _mx = device_mouse_x_to_gui(0), _my = device_mouse_y_to_gui(0);
+	for (var _i = 0; _i < array_length(_ops); _i++) {
+		var _r = scr_fin_btn_r(_i, array_length(_ops));
+		if (point_in_rectangle(_mx, _my, _r[0], _r[1], _r[2], _r[3])) { victory_index = _i; return true; }
+	}
+	return false;
+}
+
+function scr_fin_nuevo_draw() {
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	var _u = clamp(min(_gw / 1280, _gh / 720), 0.6, 2);
+	var _cx = _gw / 2;
+	if (!variable_instance_exists(id, "fin_t") || victory_alpha < 0.1) fin_t = 0;
+	fin_t++;
+	var _t = fin_t / 60;                  // segundos
+	var _res = scr_fin_resultado();      // 1 gane, 0 perdi, 2 empate
+	var _oro = make_color_rgb(255, 212, 71), _tinta = make_color_rgb(11, 15, 26);
+	var _a = victory_alpha;
+	draw_set_alpha(_a);
+
+	// --- Fondo ---
+	if (_res == 1) {
+		draw_set_color(make_color_rgb(40, 30, 10));
+		draw_rectangle(0, 0, _gw, _gh, false);
+		draw_set_color(make_color_rgb(70, 52, 14));
+		var _ry = _gh * 0.45, _L = max(_gw, _gh) * 1.5;
+		for (var _k = 0; _k < 16; _k++) {
+			var _an = _t * 0.4 + _k * pi / 8;
+			draw_triangle(_cx, _ry, _cx + _L * cos(_an), _ry + _L * sin(_an), _cx + _L * cos(_an + 0.18), _ry + _L * sin(_an + 0.18), false);
+		}
+	} else if (_res == 0) {
+		draw_rectangle_colour(0, 0, _gw, _gh, make_color_rgb(30, 22, 36), make_color_rgb(30, 22, 36), make_color_rgb(40, 28, 44), make_color_rgb(40, 28, 44), false);
+		draw_set_color(make_color_rgb(80, 80, 110));
+		for (var _k = 0; _k < 60; _k++) {
+			var _lx = ((_k * 53 + _t * 40 * _u) mod (_gw + 20)) - 10;
+			var _ly = (_k * 97 + _t * 300 * _u) mod (_gh + 20) - 10;
+			draw_line_width(_lx, _ly, _lx - 3 * _u, _ly + 14 * _u, max(1, _u));
+		}
+	} else {
+		__mn_fondo_wh(_gw, _gh);
+	}
+	draw_set_alpha(_a);
+
+	// --- Titulo ---
+	draw_set_font(fnt_menu); draw_set_halign(fa_center); draw_set_valign(fa_middle);
+	var _tit = (_res == 1) ? "VICTORIA!" : ((_res == 0) ? "DERROTA" : "EMPATE");
+	var _tc = (_res == 1) ? _oro : ((_res == 0) ? make_color_rgb(200, 80, 90) : _oro);
+	var _p = clamp(_t / 0.5, 0, 1);
+	var _ty = _gh * 0.13;
+	var _ts = 2.6 * _u;
+	if (_res == 1) { var _c = 1.7; _ts *= max(0.05, 1 + (_c + 1) * power(_p - 1, 3) + _c * power(_p - 1, 2)); }   // entra rebotando
+	else _ty = _gh * 0.13 - (1 - (1 - power(1 - _p, 3))) * 40 * _u;                                          // cae despacio
+	draw_text_transformed_color(_cx + 4 * _u, _ty + 4 * _u, _tit, _ts, _ts, 0, c_black, c_black, c_black, c_black, _a * 0.8);
+	draw_text_transformed_color(_cx, _ty, _tit, _ts, _ts, 0, _tc, _tc, _tc, _tc, _a);
+
+	// --- Tu equipo con los dibujos HD de cada personaje (tu al centro, con brillo) ---
+	var _eq = [];   // [pj, nombre, soy_yo]
+	var _yo_eq = scr_my_team();
+	var _solo = scr_modo_todos();
+	with (oOtherPlayer) {
+		if (_solo || team == "" || team != _yo_eq) continue;
+		array_push(_eq, [variable_instance_exists(id, "mySelectedPJ") ? clamp(mySelectedPJ, 0, 3) : 0, string(Name), false]);
+	}
+	// yo en medio
+	var _mitad = floor(array_length(_eq) / 2);
+	array_insert(_eq, _mitad, [variable_global_exists("pj_selected") ? clamp(global.pj_selected, 0, 3) : 0, string(global.myName), true]);
+	var _nq = array_length(_eq);
+	var _pie = _gh * 0.70;
+	var _hyo = _gh * 0.44;                       // alto del personaje (el tuyo; los demas un poco menos)
+	var _anchos = 0;
+	for (var _k = 0; _k < _nq; _k++) {
+		var _sp0 = global.pj_portraits[_eq[_k][0]];
+		var _h0 = _eq[_k][2] ? _hyo : _hyo * 0.86;
+		_anchos += sprite_get_width(_sp0) * (_h0 / sprite_get_height(_sp0)) + 24 * _u;
+	}
+	var _red = min(1, (_gw * 0.92) / max(1, _anchos));   // si no caben, todos un poco mas chicos
+	var _xx = _cx - _anchos * _red / 2;
+	var _yo_x = _cx, _yo_top = _pie - _hyo;
+	for (var _k = 0; _k < _nq; _k++) {
+		var _e = _eq[_k];
+		var _spr = global.pj_portraits[_e[0]];
+		var _sw = sprite_get_width(_spr), _sh = sprite_get_height(_spr);
+		var _h = (_e[2] ? _hyo : _hyo * 0.86) * _red;
+		var _kk = _h / _sh;
+		var _w = _sw * _kk;
+		var _sx = _xx + _w / 2 + 12 * _u * _red;
+		_xx += _w + 24 * _u * _red;
+		// entra desde abajo, uno por uno; si ganaron, dan saltitos
+		var _ent = clamp((_t - 0.15 * _k) / 0.4, 0, 1);
+		_ent = 1 - power(1 - _ent, 3);
+		if (_ent <= 0) continue;
+		var _salto = (_res == 1) ? abs(sin(_t * 4 + _k)) * 10 * _u : 0;
+		var _sg = (_sx < _cx - 2) ? -1 : 1;     // los de la izquierda miran al centro
+		var _dx = _sx + _sg * (sprite_get_xoffset(_spr) * _kk - _w / 2);
+		var _dy = _pie - _h + sprite_get_yoffset(_spr) * _kk - _salto + (1 - _ent) * 80 * _u;
+		var _al = _a * _ent;
+		if (_e[2]) {
+			// brillo alrededor (dorado si ganaste, gris si perdiste)
+			gpu_set_fog(true, (_res == 1) ? _oro : make_color_rgb(120, 120, 150), 0, 0);
+			for (var _o = 0; _o < 8; _o++) draw_sprite_ext(_spr, 0, _dx + lengthdir_x(5 * _u, _o * 45), _dy + lengthdir_y(5 * _u, _o * 45), _sg * _kk, _kk, 0, c_white, _al * 0.9);
+			gpu_set_fog(false, c_white, 0, 0);
+			_yo_x = _sx; _yo_top = _pie - _h - _salto;
+		}
+		draw_sprite_ext(_spr, 0, _dx, _dy, _sg * _kk, _kk, 0, (_res == 0) ? make_color_rgb(130, 130, 150) : c_white, _al);
+		// plaquita con el nombre
+		var _pw = min(_w + 20 * _u, 230 * _u), _ph = 28 * _u, _py = _pie + 8 * _u;
+		draw_set_alpha(_al);
+		draw_set_color(_tinta); draw_roundrect_ext(_sx - _pw / 2, _py, _sx + _pw / 2, _py + _ph, 10 * _u, 10 * _u, false);
+		draw_set_color(_e[2] ? _oro : make_color_rgb(60, 70, 110)); draw_roundrect_ext(_sx - _pw / 2, _py, _sx + _pw / 2, _py + _ph, 10 * _u, 10 * _u, true);
+		draw_set_color(_e[2] ? _oro : c_white);
+		draw_text_transformed(_sx, _py + _ph / 2, string_upper(string_copy(_e[1], 1, 12)), 0.42 * _u, 0.42 * _u, 0);
+		draw_set_alpha(_a);
+	}
+	// Tu emote arriba de ti: pulgar arriba si ganaste, llorando si perdiste
+	if (_res != 2) {
+		var _ep = clamp((_t - 0.6) / 0.3, 0, 1);
+		var _es = (110 * _u / max(1, sprite_get_width(spr_emotes))) * (0.5 + 0.5 * (1 - power(1 - _ep, 3)));
+		var _ex = _yo_x + 70 * _u, _ey = _yo_top + 30 * _u + sin(_t * 3) * 6 * _u;
+		if (_ep > 0) draw_sprite_ext(spr_emotes, (_res == 1) ? 0 : 1, _ex, _ey, _es, _es, 0, c_white, _a * _ep);
+	}
+
+	// --- Lo que ganaste (no en sala privada) ---
+	var _con_premio = global.bot_partida || (global.ONLINE && !scr_fin_es_privada());
+	var _con_bots = global.bot_partida || (variable_global_exists("botnet_partida") && global.botnet_partida);
+	if (_con_premio && _t > 0.6) {
+		var _mon, _cop, _xp;
+		if (_res == 2)      { _mon = "+25"; _cop = "0"; _xp = "+15"; }
+		else if (_res == 1) { _mon = _con_bots ? "+30" : "+50"; _cop = _con_bots ? "+10" : "+25"; _xp = _con_bots ? "+15" : "+30"; }
+		else                { _mon = _con_bots ? "+10" : "+20"; _cop = _con_bots ? "-5" : "-15"; _xp = _con_bots ? "+5" : "+10"; }
+		var _vals = [_mon, _cop, _xp];
+		var _cw = 170 * _u, _ch = 48 * _u, _gap = 20 * _u;
+		var _x0 = _cx - (3 * _cw + 2 * _gap) / 2, _yy = _pie + 48 * _u;
+		for (var _k = 0; _k < 3; _k++) {
+			var _bx = _x0 + _k * (_cw + _gap);
+			draw_set_color(_tinta); draw_roundrect_ext(_bx, _yy, _bx + _cw, _yy + _ch, 12 * _u, 12 * _u, false);
+			draw_set_color(make_color_rgb(60, 70, 110)); draw_roundrect_ext(_bx, _yy, _bx + _cw, _yy + _ch, 12 * _u, 12 * _u, true);
+			var _ix = _bx + 26 * _u, _iy = _yy + _ch / 2;
+			if (_k == 0) {
+				draw_set_color(_oro); draw_circle(_ix, _iy, 13 * _u, false);
+				draw_set_color(make_color_rgb(214, 160, 30)); draw_circle(_ix, _iy, 7 * _u, false);
+			} else if (_k == 1) {
+				draw_set_color(_oro);
+				draw_triangle(_ix - 12 * _u, _iy - 12 * _u, _ix + 12 * _u, _iy - 12 * _u, _ix, _iy + 4 * _u, false);
+				draw_rectangle(_ix - 12 * _u, _iy - 12 * _u, _ix + 12 * _u, _iy - 6 * _u, false);
+				draw_rectangle(_ix - 3 * _u, _iy + 2 * _u, _ix + 3 * _u, _iy + 9 * _u, false);
+				draw_rectangle(_ix - 8 * _u, _iy + 9 * _u, _ix + 8 * _u, _iy + 13 * _u, false);
+			} else {
+				draw_set_color(make_color_rgb(80, 220, 255));
+				draw_text_transformed(_ix, _iy, "XP", 0.45 * _u, 0.45 * _u, 0);
+			}
+			var _vc = (_k == 2) ? make_color_rgb(80, 220, 255) : ((string_char_at(_vals[_k], 1) == "-") ? make_color_rgb(229, 72, 77) : _oro);
+			draw_set_halign(fa_right); draw_set_color(_vc);
+			draw_text_transformed(_bx + _cw - 14 * _u, _iy, _vals[_k], 0.7 * _u, 0.7 * _u, 0);
+			draw_set_halign(fa_center);
+		}
+	}
+
+	// --- Confeti (solo al ganar) ---
+	if (_res == 1) {
+		for (var _k = 0; _k < 70; _k++) {
+			var _fx = ((_k * 97) mod 1000) / 1000 * _gw + sin(_k + _t * 5) * 8 * _u;
+			var _fy = ((((_k * 61) mod 1000) / 1000 * -0.6) + (0.006 + ((_k * 37) mod 100) / 12000) * _t * 60) mod 1.2;
+			if (_fy < 0) continue;
+			var _cc = [_oro, make_color_rgb(31, 155, 255), make_color_rgb(78, 220, 140), c_white, make_color_rgb(229, 72, 77)];
+			draw_set_color(_cc[_k mod 5]);
+			draw_rectangle(_fx - 4 * _u, _fy * _gh - 2 * _u, _fx + 4 * _u, _fy * _gh + 2 * _u, false);
+		}
+	}
+
+	// --- Botones (los de siempre: scr_fin_opciones) ---
+	if (victory_alpha >= 0.9) {
+		var _ops = scr_fin_opciones();
+		var _n = array_length(_ops);
+		var _mx = device_mouse_x_to_gui(0), _my = device_mouse_y_to_gui(0);
+		for (var _i = 0; _i < _n; _i++) {
+			var _r = scr_fin_btn_r(_i, _n);
+			var _sel = (victory_index == _i) || (!touch_mode() && point_in_rectangle(_mx, _my, _r[0], _r[1], _r[2], _r[3]));
+			var _salir = (_ops[_i] == "SALIR");
+			var _bc = _salir ? make_color_rgb(70, 80, 120) : ((_res == 1) ? make_color_rgb(78, 220, 140) : make_color_rgb(31, 155, 255));
+			var _rr = 14 * _u;
+			draw_set_color(__mn_osc(_bc, 0.45)); draw_roundrect_ext(_r[0], _r[1] + 6 * _u, _r[2], _r[3] + 6 * _u, _rr, _rr, false);
+			draw_set_color(_bc); draw_roundrect_ext(_r[0], _r[1], _r[2], _r[3], _rr, _rr, false);
+			draw_set_color(merge_colour(_bc, c_white, 0.25)); draw_roundrect_ext(_r[0] + 6 * _u, _r[1] + 5 * _u, _r[2] - 6 * _u, _r[1] + (_r[3] - _r[1]) * 0.42, 8 * _u, 8 * _u, false);
+			draw_set_color(_sel ? c_white : _tinta);
+			draw_roundrect_ext(_r[0], _r[1], _r[2], _r[3], _rr, _rr, true);
+			draw_roundrect_ext(_r[0] + 1, _r[1] + 1, _r[2] - 1, _r[3] - 1, _rr, _rr, true);
+			var _tcol = (!_salir && _res == 1) ? _tinta : c_white;
+			draw_text_transformed_color((_r[0] + _r[2]) / 2 + 2, (_r[1] + _r[3]) / 2 + 3, _ops[_i], 0.6 * _u, 0.6 * _u, 0, c_black, c_black, c_black, c_black, 0.5);
+			draw_text_transformed_color((_r[0] + _r[2]) / 2, (_r[1] + _r[3]) / 2 + 1, _ops[_i], 0.6 * _u, 0.6 * _u, 0, _tcol, _tcol, _tcol, _tcol, 1);
+		}
+	}
+	draw_set_alpha(1); draw_set_halign(fa_left); draw_set_valign(fa_top); draw_set_color(c_white);
+}
+
+// ======================================================
+// PANTALLA DE SUBISTE DE NIVEL (en el menu, nunca a media partida)
+//   scr_xp_dar (scr_reloj) junta los niveles que subiste en global.lvl_pendiente.
+//   Al estar en el menu principal se muestran uno por uno. Boton GENIAL! (o ENTER / ESC).
+// ======================================================
+function scr_lvl_activa() {
+	return room == rm_menu && variable_global_exists("lvl_pendiente") && global.lvl_pendiente > 0
+		&& instance_exists(oMenu) && oMenu.menu_state == "main";
+}
+
+function __lvl_btn_r() {
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	var _u = clamp(min(_gw / 1280, _gh / 720), 0.6, 2);
+	return [_gw - 300 * _u, _gh - 100 * _u, _gw - 30 * _u, _gh - 30 * _u];
+}
+
+/// oMenu Step (arriba). Devuelve true si la pantalla esta abierta (el menu no se mueve).
+function scr_lvl_step() {
+	if (!scr_lvl_activa()) { global.lvl_t = 0; return false; }
+	if (!variable_global_exists("lvl_t")) global.lvl_t = 0;
+	if (global.lvl_t == 0 && global.sfx) audio_play_sound(snd_levelup, 5, false);
+	global.lvl_t++;
+	if (global.lvl_t < 40) return true;   // que se vea un poco antes de poder cerrarla
+	var _r = __lvl_btn_r();
+	var _toque = device_mouse_check_button_pressed(0, mb_left) && point_in_rectangle(device_mouse_x_to_gui(0), device_mouse_y_to_gui(0), _r[0], _r[1], _r[2], _r[3]);
+	if (_toque || vkey_pressed(vk_enter) || vkey_pressed(vk_escape) || keyboard_check_pressed(vk_space)) {
+		global.lvl_pendiente = max(0, global.lvl_pendiente - 1);
+		global.lvl_t = 0;
+		menu_delay = 10;
+	}
+	return true;
+}
+
+/// oMenu Draw GUI (al final, encima de todo)
+function scr_lvl_draw() {
+	if (!scr_lvl_activa()) return;
+	var _gw = display_get_gui_width(), _gh = display_get_gui_height();
+	var _u = clamp(min(_gw / 1280, _gh / 720), 0.6, 2);
+	var _t = (variable_global_exists("lvl_t") ? global.lvl_t : 0) / 60;
+	var _oro = make_color_rgb(255, 212, 71), _tinta = make_color_rgb(11, 15, 26);
+	var _nuevo = global.lvl - global.lvl_pendiente + 1;     // el nivel que se muestra ahora
+	var _ultimo = (global.lvl_pendiente == 1);
+	var _cx = _gw / 2, _by = _gh * 0.42;
+	// Fondo con rayos dorados
+	__mn_fondo_wh(_gw, _gh);
+	gpu_set_blendmode(bm_add);
+	draw_set_alpha(0.12);
+	draw_set_color(_oro);
+	var _L = max(_gw, _gh) * 1.5;
+	for (var _k = 0; _k < 14; _k++) {
+		var _a = _t * 0.5 + _k * pi / 7;
+		draw_triangle(_cx, _by, _cx + _L * cos(_a), _by + _L * sin(_a), _cx + _L * cos(_a + 0.2), _by + _L * sin(_a + 0.2), false);
+	}
+	draw_set_alpha(1);
+	gpu_set_blendmode(bm_normal);
+	// Tu personaje HD entrando por la izquierda
+	var _pj = variable_global_exists("pj_selected") ? clamp(global.pj_selected, 0, 3) : 0;
+	if (variable_global_exists("pj_portraits")) {
+		var _spr = global.pj_portraits[_pj];
+		var _h = _gh * 0.72, _kk = _h / sprite_get_height(_spr);
+		var _pe = 1 - power(1 - clamp(_t / 0.6, 0, 1), 3);
+		var _px = 60 * _u + sprite_get_width(_spr) * _kk / 2 - (1 - _pe) * 300 * _u;
+		draw_sprite_ext(_spr, 0, _px - sprite_get_width(_spr) * _kk / 2 + sprite_get_xoffset(_spr) * _kk, _gh - 10 * _u - _h + sprite_get_yoffset(_spr) * _kk, _kk, _kk, 0, c_white, 1);
+	}
+	draw_set_font(fnt_menu); draw_set_halign(fa_center); draw_set_valign(fa_middle);
+	// Titulo que entra rebotando
+	var _p = clamp(_t / 0.5, 0, 1), _c = 1.7;
+	var _ts = 1.8 * _u * max(0.05, 1 + (_c + 1) * power(_p - 1, 3) + _c * power(_p - 1, 2));
+	draw_text_transformed_color(_cx + 4 * _u, _gh * 0.11 + 4 * _u, "SUBISTE DE NIVEL!", _ts, _ts, 0, c_black, c_black, c_black, c_black, 0.8);
+	draw_text_transformed_color(_cx, _gh * 0.11, "SUBISTE DE NIVEL!", _ts, _ts, 0, _oro, _oro, _oro, _oro, 1);
+	// Medalla con el numero (cambia del nivel viejo al nuevo)
+	var _q = clamp((_t - 0.2) / 0.5, 0, 1);
+	var _r = 95 * _u * max(0, 1 + (_c + 1) * power(_q - 1, 3) + _c * power(_q - 1, 2));
+	if (_r > 2) {
+		var _rot = _t * 35;
+		draw_set_color(make_color_rgb(170, 120, 20));
+		for (var _k = 0; _k < 5; _k++) {
+			var _a1 = 90 + _rot + _k * 72;
+			draw_triangle(_cx + lengthdir_x(_r * 1.35, _a1), _by + lengthdir_y(_r * 1.35, _a1),
+				_cx + lengthdir_x(_r * 0.7, _a1 + 36), _by + lengthdir_y(_r * 0.7, _a1 + 36),
+				_cx + lengthdir_x(_r * 0.7, _a1 - 36), _by + lengthdir_y(_r * 0.7, _a1 - 36), false);
+		}
+		draw_set_color(_tinta); draw_circle(_cx, _by, _r + 4 * _u, false);
+		draw_set_color(_oro); draw_circle(_cx, _by, _r, false);
+		draw_set_color(make_color_rgb(240, 180, 40)); draw_circle(_cx, _by, _r * 0.8, false);
+		var _num = (_t < 1) ? (_nuevo - 1) : _nuevo;
+		var _ns = 1.6 * _u;
+		if (_t > 0.85 && _t < 1) _ns *= max(0.1, 1 - (_t - 0.85) / 0.15);
+		else if (_t >= 1) _ns *= 1 + 0.4 * max(0, 1 - (_t - 1) / 0.25);
+		draw_text_transformed_color(_cx + 3 * _u, _by - 4 * _u + 3 * _u, string(_num), _ns, _ns, 0, c_black, c_black, c_black, c_black, 0.6);
+		draw_text_transformed_color(_cx, _by - 4 * _u, string(_num), _ns, _ns, 0, c_white, c_white, c_white, c_white, 1);
+		draw_set_color(_tinta);
+		draw_text_transformed(_cx, _by + _r * 0.62, "NIVEL", 0.4 * _u, 0.4 * _u, 0);
+	}
+	// Barra de XP: se llena del nivel viejo y sigue con lo que sobro
+	var _bw = 420 * _u, _bh = 18 * _u, _bx = _cx - _bw / 2, _byb = _by + 130 * _u;
+	var _llen, _txt;
+	if (_t < 1) { var _need0 = scr_xp_necesaria(_nuevo - 1); _llen = clamp(_t / 0.9, 0, 1); _txt = string(floor(_need0 * _llen)) + " / " + string(_need0) + " XP"; }
+	else { var _need1 = scr_xp_necesaria(_nuevo); var _xp1 = _ultimo ? global.xp : 0; _llen = clamp(_xp1 / _need1, 0, 1) * clamp((_t - 1) / 0.5, 0, 1); _txt = string(_xp1) + " / " + string(_need1) + " XP"; }
+	draw_set_color(_tinta); draw_roundrect_ext(_bx, _byb, _bx + _bw, _byb + _bh, 9 * _u, 9 * _u, false);
+	draw_set_color(make_color_rgb(60, 70, 110)); draw_roundrect_ext(_bx, _byb, _bx + _bw, _byb + _bh, 9 * _u, 9 * _u, true);
+	if (_llen > 0.02) { draw_set_color(make_color_rgb(80, 220, 255)); draw_roundrect_ext(_bx + 3 * _u, _byb + 3 * _u, _bx + 3 * _u + (_bw - 6 * _u) * _llen, _byb + _bh - 3 * _u, 6 * _u, 6 * _u, false); }
+	draw_set_color(make_color_rgb(169, 180, 208));
+	draw_text_transformed(_cx, _byb + _bh + 18 * _u, _txt, 0.4 * _u, 0.4 * _u, 0);
+	// Armas que se abren en este nivel
+	if (_t > 1.3) {
+		var _cat = scr_eq_catalogo();
+		var _arma = undefined;
+		for (var _k = 0; _k < array_length(_cat); _k++) if (_cat[_k].lv == _nuevo) { _arma = _cat[_k]; break; }
+		if (!is_undefined(_arma)) {
+			var _e = 1 - power(1 - clamp((_t - 1.3) / 0.4, 0, 1), 3);
+			var _cw = 440 * _u, _ch = 76 * _u, _x1 = _cx - _cw / 2, _y1 = _byb + 60 * _u + (1 - _e) * 30 * _u;
+			draw_set_alpha(_e);
+			draw_set_color(make_color_rgb(20, 24, 50)); draw_roundrect_ext(_x1, _y1, _x1 + _cw, _y1 + _ch, 14 * _u, 14 * _u, false);
+			draw_set_color(_oro); draw_roundrect_ext(_x1, _y1, _x1 + _cw, _y1 + _ch, 14 * _u, 14 * _u, true);
+			var _sw = sprite_get_width(_arma.spr), _sh = sprite_get_height(_arma.spr);
+			var _sk = min(140 * _u / max(1, _sw), 56 * _u / max(1, _sh));
+			draw_sprite_ext(_arma.spr, 0, _x1 + 90 * _u - _sw * _sk / 2 + sprite_get_xoffset(_arma.spr) * _sk, _y1 + _ch / 2 - _sh * _sk / 2 + sprite_get_yoffset(_arma.spr) * _sk, _sk, _sk, 0, c_white, _e);
+			draw_set_halign(fa_left);
+			draw_set_color(_oro); draw_text_transformed(_x1 + 180 * _u, _y1 + 24 * _u, "NUEVA ARMA DISPONIBLE", 0.35 * _u, 0.35 * _u, 0);
+			draw_set_color(c_white); draw_text_transformed(_x1 + 180 * _u, _y1 + 52 * _u, _arma.nombre, 0.6 * _u, 0.6 * _u, 0);
+			draw_set_halign(fa_center);
+			draw_set_alpha(1);
+		}
+	}
+	// Boton GENIAL!
+	if (variable_global_exists("lvl_t") && global.lvl_t >= 40) {
+		var _b = __lvl_btn_r(), _rr = 14 * _u, _bc = make_color_rgb(78, 220, 140);
+		draw_set_color(__mn_osc(_bc, 0.45)); draw_roundrect_ext(_b[0], _b[1] + 6 * _u, _b[2], _b[3] + 6 * _u, _rr, _rr, false);
+		draw_set_color(_bc); draw_roundrect_ext(_b[0], _b[1], _b[2], _b[3], _rr, _rr, false);
+		draw_set_color(merge_colour(_bc, c_white, 0.25)); draw_roundrect_ext(_b[0] + 6 * _u, _b[1] + 5 * _u, _b[2] - 6 * _u, _b[1] + (_b[3] - _b[1]) * 0.42, 8 * _u, 8 * _u, false);
+		draw_set_color(_tinta); draw_roundrect_ext(_b[0], _b[1], _b[2], _b[3], _rr, _rr, true);
+		draw_text_transformed((_b[0] + _b[2]) / 2, (_b[1] + _b[3]) / 2 + 2, global.lvl_pendiente > 1 ? "SIGUIENTE" : "GENIAL!", 0.6 * _u, 0.6 * _u, 0);
+	}
+	// Confeti
+	var _cc = [_oro, make_color_rgb(31, 155, 255), make_color_rgb(78, 220, 140), c_white, make_color_rgb(160, 90, 255)];
+	for (var _k = 0; _k < 60; _k++) {
+		var _fy = ((((_k * 61) mod 1000) / 1000 * -0.7) + (0.006 + ((_k * 37) mod 100) / 14000) * _t * 60);
+		if (_fy < 0 || _fy > 1.1) continue;
+		var _fx = ((_k * 97) mod 1000) / 1000 * _gw + sin(_k + _t * 5) * 8 * _u;
+		draw_set_color(_cc[_k mod 5]);
+		draw_rectangle(_fx - 4 * _u, _fy * _gh - 2 * _u, _fx + 4 * _u, _fy * _gh + 2 * _u, false);
+	}
+	draw_set_halign(fa_left); draw_set_valign(fa_top); draw_set_color(c_white); draw_set_alpha(1);
 }

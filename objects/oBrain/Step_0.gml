@@ -47,6 +47,18 @@ scr_rey_step();
 // PISO DE LAVA: la lava sube y baja, y quema al que la toca (scr_reloj)
 scr_lava_step();
 
+// DUELO POR PUNTOS: cada baja suma 1 (scr_reloj)
+scr_duelo_step();
+
+// TODOS CONTRA TODOS: cada quien su equipo, bajas y tabla (scr_reloj)
+scr_todos_step();
+
+// JEFE GIGANTE: todos contra el jefe; lo mueve el lider (scr_reloj)
+scr_jefe_step();
+
+// Explosiones de barriles: onda, escombros y humo (scr_fx)
+scr_boom_step();
+
 // ======================================================
 // 🏆 LÓGICA DE VICTORIA Y PAUSA (MODO OFFLINE Y ONLINE)
 // ======================================================
@@ -163,7 +175,7 @@ if (global.game_over == true && !abandono_activo && !scr_fin_festejo_activo()) {
         victory_index = clamp(victory_index + move, 0, array_length(_ops) - 1);
 
         // --- ACCION AL PRESIONAR ENTER ---
-        if (vkey_pressed(vk_enter)) {
+        if (vkey_pressed(vk_enter) || scr_fin_toque()) {   // o tocar un boton (pantalla nueva, draw_player_profile)
             switch (_ops[victory_index]) {
                 case "ENVIAR SOLICITUD": // partida rapida en linea
                     if (global.ultimo_rival_tag != "") {
@@ -351,6 +363,10 @@ if (global.game_over == false)
         }
         // REY DE LA BANDERA: gana el que llena su barra (o el que lleve mas al acabarse el tiempo)
         if (scr_modo_rey()) _ganador = scr_rey_ganador();
+        // TODOS CONTRA TODOS: 2 si gane yo, 1 si gano otro (scr_reloj)
+        if (scr_modo_todos()) _ganador = scr_todos_ganador();
+        // JEFE GIGANTE: 2 si lo derrotaron, 1 si gano el jefe (scr_reloj)
+        if (scr_modo_jefe()) _ganador = scr_jefe_ganador();
 
         if (_ganador != 0) 
         {
@@ -367,6 +383,8 @@ if (global.game_over == false)
 
             // CAMBIO: Avisamos a TODOS los clientes que terminó la partida
             var _data = { winner: _ganador };
+            // TODOS CONTRA TODOS: cada quien sabe si gano por el que gano (scr_reloj)
+            if (scr_modo_todos()) { _data.ffa = global.todos_win; _data.ffn = global.todos_win_n; _data.l = global.todos_lista; }
             with(oOtherPlayer) {
                 SendEventToClient(clientId, "finalizar_partida", _data);
             }
@@ -684,7 +702,7 @@ if (abandono_check > 0) {
     if (abandono_check == 0) {
         abandono_check = -1;
 
-        if (global.ONLINE && room != rm_menu && !global.game_over && global.myTeam != "") {
+        if (global.ONLINE && room != rm_menu && !global.game_over && global.myTeam != "" && !scr_modo_jefe()) {   // JEFE: todos son del mismo equipo, si alguien se va se sigue
             var _mios = 1;      // yo
             var _rivales = 0;
             with (oOtherPlayer) {

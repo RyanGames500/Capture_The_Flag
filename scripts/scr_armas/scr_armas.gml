@@ -1123,6 +1123,7 @@ function scr_eq_comprar(_id) {
 	if (global.lvl < _it.lv || global.equipo.monedas < _it.precio) return false;
 	global.equipo.monedas -= _it.precio;
 	array_push(global.equipo.armas, _id);
+	scr_xp_dar(40);   // comprar un arma da XP (scr_reloj)
 	scr_save_to_local();
 	return true;
 }
@@ -1137,6 +1138,7 @@ function scr_eq_mejorar(_id) {
 	if (global.equipo.monedas < _c) return false;
 	global.equipo.monedas -= _c;
 	global.equipo.mej[$ _id] = _n + 1;
+	scr_xp_dar((_n == 0) ? 30 : ((_n == 1) ? 50 : 80));   // mejorar da XP: 1, 2 y 3 estrellas (scr_reloj)
 	scr_save_to_local();
 	return true;
 }

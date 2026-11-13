@@ -508,6 +508,13 @@ if (health <= 0 && !isDead)
 
 	scrAddKillFeed(localText);
 
+	// TODOS CONTRA TODOS: la baja es del ultimo que me pego (el lider la cuenta) (scr_reloj)
+	if (scr_modo_todos()) {
+		var _kil = (death_reason == "lava" || death_reason == "crush") ? "" : string(last_killer);
+		if (oBrain.AmIPseudoHost) scr_todos_baja(_kil, x, y);
+		else SendEventToClient(oBrain.pseudoHostClientId, "todos_baja", { k: _kil, x: x, y: y });
+	}
+
 	if (global.ONLINE && instance_exists(oOtherPlayer))
 	{
 		with(oOtherPlayer) {
@@ -548,7 +555,7 @@ if (state == PLAYERSTATE.DEAD && has_flag == true)
 
 var objetivo = (global.myTeam == "AZUL") ? oFlag : oFlag2;
 
-if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD && !has_flag && !objetivo.has_flag && !scr_bomba_no_coger() && !scr_modo_rey())   // (BANDERA BOMBA: el que la paso espera un ratito)
+if (!score_pending && place_meeting(x, y, objetivo) && state != PLAYERSTATE.DEAD && !has_flag && !objetivo.has_flag && !scr_bomba_no_coger() && !scr_modo_sin_banderas())   // (BANDERA BOMBA: el que la paso espera un ratito)
 {
 	has_flag = true;
 	with(objetivo) {
@@ -577,7 +584,7 @@ if (place_meeting(x, y, miBase) && has_flag && !score_pending)
 	// En sala privada no se suma nada (es partida entre amigos)
 	if (!scr_fin_es_privada()) {
 		global.flags_captured += 1;
-		global.xp += 25;
+		scr_xp_dar(10);   // capturar bandera (scr_reloj)
 
 		with(oBrain) {
 			save_state = "prepare";
@@ -647,7 +654,7 @@ if (!score_pending && place_meeting(x, y, miBandera) && !miBandera.has_flag && (
 	// En sala privada no se suma nada (es partida entre amigos)
 	if (!scr_fin_es_privada()) {
 		global.flags_returned += 1;
-		global.xp += 15;
+		scr_xp_dar(5);    // devolver tu bandera (scr_reloj)
 
 		with(oBrain) {
 			save_state = "prepare";
@@ -734,7 +741,8 @@ global.sharedProperties = {
 	_HGY: round(hab_g_y)
 };
 
-if (global.xp >= 100)
+// El nivel ahora sube en scr_xp_dar y la pantalla sale al salir de la partida (scr_reloj)
+if (false)
 {
 	global.lvl += 1;
 	global.xp -= 100;

@@ -1173,3 +1173,7 @@ if (menu_state == "main" && !touch_mode() && !MN_NUEVO)   // (el menu nuevo ya n
     draw_set_color(c_white);
     draw_set_alpha(1);
 }
+
+
+// SUBISTE DE NIVEL: encima de todo el menu (draw_player_profile)
+scr_lvl_draw();

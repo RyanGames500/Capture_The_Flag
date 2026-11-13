@@ -75,6 +75,11 @@ if(type == network_type_data){
 			scr_ranking_recibir(realData);
 		break;
 
+		case "eventos":
+			// Los eventos con su cuenta regresiva (DatabaseFunctions)
+			scr_eventos_recibir(realData);
+		break;
+
 		case "cuenta":
 			// Respuesta de las cuentas (crear, entrar, token, guardar, salir) (DatabaseFunctions)
 			scr_cuenta_recibir(realData);

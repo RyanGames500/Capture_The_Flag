@@ -167,8 +167,12 @@ if (!global.game_over) {
     if (room != rm_menu) {
         // Marcador vivo, flechas, banners, anotacion y avisos (scr_feedback).
         // Ahora funciona tanto en linea como en local.
+        scr_boom_draw();   // explosiones de barriles: onda, escombros, humo y destello (scr_fx)
         scr_lava_draw();   // PISO DE LAVA: la lava y el aviso (scr_reloj)
         if (scr_modo_rey()) scr_rey_draw_marcador(_mx_base, 14);   // REY DE LA BANDERA: barras (scr_reloj)
+        else if (scr_modo_duelo()) { scr_duelo_draw_marcador(_mx_base, 14); scr_duelo_draw(); }   // DUELO POR PUNTOS (scr_reloj)
+        else if (scr_modo_todos()) scr_todos_draw();   // TODOS CONTRA TODOS: mis bajas, lugar y tabla (scr_reloj)
+        else if (scr_modo_jefe()) scr_jefe_draw_gui(_mx_base, 14);   // JEFE GIGANTE: su barra de vida y el reloj (scr_reloj)
         else fb_draw_marcador(_mx_base, 14);
         fb_draw_gui();
         scr_bomba_draw();   // BANDERA BOMBA: la cuenta encima de cada bandera (scr_reloj)
@@ -261,6 +265,10 @@ if (room != rm_menu) scr_ms_aviso_draw();
 // --- 4. PANTALLA DE RESULTADOS (diseno A: GANASTE / PERDISTE, marcador, equipos, premio) ---
 if (global.game_over && !abandono_activo)
 {
+    // Pantalla nueva: VICTORIA / DERROTA / EMPATE con tu personaje (draw_player_profile)
+    if (MN_NUEVO) {
+        scr_fin_nuevo_draw();
+    } else {
     var gw = display_get_gui_width();
     var gh = display_get_gui_height();
     var mid_x = gw / 2;
@@ -279,6 +287,7 @@ if (global.game_over && !abandono_activo)
     var _col_ganador = (_gana_eq == "ROJO") ? _rojo_c : _azul_c;
     var _empate  = (global.winner_team == 3);   // EMPATE: nadie gana (scr_reloj)
     if (_empate) { _gane = false; _col_ganador = _oro_c; }
+    if (scr_modo_todos()) { _gane = (global.winner_team == 2); _col_ganador = scr_todos_color(global.todos_win); }   // TODOS CONTRA TODOS (scr_reloj)
     var _en_linea = global.ONLINE;
     var _con_bots = global.bot_partida || (variable_global_exists("botnet_partida") && global.botnet_partida);
 
@@ -292,6 +301,15 @@ if (global.game_over && !abandono_activo)
             var _tm = (team != "") ? team : lobby_team;
             var _it = [string(Name), es_bot ? 2 : 0];
             if (_tm == "ROJO") array_push(_l_ro, _it); else array_push(_l_az, _it);
+        }
+    }
+    // TODOS CONTRA TODOS: la tabla final en las dos columnas (scr_reloj)
+    if (_en_linea && scr_modo_todos() && variable_global_exists("todos_lista")) {
+        _l_az = []; _l_ro = [];
+        for (var _q2 = 0; _q2 < array_length(global.todos_lista); _q2++) {
+            var _e2 = global.todos_lista[_q2];
+            var _it2 = [string(_q2 + 1) + ". " + string(_e2[1]) + " (" + string(_e2[2]) + ")", (_e2[0] == global.myTeam) ? 1 : 0];
+            if (_q2 mod 2 == 0) array_push(_l_az, _it2); else array_push(_l_ro, _it2);
         }
     }
     var _filas = max(array_length(_l_az), array_length(_l_ro));
@@ -361,7 +379,7 @@ if (global.game_over && !abandono_activo)
     _cy += 52;
     draw_set_font(fnt_small);
     draw_set_color(_empate ? make_color_rgb(207, 211, 224) : _col_ganador);
-    draw_text_transformed(mid_x, _cy, _empate ? "NADIE GANA" : ("VICTORIA " + _gana_eq), 1, 1, 0);
+    draw_text_transformed(mid_x, _cy, _empate ? "NADIE GANA" : (scr_modo_todos() ? ("GANA " + string_upper(string(global.todos_win_n))) : ("VICTORIA " + _gana_eq)), 1, 1, 0);
 
     // Marcador: tus banderas a cada lado y el numero en medio
     _cy += 64;
@@ -387,7 +405,7 @@ if (global.game_over && !abandono_activo)
 
     // Equipos (en linea): tu en dorado, los bots en gris
     if (_en_linea) {
-        var _cols = [[_l_az, _azul_c, "EQUIPO AZUL", mid_x - 140], [_l_ro, _rojo_c, "EQUIPO ROJO", mid_x + 140]];
+        var _cols = [[_l_az, _azul_c, scr_modo_todos() ? "TABLA" : "EQUIPO AZUL", mid_x - 140], [_l_ro, _rojo_c, scr_modo_todos() ? "TABLA" : "EQUIPO ROJO", mid_x + 140]];
         for (var t = 0; t < 2; t++) {
             var _c = _cols[t];
             draw_set_color(_c[1]);
@@ -450,6 +468,7 @@ if (global.game_over && !abandono_activo)
             draw_text_transformed(bx + btn_w / 2, by + btn_h / 2, opciones_vic[i], b_scale, b_scale, 0);
         }
     }
+    } // fin pantalla vieja
 }
 
 // Resets

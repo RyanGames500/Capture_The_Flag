@@ -1121,3 +1121,70 @@ function scr_skin_poner(_cod) {
 	global.skin_actual = string(_cod);
 	scr_save_to_local();
 }
+
+
+// ======================================================
+// EVENTOS (los decide el servidor: ctf-server/eventos.js)
+//   El menu principal pide la lista al abrir y cada minuto. Cada evento trae cuanto falta
+//   para que empiece (d) y para que termine (h) en milisegundos; de ahi la cuenta sigue sola.
+//   Asi la hora es la del servidor (cambiar la hora del celular no sirve de nada).
+//   La tarjeta se dibuja en draw_player_profile (__mn_evento_draw).
+// ======================================================
+function scr_eventos_init() {
+	if (variable_global_exists("eventos") && is_struct(global.eventos)) return;
+	global.eventos = { lista: [], t: 0, pedir: 0 };
+}
+
+/// oMenu, menu principal: pide los eventos al servidor
+function scr_eventos_step() {
+	scr_eventos_init();
+	var _e = global.eventos;
+	_e.pedir -= 1;
+	if (_e.pedir <= 0) {
+		_e.pedir = room_speed * 60;                                          // cada minuto
+		if (!scr_cuenta_enviar("eventos", {})) _e.pedir = room_speed * 5;   // sin conexion: lo intenta otra vez pronto
+	}
+}
+
+/// Respuesta del servidor (oBrain Other_68, case "eventos")
+function scr_eventos_recibir(_d) {
+	scr_eventos_init();
+	var _e = global.eventos;
+	try {
+		var _l = json_parse(string(_d.lista));
+		_e.lista = is_array(_l) ? _l : [];
+		_e.t = current_time;
+	} catch (_err) { _e.lista = []; }
+}
+
+/// El evento que sale en la tarjeta (o undefined).
+/// { m: modo, n: nombre, x: texto, f: "el viernes 20 a las 6 pm", falta_ini, falta_fin (segundos), activo }
+function scr_evento_actual() {
+	if (!variable_global_exists("eventos") || !is_struct(global.eventos)) return undefined;
+	var _e = global.eventos;
+	var _pasado = current_time - _e.t;
+	var _modos = array_length(__mn_modos());
+	var _mejor = undefined;
+	for (var i = 0; i < array_length(_e.lista); i++) {
+		var _v = _e.lista[i];
+		if (!is_struct(_v) || !variable_struct_exists(_v, "m") || !variable_struct_exists(_v, "d") || !variable_struct_exists(_v, "h")) continue;
+		var _m = real(_v.m);
+		if (_m < 0 || _m >= _modos) continue;   // un modo que esta version del juego no tiene
+		var _fin = (real(_v.h) - _pasado) / 1000;
+		if (_fin <= 0) continue;                 // ya termino
+		var _ini = max(0, (real(_v.d) - _pasado) / 1000);
+		var _r = { m: _m, n: variable_struct_exists(_v, "n") ? string(_v.n) : "EVENTO", x: variable_struct_exists(_v, "x") ? string(_v.x) : "",
+		           f: variable_struct_exists(_v, "f") ? string(_v.f) : "", falta_ini: _ini, falta_fin: _fin, activo: (_ini <= 0) };
+		if (is_undefined(_mejor) || (_r.activo && !_mejor.activo) || (_r.activo == _mejor.activo && _r.falta_ini < _mejor.falta_ini)) _mejor = _r;
+	}
+	return _mejor;
+}
+
+/// "2d 4h 12m" o, si falta menos de un dia, "4h 33m 08s"
+function scr_evento_tiempo(_s) {
+	_s = max(0, floor(_s));
+	var _d = _s div 86400, _h = (_s mod 86400) div 3600, _m = (_s mod 3600) div 60, _sg = _s mod 60;
+	var _mm = ((_m < 10) ? "0" : "") + string(_m);
+	if (_d > 0) return string(_d) + "d " + string(_h) + "h " + _mm + "m";
+	return string(_h) + "h " + _mm + "m " + ((_sg < 10) ? "0" : "") + string(_sg) + "s";
+}

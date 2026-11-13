@@ -8,6 +8,10 @@ if (instance_exists(oBrain)) {
     if (variable_instance_exists(oBrain, "socket") && oBrain.socket != -1) {
         
 var mi_tag_actual = string(global.miFriendTag);
+// Tu ficha publica (para que te encuentren por tu ID): una vez cada vez que abres el juego
+if (!variable_global_exists("perfil_publicado") || !global.perfil_publicado) {
+    if (mi_tag_actual != "" && mi_tag_actual != "0" && scr_cuenta_conectado()) { scr_sincronizar_nube(); global.perfil_publicado = true; }
+}
 show_debug_message("--- TEST DE BUSQUEDA ---");
 show_debug_message("Buscando en colección: solicitudes");
 show_debug_message("Buscando documento: " + mi_tag_actual);

@@ -322,6 +322,7 @@ function fb_flechas() {
 		if (variable_global_exists("rey_x")) fb_burbuja_bandera(global.rey_x, global.rey_y - 40, (global.rey_c == 2) ? spr_flag_red : spr_flag_blue, FB_ORO, "ZONA", false);
 		return;
 	}
+	if (scr_modo_sin_banderas()) return;   // DUELO POR PUNTOS: sin flechitas de banderas
 	var _rival = fb_rival(_mio);
 	var _fEnemy = (_mio == "AZUL") ? oFlag : oFlag2;   // la que tengo que robar
 	var _fMine  = (_mio == "AZUL") ? oFlag2 : oFlag;   // la mía

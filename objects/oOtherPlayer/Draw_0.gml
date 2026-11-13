@@ -27,7 +27,7 @@ if (enemyHealth > 0) {
 
 draw_set_halign(fa_center);
 draw_set_font(fnt_small); 
-draw_set_color(c_white);
+draw_set_color(scr_modo_todos() ? scr_todos_color(team) : c_white);   // TODOS CONTRA TODOS: el nombre con su color
 draw_text(x, y - 60 * _gs, string(Name));
 
 // --- DIBUJO DEL CUERPO ---

@@ -1,39 +1,3 @@
-function callback_ChangeRoom(new_room_id) {
-    // Si entramos a una sala y ya hay alguien más ahí esperándonos
-        if (!string_count("auto_matchmake", new_room_id) && instance_exists(oMenu)) {
-        // Si el contador de otros jugadores es mayor a 0, saltamos de una
-            oMenu.menu_state = "lobby_espera";
-        
-    }
-    
-    // Tu lógica de matchmaking de antes...
-    if(string_count("auto_match_", new_room_id)){
-        scr_ajustes_default();   // partida rápida: 5 min, 3 banderas
-        // Mapa sacado del nombre de la sala: los dos jugadores tienen el mismo nombre = mismo mapa
-        global.match_mapa = scr_mapa_desde_codigo(new_room_id);
-        scr_qp_mixta(new_room_id);   // faltan personas: los espacios vacios los juegan bots
-        room_goto(scr_mapa_room(global.match_mapa));
-    }
-}
-//foto del plano
-//luz y agua
-//uso de suelo para bono patio
-
-/*
-function callback_ChangeRoom(new_room_id){
-
-
-    if(string_count("auto_match_", new_room_id)){
-        room_goto(rm_stage1);
-		
-    }
-	
-    if(string_count("public", new_room_id)){
-        room_goto(rm_game);
-    }
-	
-}
-
 /// PARTIDA RAPIDA MIXTA: si el servidor junto a menos personas de las que pide el modo
 /// (por ejemplo 2 personas buscando 2 VS 2), la sala se llama "auto_match_N_k_hP"
 /// (N = jugadores del modo, P = personas que entraron). Las personas van juntas en AZUL
@@ -70,3 +34,41 @@ function scr_qp_mixta(_sala) {
 		}
 	}
 }
+
+
+function callback_ChangeRoom(new_room_id) {
+    // Si entramos a una sala y ya hay alguien más ahí esperándonos
+        if (!string_count("auto_matchmake", new_room_id) && instance_exists(oMenu)) {
+        // Si el contador de otros jugadores es mayor a 0, saltamos de una
+            oMenu.menu_state = "lobby_espera";
+        
+    }
+    
+    // Tu lógica de matchmaking de antes...
+    if(string_count("auto_match_", new_room_id)){
+        scr_ajustes_default();   // partida rápida: 5 min, 3 banderas
+        // Mapa sacado del nombre de la sala: los dos jugadores tienen el mismo nombre = mismo mapa
+        global.match_mapa = scr_mapa_desde_codigo(new_room_id);
+        scr_qp_mixta(new_room_id);   // faltan personas: los espacios vacios los juegan bots
+        room_goto(scr_mapa_room(global.match_mapa));
+    }
+}
+//foto del plano
+//luz y agua
+//uso de suelo para bono patio
+
+/*
+function callback_ChangeRoom(new_room_id){
+
+
+    if(string_count("auto_match_", new_room_id)){
+        room_goto(rm_stage1);
+		
+    }
+	
+    if(string_count("public", new_room_id)){
+        room_goto(rm_game);
+    }
+	
+}
+*/

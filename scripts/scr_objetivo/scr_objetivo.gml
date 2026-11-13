@@ -7,6 +7,7 @@
 /// En local, el de global.myTeam. Si no hay ninguno, por mi id (como antes).
 function scr_my_team() {
 	var _online = variable_global_exists("ONLINE") && global.ONLINE;
+	if (_online && room != rm_menu && scr_modo_jefe()) return "AZUL";   // JEFE GIGANTE: todos del mismo equipo (scr_reloj)
 	if (_online && variable_global_exists("serverTeam") && global.serverTeam != "") return global.serverTeam;
 	if (variable_global_exists("myTeam") && global.myTeam != "") return global.myTeam;
 	if (variable_global_exists("clientId")) return (global.clientId % 2 == 0) ? "AZUL" : "ROJO";
@@ -18,7 +19,9 @@ function scr_my_team() {
 function scr_spawn_en_base() {
 	var _team = scr_my_team();
 	var _base = (_team == "AZUL") ? obj_base_blue : obj_base_red;
-	if (instance_exists(_base)) {
+	if (scr_modo_todos() && scr_todos_spawn()) {
+		// TODOS CONTRA TODOS: lejos de los demas (scr_reloj)
+	} else if (instance_exists(_base)) {
 		x = _base.x;
 		y = _base.y;
 	} else {
@@ -351,6 +354,10 @@ function scr_botnet_crear_todos() {
 		with (_b) {
 			scr_botnet_init(_d.t, _nom, _pj);
 			bot_rol = _d.r;
+			// TODOS CONTRA TODOS: cada bot es su propio equipo (scr_reloj)
+			if (scr_modo_todos()) { team = "B" + string(i + 1); lobby_team = team; thisPlayerTeam = team; }
+			// JEFE GIGANTE: los bots ayudan contra el jefe (scr_reloj)
+			if (scr_modo_jefe()) { team = "AZUL"; lobby_team = team; thisPlayerTeam = team; }
 		}
 	}
 	if (array_length(global.botnet_defs) > 0) global.botnet_partida = true;
@@ -477,7 +484,9 @@ function scr_botnet_init(_team, _name, _pj) {
 function scr_botnet_a_base() {
 	var _base = (team == "AZUL") ? obj_base_blue : obj_base_red;
 	var _off = (((BOTNET_ID_BASE - clientId) mod 3) - 1) * 20;   // para que no salgan encimados
-	if (instance_exists(_base)) {
+	if (scr_modo_todos() && scr_todos_spawn()) {
+		// TODOS CONTRA TODOS: lejos de los demas (scr_reloj)
+	} else if (instance_exists(_base)) {
 		x = _base.x + _off;
 		y = _base.y;
 	} else {
@@ -696,6 +705,8 @@ function scr_botnet_step() {
 
 /// Que hace el bot: a donde va, a quien le dispara, cuando usa su habilidad.
 function scr_botnet_pensar() {
+	// JEFE GIGANTE: el bot se pone de lado del jefe y le dispara (scr_reloj)
+	if (scr_modo_jefe()) { scr_jefe_bot_pensar(); return; }
 	var _flag_rival = (team == "AZUL") ? oFlag : oFlag2;   // la que tiene que robar
 	var _flag_mia   = (team == "AZUL") ? oFlag2 : oFlag;   // la de su equipo
 	var _base       = (team == "AZUL") ? obj_base_blue : obj_base_red;
@@ -730,7 +741,11 @@ function scr_botnet_pensar() {
 	var _arma = (!has_flag && bot_w.tipo == "gun") ? scr_botnet_arma_cerca(220) : noone;   // un arma mejor cerca
 	var _compa_la_lleva = instance_exists(_flag_rival) && _flag_rival.has_flag && instance_exists(_flag_rival.portador_instancia) && _flag_rival.portador_instancia != id;
 
-	if (scr_modo_rey() && variable_global_exists("rey_x")) {
+	if (scr_modo_duelo() || scr_modo_todos()) {
+		// DUELO POR PUNTOS y TODOS CONTRA TODOS: a buscar al rival mas cercano
+		if (_ene != noone) { _tx = _ene.x; _ty = _ene.y; _voy_al_rival = true; }
+	}
+	else if (scr_modo_rey() && variable_global_exists("rey_x")) {
 		// REY DE LA BANDERA: todos a la zona; si un rival esta cerca, a pelear
 		if (_veo && _ene_d < 200) { _tx = _ene.x; _ty = _ene.y; _voy_al_rival = true; }
 		else {
@@ -1135,6 +1150,11 @@ function scr_botnet_dano(_b, _m, _from) {
 			hit_bloqueo_timer = 20;
 			if (has_flag) scr_botnet_soltar(-6, 25);
 		}
+		// Explosion de barril: lo avienta hacia afuera (sin soltar la bandera)
+		if (_why == "explosion" && variable_struct_exists(_m, "angle")) {
+			if (bot_cor_t <= 0) { push_h = lengthdir_x(16, real(_m.angle)); vsp = -6; }
+			hit_bloqueo_timer = 15;
+		}
 	}
 }
 
@@ -1162,7 +1182,7 @@ function scr_botnet_soltar(_vy, _alto, _px = undefined, _py = undefined) {
 /// Robar, anotar y devolver (el lider lo decide, como cuando anota el host).
 function scr_botnet_banderas() {
 	if (isDead || global.game_over) return;
-	if (scr_modo_rey()) return;   // REY DE LA BANDERA: no hay banderas que robar
+	if (scr_modo_sin_banderas()) return;   // REY DE LA BANDERA y DUELO POR PUNTOS: no hay banderas que robar
 	var _obj  = (team == "AZUL") ? oFlag : oFlag2;          // la rival
 	var _mia  = (team == "AZUL") ? oFlag2 : oFlag;          // la de su equipo
 	var _base = (team == "AZUL") ? obj_base_blue : obj_base_red;
@@ -1836,6 +1856,50 @@ function scr_partida_estado_nuevo() {
 		puntos_procesados = false;
 		abandono_activo   = false;
 		abandono_check    = -1;
+	}
+	if (instance_exists(oIntroVersus)) instance_destroy(oIntroVersus);
+}
+
+/// LIMPIEZA AL VOLVER AL MENU (oMenu, Create). Salgas como salgas de la partida (SALIR, ESC,
+/// pausa, abandono, contra bots, sala privada, sin conexion), al llegar al menu no queda nada
+/// pegado de la partida anterior. No toca el modo sin internet ni tu personaje elegido.
+function scr_menu_limpiar() {
+	if (room != rm_menu) return;
+	global.game_over   = false;
+	global.pausa       = false;
+	global.puntos_azul = 0;
+	global.puntos_rojo = 0;
+	global.winner_team = 0;
+	global.mi_listo    = false;
+	global.rival_listo = false;
+	global.sala_listo  = false;
+	global.sel_tarde   = false;
+	global.revancha_rival = false;
+	if (variable_global_exists("fest") && is_struct(global.fest)) global.fest.t = 0;
+	// Bots de la partida anterior
+	global.botq           = false;
+	global.botq_pendiente = false;
+	global.bot_partida    = false;
+	global.botnet_defs    = [];
+	global.botnet_partida = false;
+	// Efectos y modos (cada modo se vuelve a armar al empezar la siguiente partida)
+	global.boom_fx = [];
+	global.boom_flash = 0;
+	if (variable_global_exists("jefe") && is_struct(global.jefe)) global.jefe.cuarto = -1;   // JEFE: se arma de nuevo
+	// TODOS CONTRA TODOS te deja un "equipo" raro ("J5"): en el menu vuelves a AZUL o ROJO normal
+	if (variable_global_exists("myTeam") && global.myTeam != "AZUL" && global.myTeam != "ROJO") global.myTeam = "";
+	if (instance_exists(oBrain)) with (oBrain) {
+		intro_disparada   = false;
+		timer_intro       = 60 * 60;
+		victory_alpha     = 0;
+		victory_index     = 0;
+		puntos_procesados = false;
+		abandono_activo   = false;
+		abandono_check    = -1;
+		ammo_spawned      = false;
+		weapons_spawned   = false;
+		kill_feed         = [];
+		alerts            = [];
 	}
 	if (instance_exists(oIntroVersus)) instance_destroy(oIntroVersus);
 }
@@ -2659,8 +2723,7 @@ function scr_sala_listo_step() {
 function scr_empate_premio() {
 	if (scr_fin_es_privada()) return;
 	scr_eq_premio(25);   // monedas por jugar (scr_armas, EQUIPAMIENTO)
-	global.xp += 10;
-	while (global.xp >= 100) { global.lvl += 1; global.xp -= 100; }
+	scr_xp_dar(15);   // nivel (scr_reloj)
 	scr_save_to_local();
 	scr_save_to_cloud();
 	show_debug_message(">>> FIN: EMPATE, +10 XP");

@@ -13,6 +13,7 @@ function scr_red_step() {
 	if (!_en_partida) {
 		net_estado = "ok";
 		net_toast = 0;
+		if (room == rm_menu) scr_red_menu_step();   // en el menu tambien se revisa (abajo)
 		return;
 	}
 
@@ -272,4 +273,42 @@ function scr_red_draw_esquina() {
 	draw_set_colour(c_white);
 	draw_set_halign(fa_left);
 	draw_set_valign(fa_top);
+}
+
+
+// ======================================================
+// CONEXION EN EL MENU
+// Antes solo se revisaba en la partida. Si el servidor se reiniciaba (por ejemplo cuando
+// Render se actualiza) o se caia el internet estando en el menu, el juego seguia como si
+// estuviera conectado: buscabas partida y nadie contestaba, y a los 3 s te mandaba al bot
+// viejo (la sala con un solo bot). Ahora, si el servidor deja de contestar el ping,
+// se vuelve a conectar solo (cada 10 s mientras no lo logre) y cancela la busqueda.
+// ======================================================
+#macro RED_MENU_REINTENTO 10000   // ms entre intentos de volver a conectar
+
+function scr_red_menu_step() {
+	if (!variable_global_exists("red_reconectando")) { global.red_reconectando = false; global.red_intento_t = 0; }
+	// Ya conectado y contestando: todo bien
+	if (global.clientId != -1 && current_time - last_got_ping <= RED_PERDIDA) { global.red_reconectando = false; return; }
+	var _caida = (global.clientId != -1 && current_time - last_got_ping > RED_PERDIDA);   // estaba conectado y dejo de contestar
+	var _reintento = (global.clientId == -1 && global.red_reconectando && current_time - global.red_intento_t > RED_MENU_REINTENTO);
+	if (!_caida && !_reintento) return;
+	if (_caida) {
+		show_debug_message(">>> RED: el servidor no contesta en el menu, me vuelvo a conectar");
+		// Si estaba buscando partida o en una sala, eso ya no sirve: de regreso a elegir modo
+		if (instance_exists(oMenu) && (oMenu.menu_state == "connecting" || oMenu.menu_state == "lobby_espera")) {
+			oMenu.menu_state = "modos";
+			if (variable_global_exists("mn_ui") && is_struct(global.mn_ui)) { global.mn_ui.msg = "SE PERDIO LA CONEXION, BUSCA OTRA VEZ"; global.mn_ui.msg_t = 150; }
+		}
+		global.botq_pendiente = false;
+		global.botnet_defs = [];
+		global.botnet_partida = false;
+	}
+	global.red_reconectando = true;
+	global.red_intento_t = current_time;
+	try { network_destroy(oBrain.socket); } catch (_e) {}
+	global.clientId = -1;
+	global.roomId = "";
+	ConnectToServer();          // conexion nueva (al conectar entra solo a tu cuenta)
+	last_got_ping = current_time;
 }

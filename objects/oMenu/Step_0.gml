@@ -1,6 +1,12 @@
 // MUSICA: si todavia no existe oBrain (sin conexion), la lleva el menu (scr_fx)
 if (!instance_exists(oBrain)) scr_musica_step();
 
+// SUBISTE DE NIVEL: la pantalla bonita tapa el menu hasta que la cierres (draw_player_profile)
+if (scr_lvl_step()) exit;
+
+// REINICIAR PROGRESO (solo pruebas: DEV_REINICIAR en scr_reloj, CTRL + SUPR)
+scr_dev_reiniciar_step();
+
 // CUENTAS: pantalla de entrar / crear cuenta, chip del menu y franja de PERFIL (DatabaseFunctions)
 if (scr_cuenta_menu_step()) exit;
 
@@ -195,7 +201,7 @@ else if (menu_state == "friends_menu" && friends_state == "anadir") {
             ultimo_intento_busqueda = _val; 
             
             // PASO 1: ID Directo
-            request_datos_rival = ReadSimpleData("perfiles", _val);
+            request_datos_rival = ReadSimpleData("perfiles", string_upper(_val));   // los ID van en mayusculas
             
             show_debug_message(">>> BUSCANDO EN NUBE: " + _val);
         }
@@ -380,7 +386,7 @@ else if (menu_state == "setup_room") {
     var side_move = vkey_pressed(vk_right) - vkey_pressed(vk_left);
     if (side_move != 0) {
         switch (s_index) {
-            case 0: global.setup_modo = (global.setup_modo + side_move + 4) % 4; break; // MODO
+            case 0: var _nm = (scr_modo() == 8) ? 2 : 4; global.setup_modo = (global.setup_modo + side_move + _nm) % _nm; break; // MODO (JEFE: solo 2 o 4 jugadores)
             case 1: scr_ajustes_cambiar(1, side_move); break;                           // MAPA
             case 2: scr_ajustes_cambiar(0, side_move); break;                           // TIEMPO
             case 3: scr_ajustes_cambiar(2, side_move); break;                           // BANDERAS
@@ -388,10 +394,12 @@ else if (menu_state == "setup_room") {
     }
 
     // Cupo de la sala segun el modo: 1vs1 = 2, 2vs2 = 4, 3vs3 = 6, 4vs4 = 8
+    if (scr_modo() == 8) global.setup_modo = min(global.setup_modo, 1);   // JEFE GIGANTE: maximo 4 jugadores
     global.max_players_allowed = (global.setup_modo + 1) * 2;
 
     // Textos (siempre muestran lo que de verdad se va a jugar)
     var mod_text = ["1 VS 1", "2 VS 2", "3 VS 3", "4 VS 4"];
+    if (scr_modo() == 8) mod_text = ["2 JUGADORES", "4 JUGADORES", "4 JUGADORES", "4 JUGADORES"];   // JEFE: todos juntos
     setup_options[0] = "MODO: " + mod_text[global.setup_modo];
     setup_options[1] = "MAPA: " + scr_ajustes_texto(1);
     setup_options[2] = "TIEMPO: " + scr_ajustes_texto(0);
@@ -563,7 +571,7 @@ if (vkey_pressed(ord("P"))) {
     
     // Iniciamos la carga de datos del amigo
     estado_busqueda = "buscando";
-    request_datos_rival = ReadSimpleData("perfiles", _tag_objetivo);
+    request_datos_rival = ReadSimpleData("perfiles", string_upper(string(_tag_objetivo)));
     
     friends_state = "perfil_amigo"; 
     input_activo = false;
@@ -805,7 +813,7 @@ if (vkey_pressed(ord("B")) && !input_activo) {
         if (_id_buscado != "" && _id_buscado != string(PLAYER_ID)) {
             estado_busqueda = "buscando";
             // PASO DIRECTO: Leemos el perfil usando el ID como nombre de documento
-            request_datos_rival = ReadSimpleData("perfiles", string(_id_buscado));
+            request_datos_rival = ReadSimpleData("perfiles", string_upper(string(_id_buscado)));
             
             show_debug_message(">>> BUSCADOR: Pidiendo perfil del ID: " + string(_id_buscado));
         }
@@ -890,7 +898,7 @@ if (estado_busqueda == "buscando" || estado_busqueda == "buscando_nombre" || est
         if (estado_busqueda == "buscando") {
             // Reintento rápido por nombre
             show_debug_message(">>> ID TARDA MUCHO, SALTANDO A NOMBRE...");
-            request_datos_rival = ReadSimpleData("perfiles", ultimo_intento_busqueda);
+            request_datos_rival = ReadSimpleData("perfiles", string_upper(string(ultimo_intento_busqueda)));
             estado_busqueda = "buscando_nombre";
             search_timer = 0; // Reset para otros 2 segundos
         } else {
